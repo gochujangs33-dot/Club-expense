@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.282';
+const APP_VERSION      = '1.6.283';
 const APP_VERSION_DATE = '2026.09.22';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -44,7 +44,7 @@ function setupCurrencyInput(el) {
 // --- Firebase Config & Initialization ---
 // 구글 Firebase 콘솔에서 발급받은 실제 설정 키값들을 아래에 입력하시면 클라우드 연동이 활성화됩니다.
 const firebaseConfig = {
-    apiKey: "AIzaSyA_vDZaJvmPiiWTmFxJju6rWuv7g5g9Jk",
+    apiKey: "AIzaSyA_vDZaJvmPiiWTmFxJju6rwLuv7g5g9Jk",
     authDomain: "club-expence.firebaseapp.com",
     databaseURL: "https://club-expence-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "club-expence",
@@ -5920,6 +5920,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.283', date: '2026.09.22', items: ['Firebase API Key 오탈자 수정(39자리 정상화) — 익명 자동 인증 및 비공개 DB 정상 연동'] },
         { ver: '1.6.282', date: '2026.09.22', items: ['Firebase 익명 자동 인증(signInAnonymously) 도입 — 비공개 보안 규칙(auth != null) 환경에서 추가 입력 없이 안전하게 자동 접속', '최신 Firebase Config 동기화(measurementId 반영)'] },
         { ver: '1.6.281', date: '2026.08.27', items: ['카테고리별 비용 비중 도넛을 12시 방향에서 시작해 시계방향으로 연속 노출하는 애니메이션 적용', '도넛 조각별 동시 확대 대신 전체 원을 하나의 부드러운 각도 마스크로 표시', '모바일 재생시간 단축·동작 최소화 설정과 기존 비율·색상·범례·필터 유지'] },
         { ver: '1.6.280', date: '2026.08.27', items: ['관리자 시작 안내의 중복된 4번 로그 기록 확인 항목 제거', '클럽·예산 설정, 정산 기준 확인, 정산 현황 확인 3개 안내를 한 줄로 정돈', '대시보드 상단의 실제 로그 기록 버튼과 전체 작업 로그 기능은 그대로 유지'] },
