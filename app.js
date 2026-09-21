@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.281';
-const APP_VERSION_DATE = '2026.08.27';
+const APP_VERSION      = '1.6.282';
+const APP_VERSION_DATE = '2026.09.22';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
 function updatePerPersonSelfPayIcon(perPersonSelfPay) {
@@ -50,14 +50,23 @@ const firebaseConfig = {
     projectId: "club-expence",
     storageBucket: "club-expence.firebasestorage.app",
     messagingSenderId: "679102443088",
-    appId: "1:679102443088:web:ef82b35806569c5b2aab55"
+    appId: "1:679102443088:web:ef82b35806569c5b2aab55",
+    measurementId: "G-S6W5PN184M"
 };
 
 let firebaseDb = null;
+let firebaseAuth = null;
 try {
     if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
         firebase.initializeApp(firebaseConfig);
         firebaseDb = firebase.database();
+        if (typeof firebase.auth === 'function') {
+            firebaseAuth = firebase.auth();
+            // 비공개 보안 규칙(auth != null) 환경에서 사이트 접속 시 백그라운드로 안전하게 자동 인증 세션 획득
+            firebaseAuth.signInAnonymously().catch(err => {
+                console.warn("Firebase anonymous auth:", err.message || err);
+            });
+        }
         console.log("Firebase initialized successfully.");
     }
 } catch (error) {
@@ -356,6 +365,7 @@ const AppState = {
     isLoggedIn: false,
     currentPin: null,
     firebaseDb: firebaseDb,
+    firebaseAuth: firebaseAuth,
 
     // 감사 로그는 공유 데이터 변경의 원인 추적용이며 auditLogs/{pushKey}에 추가 전용으로 기록한다.
     // 사진·영수증 원문이나 비밀값은 저장하지 않고, 화면에서 식별 가능한 요약과 숫자 변경값만 남긴다.
@@ -5910,6 +5920,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.282', date: '2026.09.22', items: ['Firebase 익명 자동 인증(signInAnonymously) 도입 — 비공개 보안 규칙(auth != null) 환경에서 추가 입력 없이 안전하게 자동 접속', '최신 Firebase Config 동기화(measurementId 반영)'] },
         { ver: '1.6.281', date: '2026.08.27', items: ['카테고리별 비용 비중 도넛을 12시 방향에서 시작해 시계방향으로 연속 노출하는 애니메이션 적용', '도넛 조각별 동시 확대 대신 전체 원을 하나의 부드러운 각도 마스크로 표시', '모바일 재생시간 단축·동작 최소화 설정과 기존 비율·색상·범례·필터 유지'] },
         { ver: '1.6.280', date: '2026.08.27', items: ['관리자 시작 안내의 중복된 4번 로그 기록 확인 항목 제거', '클럽·예산 설정, 정산 기준 확인, 정산 현황 확인 3개 안내를 한 줄로 정돈', '대시보드 상단의 실제 로그 기록 버튼과 전체 작업 로그 기능은 그대로 유지'] },
         { ver: '1.6.279', date: '2026.08.27', items: ['클럽 추가 배정을 일반 예산 수정과 구분해 전체 작업 로그에 별도 기록', '로그 요약과 상세에 기존 배정액·추가 배정액·변경 후 총 배정액·추가 배정 후 잔여금을 함께 표시', '작업 일시·관리자와 기존 사용액·확정 지원금 누적을 보존해 잔여금 산정 근거 확인 가능'] },
