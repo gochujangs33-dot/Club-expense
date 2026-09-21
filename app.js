@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.284';
+const APP_VERSION      = '1.6.285';
 const APP_VERSION_DATE = '2026.09.22';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -5902,9 +5902,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     logoutBtn.addEventListener('click', () => {
-        if (confirm(t('confirm.logout'))) {
+        showConfirmModal(t('confirm.logout') || '로그아웃 하시겠습니까?', () => {
             switchToOfflineMode();
-        }
+            pinErrorText.classList.add('hidden');
+            resetPinInput();
+            document.getElementById('login-mode-section').classList.remove('hidden');
+            document.getElementById('register-mode-section').classList.add('hidden');
+            pinModal.classList.remove('hidden');
+        });
     });
 
     loginBtn.addEventListener('click', () => {
@@ -5926,6 +5931,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.285', date: '2026.09.22', items: ['로그아웃 클릭 시 브라우저 confirm 대신 앱 커스텀 확인 모달(showConfirmModal)로 전환 및 로그아웃 즉시 로그인 화면으로 전환'] },
         { ver: '1.6.284', date: '2026.09.22', items: ['올해 사용 가능한 총 클럽예산(clubTotalBudget)을 실시간 리스너(.on)로 전환해 초기 인증 완료 및 변경 시 즉시 동기화 보장'] },
         { ver: '1.6.283', date: '2026.09.22', items: ['Firebase API Key 오탈자 수정(39자리 정상화) — 익명 자동 인증 및 비공개 DB 정상 연동'] },
         { ver: '1.6.282', date: '2026.09.22', items: ['Firebase 익명 자동 인증(signInAnonymously) 도입 — 비공개 보안 규칙(auth != null) 환경에서 추가 입력 없이 안전하게 자동 접속', '최신 Firebase Config 동기화(measurementId 반영)'] },
