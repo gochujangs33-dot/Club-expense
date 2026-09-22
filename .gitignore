@@ -5,3 +5,5 @@ package-lock.json
 firebase.json
 test_agent.js
 _test_*.js
+.obsidian/
+docs/

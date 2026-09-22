@@ -16,6 +16,7 @@
 | 2 | `renderAdminDashboard` globalHistory `.then()` — `updateChartsBudgetStats(historyList)` 호출 | 이력 도착 시 차트 예산 통계 타일 갱신 | 로그인 후 차트 탭 첫 진입 시 사용예산/정산건수 **0원 고정** |
 | 3 | `renderAdminDashboard` step 3 — `renderAllCharts` **호출 없음** (rAF 핸들러 + `.then()` 2경로가 담당) | 차트 3중 렌더 제거 | 차트 탭 클릭마다 전 차트 3회 파괴/재생성 → 깜빡임 |
 | 4 | `_countAttendeesByEmpId` 상단 주석 | "이름 폴백" 설명 제거, 재도입 금지 경고로 교체 | 주석을 근거로 이름 폴백 "복원" → 동명이인 카운트 오귀속 재발 |
+| 5 | `clubTotalBudget` 리스너 (`.on('value')`) (v1.6.284) | 총 클럽예산을 실시간 리스너로 등록해 관리자 예산 수정 시 전 클라이언트 즉시 동기화 보장 | 새로고침 전까지 변경된 총예산 미반영 |
 
 > v1.6.197~200의 수정 사항(사번 기준 카운트, `.off` 후 `.on`, step 3 loadClubRegistry 재호출 금지 등)은
 > [`CLAUDE.md`](CLAUDE.md) §1-6 재수정 금지 표 참조.
@@ -56,9 +57,9 @@
 - 관리자 로그인 시 전체 렌더 2회 (recalc의 `render()` + 로그인 후속 `AppState.render()`)
 - 성능 실측 영향이 미미하므로, 다른 작업으로 해당 함수를 열 때 같이 정리하는 정도만 권장.
 
-### D. `clubTotalBudget` 실시간 갱신 (다중 관리자 환경에서만 의미)
+### D. `clubTotalBudget` 실시간 갱신 (v1.6.284 완료 ✅)
 - **현상**: 총 클럽비용은 `loadClubRegistry` 내 `.once`로만 로드 — 다른 관리자가 변경해도 새로고침 전까지 미반영.
-- **개선안**: `.on('value')` 리스너로 전환 (단일 관리자 운영이면 불필요).
+- **개선 내용**: `.on('value')` 리스너로 전환하여 관리자 변경 시 즉시 모든 클라이언트에 동기화되도록 구현 완료.
 
 ---
 
