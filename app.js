@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.286';
+const APP_VERSION      = '1.6.287';
 const APP_VERSION_DATE = '2026.10.14';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -5931,6 +5931,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.287', date: '2026.10.14', items: ['모바일 전체 폰트 크기 및 카드 패딩 슬림화(과도한 줄바꿈 전면 완화)', '월별 차트 막대 위 금액 초컴팩트(N만) 표기 및 9.5px 폰트로 텍스트 겹침 완벽 해결', '모바일 차트 내부 5줄 범례 숨김으로 막대 그래프 가시 영역 2배 확장'] },
         { ver: '1.6.286', date: '2026.10.14', items: ['모바일 관리자 모드 클럽 목록이 압축·찌그러져 보이는 레이아웃 버그 수정(flex-shrink: 0 및 overflow 보정)', '차트 상단 여백 및 Y축 여유 공간(grace 15%, suggestedMax 1.3배) 확대로 막대 위 금액/건수/라벨 잘림 원천 차단', '가로 막대 100% 소진율 등 막대 내부 라벨 가독성 고대비(#ffffff + 텍스트 그림자) 개선'] },
         { ver: '1.6.285', date: '2026.09.22', items: ['로그아웃 클릭 시 브라우저 confirm 대신 앱 커스텀 확인 모달(showConfirmModal)로 전환 및 로그아웃 즉시 로그인 화면으로 전환'] },
         { ver: '1.6.284', date: '2026.09.22', items: ['올해 사용 가능한 총 클럽예산(clubTotalBudget)을 실시간 리스너(.on)로 전환해 초기 인증 완료 및 변경 시 즉시 동기화 보장'] },
@@ -7493,7 +7494,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.save();
             const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640;
             ctx.font = isMobile
-                ? "600 11px 'Malgun Gothic', '맑은 고딕', 'Segoe UI', sans-serif"
+                ? "700 9.5px 'Malgun Gothic', '맑은 고딕', 'Segoe UI', sans-serif"
                 : "600 12px 'Malgun Gothic', '맑은 고딕', 'Segoe UI', sans-serif";
             ctx.textBaseline = 'middle';
 
@@ -7574,11 +7575,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.fillStyle = '#ffffff';
                         ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
                         ctx.shadowBlur = 4;
-                        ctx.fillText(text, topEl.x, topEl.y + 12);
+                        ctx.fillText(text, topEl.x, topEl.y + (isMobile ? 10 : 12));
                         ctx.shadowBlur = 0;
                     } else {
                         // 캔버스 최상단(y=0) 밖으로 튀어나가지 않도록 최소 Y좌표 보장 (상단 잘림 원천 방지)
-                        const textY = Math.max(12, topEl.y - 10);
+                        const textY = Math.max(isMobile ? 9 : 12, topEl.y - (isMobile ? 6 : 10));
                         ctx.fillStyle = opts.color || '#e2e8f0';
                         ctx.shadowBlur = 0;
                         ctx.fillText(text, topEl.x, textY);
@@ -7763,11 +7764,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
 
         const stacked = sortedClubs.length > 1;
+        const isMobileScreen = typeof window !== 'undefined' && window.innerWidth <= 640;
         // 차트 표기는 한국 원화 단위(억·만·천)로 통일한다.
-        // 축에는 단위를 간결하게, 막대 합계에는 원 단위까지 표시한다. 모바일에서는 컴팩트 단위로 겹침 방지.
+        // 축에는 단위를 간결하게, 막대 합계에는 원 단위까지 표시한다. 모바일에서는 초컴팩트(N만)로 겹침 원천 방지.
         const formatKoreanWon = (value, includeWon = false, isCompact = false) => {
             const amount = Math.round(Number(value) || 0);
             if (amount === 0) return includeWon ? '0원' : '0';
+
+            if (isCompact) {
+                // 모바일 초컴팩트 표기: 막대 위 텍스트 겹침을 원천 차단하기 위해 2~4글자 고정 (예: 383만, 16만, 9.5만)
+                if (amount >= 100000000) {
+                    const eokVal = amount / 100000000;
+                    return `${Math.round(eokVal * 10) / 10}억`;
+                }
+                if (amount >= 10000) {
+                    const manVal = amount / 10000;
+                    return manVal >= 10 ? `${Math.round(manVal)}만` : `${Math.round(manVal * 10) / 10}만`;
+                }
+                if (amount >= 1000) {
+                    return `${Math.round(amount / 1000)}천`;
+                }
+                return `${amount}`;
+            }
 
             const eok = Math.floor(amount / 100000000);
             const restAfterEok = amount % 100000000;
@@ -7775,19 +7793,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const restWon = restAfterEok % 10000;
             const parts = [];
             if (eok) parts.push(`${eok}억`);
-            if (man) {
-                if (isCompact && restWon >= 1000) {
-                    const decimal = Math.round((man + (restWon / 10000)) * 10) / 10;
-                    return `${decimal}만${includeWon ? '원' : ''}`;
-                }
-                parts.push(`${man.toLocaleString('ko-KR')}만`);
-            }
-            if (!isCompact) {
-                if (restWon >= 1000) parts.push(`${Math.floor(restWon / 1000)}천`);
-                if (restWon % 1000) parts.push(`${restWon % 1000}`);
-            } else if (!man && restWon >= 1000) {
-                parts.push(`${Math.floor(restWon / 1000)}천`);
-            }
+            if (man) parts.push(`${man.toLocaleString('ko-KR')}만`);
+            if (restWon >= 1000) parts.push(`${Math.floor(restWon / 1000)}천`);
+            if (restWon % 1000) parts.push(`${restWon % 1000}`);
             return `${parts.join(' ')}${includeWon ? '원' : ''}`;
         };
         // 스택 합계 라벨이 막대 위쪽에 잘리지 않도록 y축 최대치에 여유 확보
@@ -7802,9 +7810,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 ...barChartEntranceOptions(animateEntrance),
-                layout: { padding: { top: 32, left: 6, right: 10, bottom: 6 } },
+                layout: { padding: { top: isMobileScreen ? 20 : 30, left: 2, right: 6, bottom: 2 } },
                 plugins: {
-                    legend: { labels: { color: '#cbd5e1', boxWidth: 12, boxHeight: 12, borderRadius: 4, padding: 12 } },
+                    // 모바일에서는 바로 위에 클럽 필터 칩이 있으므로 차트 영역을 가리는 5줄 범례를 숨김
+                    legend: {
+                        display: !isMobileScreen,
+                        labels: { color: '#cbd5e1', boxWidth: 10, boxHeight: 10, borderRadius: 3, padding: 8, font: { size: 11 } }
+                    },
                     tooltip: {
                         callbacks: {
                             label: ctx => `${ctx.dataset.label}: ${SettlementCalculator.formatCurrency(ctx.parsed.y)}`
@@ -7812,20 +7824,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     chartValueLabel: {
                         color: '#e2e8f0',
-                        getLabel: (_idx, total) => {
-                            const isMobileScreen = typeof window !== 'undefined' && window.innerWidth <= 640;
-                            return formatKoreanWon(total, true, isMobileScreen);
-                        }
+                        getLabel: (_idx, total) => formatKoreanWon(total, false, isMobileScreen)
                     }
                 },
                 scales: {
-                    x: { stacked, ticks: { color: '#94a3b8', font: { size: 12, weight: '500' } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                    x: {
+                        stacked,
+                        ticks: { color: '#94a3b8', font: { size: isMobileScreen ? 10 : 12, weight: '500' }, maxRotation: 45, minRotation: isMobileScreen ? 45 : 0 },
+                        grid: { color: 'rgba(255,255,255,0.04)' }
+                    },
                     y: {
                         stacked,
-                        suggestedMax: Math.ceil(maxTotal * 1.3) || undefined,
+                        suggestedMax: Math.ceil(maxTotal * 1.25) || undefined,
                         grace: '15%',
-                        title: { display: true, text: '금액 (원)', color: '#94a3b8', font: { size: 12, weight: '600' } },
-                        ticks: { color: '#94a3b8', callback: value => formatKoreanWon(value) },
+                        title: { display: !isMobileScreen, text: '금액 (원)', color: '#94a3b8', font: { size: 11, weight: '600' } },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: isMobileScreen ? 10 : 11 },
+                            callback: value => formatKoreanWon(value, false, isMobileScreen)
+                        },
                         grid: { color: 'rgba(255,255,255,0.05)' },
                         beginAtZero: true
                     }

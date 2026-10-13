@@ -3249,18 +3249,36 @@ html[data-app-theme="light"] .audit-log-details { border-top-color: rgba(72, 91,
     color: #c4b5fd;
 }
 
-/* 전 화면 공통 모바일 보정: 가로 넘침을 없애고 조작 영역을 터치하기 쉽게 유지한다. */
+/* 전 화면 공통 모바일 보정: 가로 넘침을 없애고 글씨 크기를 슬림하게 조정하여 과도한 줄바꿈 완화 */
 @media (max-width: 640px) {
-    body {
-        padding: calc(0.75rem + env(safe-area-inset-top))
-                 calc(0.5rem + env(safe-area-inset-right))
-                 calc(0.9rem + env(safe-area-inset-bottom))
-                 calc(0.5rem + env(safe-area-inset-left));
+    html {
+        font-size: 14.5px; /* 전체 rem 기준 10% 축소로 모바일 줄바꿈 현상 전면 완화 */
     }
 
-    .app-header { margin-bottom: 1.35rem; }
-    .logo-area { gap: 0.45rem; }
-    .app-header h1 { font-size: clamp(1.65rem, 8vw, 2rem); }
+    body {
+        padding: calc(0.6rem + env(safe-area-inset-top))
+                 calc(0.45rem + env(safe-area-inset-right))
+                 calc(0.75rem + env(safe-area-inset-bottom))
+                 calc(0.45rem + env(safe-area-inset-left));
+    }
+
+    .card {
+        padding: 0.85rem 0.75rem;
+    }
+
+    .card-header h2 {
+        font-size: 1.05rem;
+        line-height: 1.3;
+    }
+
+    .chart-subtitle {
+        font-size: 0.72rem;
+        line-height: 1.25;
+    }
+
+    .app-header { margin-bottom: 1.1rem; }
+    .logo-area { gap: 0.4rem; }
+    .app-header h1 { font-size: clamp(1.4rem, 6.5vw, 1.75rem); }
     .login-status-wrapper,
     #login-status-wrapper { flex-wrap: wrap; }
     .new-club-input-row { flex-wrap: wrap; }
@@ -3408,7 +3426,10 @@ html[data-app-theme="light"] .audit-log-details { border-top-color: rgba(72, 91,
     .chart-canvas-wrap:has(#club-unique-attendees-chart) { height: 350px; }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 380px) {
+    html {
+        font-size: 13.5px; /* 초소형 화면(380px 이하)에서 글씨 크기 추가 축소로 줄바꿈 원천 방지 */
+    }
     #club-list-container .expense-row { grid-template-columns: 1fr; }
     .club-usage-summary-totals { grid-template-columns: 1fr; }
     .chart-canvas-wrap:has(#club-activity-chart),
