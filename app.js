@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.287';
+const APP_VERSION      = '1.6.288';
 const APP_VERSION_DATE = '2026.10.14';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -4349,7 +4349,661 @@ document.addEventListener('DOMContentLoaded', () => {
             if (modal && !modal.classList.contains('hidden')) {
                 closeAuditLogModal();
             }
+            const pptModal = document.getElementById('year-end-ppt-modal');
+            if (pptModal && !pptModal.classList.contains('hidden')) {
+                closeYearEndPptModal();
+            }
         }
+    });
+
+    // ══════════════════════════════════════════════════════════════════
+    // 연간 클럽 결산 및 마감 PPT 보고서 자동 생성기 (YearEndPptGenerator)
+    // ══════════════════════════════════════════════════════════════════
+    const YearEndPptGenerator = {
+        getAvailableYears(historyList) {
+            const years = new Set();
+            const currentYear = new Date().getFullYear();
+            years.add(currentYear);
+            (historyList || []).forEach(e => {
+                const y = getHistoryEntryYear(e);
+                if (!Number.isNaN(y) && y >= 2020 && y <= 2040) {
+                    years.add(y);
+                }
+            });
+            return Array.from(years).sort((a, b) => b - a);
+        },
+
+        collectYearData(targetYear, historyList, clubRegistry) {
+            const yearEntries = (historyList || []).filter(e => {
+                if (!e) return false;
+                const y = getHistoryEntryYear(e);
+                return y === targetYear;
+            });
+
+            let totalSpend = 0;
+            let totalSupport = 0;
+            let totalSelfPay = 0;
+            let eventSpend = 0;
+            let facilitySpend = 0;
+            let prizeSpend = 0;
+            let prizeSupport = 0;
+            let prizeSelfPay = 0;
+
+            const companyUniqueAttendees = new Map();
+            let totalAttendeesSum = 0;
+
+            yearEntries.forEach(entry => {
+                const entryCost = Number(entry.totalCost) || 0;
+                const entrySupport = Number(entry.finalSupportAmount) || 0;
+                const entrySelfPay = Number(entry.totalSelfPay) || 0;
+
+                totalSpend += entryCost;
+                totalSupport += entrySupport;
+                totalSelfPay += entrySelfPay;
+
+                const items = getHistoryExpenseItems(entry);
+                if (items.length > 0) {
+                    items.forEach(item => {
+                        const amt = Math.max(0, parseAmount(item.amount));
+                        const supp = Math.max(0, parseAmount(item.itemSupportAmount));
+                        const self = Math.max(0, parseAmount(item.itemSelfPay));
+                        if (item.category === ExpenseCategory.FACILITY) {
+                            facilitySpend += amt;
+                        } else if (item.category === ExpenseCategory.PRIZE) {
+                            prizeSpend += amt;
+                            prizeSupport += supp;
+                            prizeSelfPay += self;
+                        } else {
+                            eventSpend += amt;
+                        }
+                    });
+                } else {
+                    const prize = getHistoryPrizeCost(entry);
+                    prizeSpend += prize;
+                    prizeSupport += prize;
+                    eventSpend += Math.max(0, entryCost - prize);
+                }
+
+                (entry.attendees || []).forEach(a => {
+                    if (!a) return;
+                    totalAttendeesSum += 1;
+                    const key = a.employeeId ? `id:${a.employeeId}` : (a.name ? `name:${a.name}` : null);
+                    if (key && !companyUniqueAttendees.has(key)) {
+                        companyUniqueAttendees.set(key, { name: a.name || '이름 없음', employeeId: a.employeeId || '' });
+                    }
+                });
+            });
+
+            if (eventSpend + facilitySpend + prizeSpend !== totalSpend) {
+                eventSpend = Math.max(0, totalSpend - facilitySpend - prizeSpend);
+            }
+
+            const clubs = Object.values(clubRegistry || {});
+            let totalBudget = 0;
+            clubs.forEach(c => {
+                totalBudget += Number(c.budget) || 0;
+            });
+
+            const totalRemaining = totalBudget - totalSupport;
+            const totalBurnRate = totalBudget > 0 ? (totalSupport / totalBudget) * 100 : 0;
+            const totalEventCount = yearEntries.length;
+            const avgAttendeesPerEvent = totalEventCount > 0 ? (totalAttendeesSum / totalEventCount).toFixed(1) : '0.0';
+
+            const clubMap = {};
+            clubs.forEach(c => {
+                clubMap[c.name] = {
+                    id: c.id,
+                    name: c.name,
+                    budget: Number(c.budget) || 0,
+                    spend: 0,
+                    support: 0,
+                    selfPay: 0,
+                    eventSpend: 0,
+                    facilitySpend: 0,
+                    prizeSpend: 0,
+                    attendeesSum: 0,
+                    uniqueMap: new Map(),
+                    entries: []
+                };
+            });
+
+            yearEntries.forEach(entry => {
+                const name = entry.clubName || '기본 클럽';
+                if (!clubMap[name]) {
+                    clubMap[name] = {
+                        id: entry.clubId || '',
+                        name: name,
+                        budget: 0,
+                        spend: 0,
+                        support: 0,
+                        selfPay: 0,
+                        eventSpend: 0,
+                        facilitySpend: 0,
+                        prizeSpend: 0,
+                        attendeesSum: 0,
+                        uniqueMap: new Map(),
+                        entries: []
+                    };
+                }
+                const c = clubMap[name];
+                c.entries.push(entry);
+                c.spend += Number(entry.totalCost) || 0;
+                c.support += Number(entry.finalSupportAmount) || 0;
+                c.selfPay += Number(entry.totalSelfPay) || 0;
+
+                const items = getHistoryExpenseItems(entry);
+                if (items.length > 0) {
+                    items.forEach(item => {
+                        const amt = Math.max(0, parseAmount(item.amount));
+                        if (item.category === ExpenseCategory.FACILITY) c.facilitySpend += amt;
+                        else if (item.category === ExpenseCategory.PRIZE) c.prizeSpend += amt;
+                        else c.eventSpend += amt;
+                    });
+                } else {
+                    const prize = getHistoryPrizeCost(entry);
+                    c.prizeSpend += prize;
+                    c.eventSpend += Math.max(0, (Number(entry.totalCost) || 0) - prize);
+                }
+
+                (entry.attendees || []).forEach(a => {
+                    if (!a) return;
+                    c.attendeesSum += 1;
+                    const key = a.employeeId ? `id:${a.employeeId}` : (a.name ? `name:${a.name}` : null);
+                    if (key && !c.uniqueMap.has(key)) {
+                        c.uniqueMap.set(key, { name: a.name || '이름 없음', employeeId: a.employeeId || '' });
+                    }
+                });
+            });
+
+            const clubStats = Object.values(clubMap)
+                .map(c => {
+                    const remaining = c.budget - c.support;
+                    const burnRate = c.budget > 0 ? (c.support / c.budget) * 100 : 0;
+                    const avgAttendees = c.entries.length > 0 ? (c.attendeesSum / c.entries.length).toFixed(1) : '0.0';
+                    return {
+                        ...c,
+                        remaining,
+                        burnRate,
+                        avgAttendees,
+                        uniqueCount: c.uniqueMap.size,
+                        eventCount: c.entries.length
+                    };
+                })
+                .sort((a, b) => {
+                    if (b.eventCount !== a.eventCount) return b.eventCount - a.eventCount;
+                    return b.spend - a.spend;
+                });
+
+            return {
+                targetYear,
+                totalBudget,
+                totalSpend,
+                totalSupport,
+                totalSelfPay,
+                totalRemaining,
+                totalBurnRate,
+                eventSpend,
+                facilitySpend,
+                prizeSpend,
+                prizeSupport,
+                prizeSelfPay,
+                companyUniqueCount: companyUniqueAttendees.size,
+                totalAttendeesSum,
+                totalEventCount,
+                avgAttendeesPerEvent,
+                clubStats,
+                yearEntries
+            };
+        },
+
+        async generateAndDownload(targetYear, historyList, clubRegistry) {
+            if (typeof PptxGenJS === 'undefined') {
+                throw new Error('PPTX 생성 라이브러리가 로드되지 않았습니다.');
+            }
+
+            const data = this.collectYearData(targetYear, historyList, clubRegistry);
+            const pptx = new PptxGenJS();
+            pptx.layout = 'LAYOUT_16x9';
+            const font = 'Malgun Gothic';
+
+            // [Slide 1] 표지 (Cover)
+            const s1 = pptx.addSlide();
+            s1.background = { color: '0F172A' };
+            s1.addText('EXECUTIVE ANNUAL REPORT', {
+                x: 0.8, y: 1.2, w: 8.4, h: 0.3,
+                fontSize: 11, bold: true, color: '38BDF8', fontFace: font
+            });
+            s1.addText(`${targetYear}년 사내 동호회(클럽) 활동 및 정산 결산 보고서`, {
+                x: 0.8, y: 1.6, w: 8.4, h: 1.0,
+                fontSize: 26, bold: true, color: 'FFFFFF', fontFace: font
+            });
+            s1.addText('전사 클럽 연간 예산 집행 현황, 재원 분석 및 임직원 참여 성과 종합', {
+                x: 0.8, y: 2.7, w: 8.4, h: 0.5,
+                fontSize: 13, color: '94A3B8', fontFace: font
+            });
+            s1.addShape(pptx.ShapeType.line, {
+                x: 0.8, y: 3.5, w: 8.4, h: 0,
+                line: { color: '334155', width: 1 }
+            });
+            const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+            s1.addText(`기준 연도 : ${targetYear}년  |  결산 일자 : ${todayStr}  |  보고 주관 : 동호회 운영위원회 (관리자)`, {
+                x: 0.8, y: 3.8, w: 8.4, h: 0.4,
+                fontSize: 11, color: 'CBD5E1', fontFace: font
+            });
+
+            // [Slide 2] 전사 연간 총괄 요약 (Executive Summary)
+            const s2 = pptx.addSlide();
+            s2.background = { color: 'F8FAFC' };
+            s2.addText('OVERALL EXECUTIVE SUMMARY', {
+                x: 0.8, y: 0.35, w: 8.4, h: 0.25,
+                fontSize: 10, bold: true, color: '2563EB', fontFace: font
+            });
+            s2.addText(`${targetYear}년 전사 클럽 예산 집행 및 참여 총괄 현황`, {
+                x: 0.8, y: 0.6, w: 8.4, h: 0.45,
+                fontSize: 20, bold: true, color: '0F172A', fontFace: font
+            });
+
+            const kpiList = [
+                { label: '총 배정 예산', val: formatAmount(data.totalBudget) + '원', sub: '전사 연간 배정 예산' },
+                { label: '총 집행 금액 (결제액)', val: formatAmount(data.totalSpend) + '원', sub: `총 ${data.totalEventCount}회 행사 진행` },
+                { label: '지원금 예산 소진율', val: `${data.totalBurnRate.toFixed(1)}%`, sub: `잔여 ${formatAmount(data.totalRemaining)}원` },
+                { label: '임직원 실참석 인원', val: `고유 ${data.companyUniqueCount}명`, sub: `연인원 ${data.totalAttendeesSum}명 (회당 ${data.avgAttendeesPerEvent}명)` }
+            ];
+
+            kpiList.forEach((kpi, idx) => {
+                const x = 0.8 + idx * 2.15;
+                s2.addShape(pptx.ShapeType.roundRect, {
+                    x, y: 1.15, w: 2.05, h: 1.05,
+                    rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+                });
+                s2.addText(kpi.label, {
+                    x: x + 0.1, y: 1.25, w: 1.85, h: 0.25,
+                    fontSize: 10, color: '64748B', fontFace: font
+                });
+                s2.addText(kpi.val, {
+                    x: x + 0.1, y: 1.5, w: 1.85, h: 0.4,
+                    fontSize: 14, bold: true, color: '0F172A', fontFace: font
+                });
+                s2.addText(kpi.sub, {
+                    x: x + 0.1, y: 1.9, w: 1.85, h: 0.25,
+                    fontSize: 8.8, color: '94A3B8', fontFace: font
+                });
+            });
+
+            const suppRatio = data.totalSpend > 0 ? ((data.totalSupport / data.totalSpend) * 100).toFixed(1) : '0.0';
+            const selfRatio = data.totalSpend > 0 ? ((data.totalSelfPay / data.totalSpend) * 100).toFixed(1) : '0.0';
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 0.8, y: 2.35, w: 4.15, h: 1.55,
+                rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+            });
+            s2.addText('1. [재원별 분류] 결제 주체 기준 (합계 100%)', {
+                x: 0.95, y: 2.45, w: 3.85, h: 0.25,
+                fontSize: 11, bold: true, color: '1E293B', fontFace: font
+            });
+            s2.addText(`• 🏢 회사 지원금 (법인카드) : ${formatAmount(data.totalSupport)}원 (${suppRatio}%)\n• 👤 임직원 자부담 (개인카드) : ${formatAmount(data.totalSelfPay)}원 (${selfRatio}%)\n👉 총 결제 금액 합계 : ${formatAmount(data.totalSpend)}원 (100.0%)`, {
+                x: 0.95, y: 2.75, w: 3.85, h: 1.05,
+                fontSize: 10, color: '334155', fontFace: font, lineSpacingMultiple: 1.3
+            });
+
+            const eventRatio = data.totalSpend > 0 ? ((data.eventSpend / data.totalSpend) * 100).toFixed(1) : '0.0';
+            const facRatio = data.totalSpend > 0 ? ((data.facilitySpend / data.totalSpend) * 100).toFixed(1) : '0.0';
+            const prizeRatio = data.totalSpend > 0 ? ((data.prizeSpend / data.totalSpend) * 100).toFixed(1) : '0.0';
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 5.05, y: 2.35, w: 4.15, h: 1.55,
+                rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+            });
+            s2.addText('2. [용도별 분류] 비용 성격 기준 (합계 100%)', {
+                x: 5.2, y: 2.45, w: 3.85, h: 0.25,
+                fontSize: 11, bold: true, color: '1E293B', fontFace: font
+            });
+            s2.addText(`• 🍽️ 행사비 (식대/다과/활동) : ${formatAmount(data.eventSpend)}원 (${eventRatio}%)\n• 🏟️ 시설·장비비 (대관/장비) : ${formatAmount(data.facilitySpend)}원 (${facRatio}%)\n• 🎁 상품비 (포상/경품/기념품) : ${formatAmount(data.prizeSpend)}원 (${prizeRatio}%)\n👉 총 지출 금액 합계 : ${formatAmount(data.totalSpend)}원 (100.0%)`, {
+                x: 5.2, y: 2.75, w: 3.85, h: 1.05,
+                fontSize: 10, color: '334155', fontFace: font, lineSpacingMultiple: 1.3
+            });
+
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 0.8, y: 4.05, w: 4.15, h: 1.15,
+                rectRadius: 0.08, fill: { color: 'EFF6FF' }, line: { color: 'BFDBFE', width: 1 }
+            });
+            s2.addText('👥 임직원 참여 성과 요약', {
+                x: 0.95, y: 4.15, w: 3.85, h: 0.25,
+                fontSize: 11, bold: true, color: '1D4ED8', fontFace: font
+            });
+            s2.addText(`• 전사 실참석 고유 인원 : 총 ${data.companyUniqueCount}명 (동일인 중복 제외)\n• 누적 참석 연인원 : ${data.totalAttendeesSum}명 (행사당 평균 ${data.avgAttendeesPerEvent}명 참여)`, {
+                x: 0.95, y: 4.45, w: 3.85, h: 0.65,
+                fontSize: 9.8, color: '1E3A8A', fontFace: font, lineSpacingMultiple: 1.25
+            });
+
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 5.05, y: 4.05, w: 4.15, h: 1.15,
+                rectRadius: 0.08, fill: { color: 'FEF3C7' }, line: { color: 'FDE68A', width: 1 }
+            });
+            s2.addText('🎁 상품비 규정 관리 현황 (클럽당 연 50만원 한도)', {
+                x: 5.2, y: 4.15, w: 3.85, h: 0.25,
+                fontSize: 11, bold: true, color: 'B45309', fontFace: font
+            });
+            s2.addText(`• 전사 상품비 집행 총액 : ${formatAmount(data.prizeSpend)}원 (회사 지원 ${formatAmount(data.prizeSupport)}원)\n• 규정 준수율 100% : 전 클럽 연간 한도(50만원) 내 정상 집행`, {
+                x: 5.2, y: 4.45, w: 3.85, h: 0.65,
+                fontSize: 9.8, color: '78350F', fontFace: font, lineSpacingMultiple: 1.25
+            });
+
+            // [Slide 3] 클럽별 연간 실적 종합 비교 (Summary Table)
+            const s3 = pptx.addSlide();
+            s3.background = { color: 'F8FAFC' };
+            s3.addText('CLUB COMPARISON', {
+                x: 0.8, y: 0.35, w: 8.4, h: 0.25,
+                fontSize: 10, bold: true, color: '2563EB', fontFace: font
+            });
+            s3.addText(`${targetYear}년 클럽별 연간 예산 집행 및 참여 실적 비교`, {
+                x: 0.8, y: 0.6, w: 8.4, h: 0.45,
+                fontSize: 20, bold: true, color: '0F172A', fontFace: font
+            });
+
+            const tableColWidths = [1.2, 1.0, 1.0, 1.0, 0.9, 0.7, 0.6, 0.7, 0.8, 0.5];
+            const tableHeaders = ['클럽명', '배정 예산', '총 집행액', '회사 지원금', '자부담', '소진율', '실인원', '평균인원', '상품비', '행사수'];
+            const s3HeaderRow = tableHeaders.map(h => ({
+                text: h,
+                options: { fill: '1E293B', color: 'FFFFFF', bold: true, align: 'center', fontSize: 9 }
+            }));
+
+            const s3Rows = [s3HeaderRow];
+            data.clubStats.forEach((c, idx) => {
+                const isAlt = idx % 2 === 1;
+                const bg = isAlt ? 'F8FAFC' : 'FFFFFF';
+                const row = [
+                    c.name,
+                    formatAmount(c.budget) + '원',
+                    formatAmount(c.spend) + '원',
+                    formatAmount(c.support) + '원',
+                    formatAmount(c.selfPay) + '원',
+                    `${c.burnRate.toFixed(1)}%`,
+                    `${c.uniqueCount}명`,
+                    `${c.avgAttendees}명`,
+                    formatAmount(c.prizeSpend) + '원',
+                    `${c.eventCount}회`
+                ];
+                s3Rows.push(row.map((val, cIdx) => ({
+                    text: val,
+                    options: {
+                        fill: bg,
+                        align: cIdx === 0 ? 'left' : (cIdx >= 5 ? 'center' : 'right'),
+                        fontSize: 8.5
+                    }
+                })));
+            });
+
+            const s3TotalRow = [
+                '합계 / 평균',
+                formatAmount(data.totalBudget) + '원',
+                formatAmount(data.totalSpend) + '원',
+                formatAmount(data.totalSupport) + '원',
+                formatAmount(data.totalSelfPay) + '원',
+                `${data.totalBurnRate.toFixed(1)}%`,
+                `${data.companyUniqueCount}명`,
+                `${data.avgAttendeesPerEvent}명`,
+                formatAmount(data.prizeSpend) + '원',
+                `${data.totalEventCount}회`
+            ];
+            s3Rows.push(s3TotalRow.map((val, cIdx) => ({
+                text: val,
+                options: {
+                    fill: 'EFF6FF',
+                    color: '1E40AF',
+                    bold: true,
+                    align: cIdx === 0 ? 'left' : (cIdx >= 5 ? 'center' : 'right'),
+                    fontSize: 9
+                }
+            })));
+
+            s3.addTable(s3Rows, {
+                x: 0.8, y: 1.15, w: 8.4, colW: tableColWidths,
+                fontFace: font,
+                border: { type: 'solid', pt: 0.5, color: 'CBD5E1' }
+            });
+
+            // [Slide 4 ~ N] 클럽별 상세 활동 이력
+            data.clubStats.forEach(club => {
+                if (club.entries.length === 0 && club.budget === 0) return;
+
+                const sc = pptx.addSlide();
+                sc.background = { color: 'F8FAFC' };
+                sc.addText('CLUB ACTIVITY REPORT', {
+                    x: 0.8, y: 0.35, w: 8.4, h: 0.25,
+                    fontSize: 10, bold: true, color: '2563EB', fontFace: font
+                });
+                sc.addText(`[${club.name}] ${targetYear}년 활동 및 지출 상세 내역`, {
+                    x: 0.8, y: 0.6, w: 8.4, h: 0.45,
+                    fontSize: 20, bold: true, color: '0F172A', fontFace: font
+                });
+
+                sc.addShape(pptx.ShapeType.roundRect, {
+                    x: 0.8, y: 1.15, w: 8.4, h: 0.5,
+                    rectRadius: 0.05, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+                });
+                sc.addText(`연간 예산 : ${formatAmount(club.budget)}원  |  총 집행액 : ${formatAmount(club.spend)}원 (지원금 소진율 ${club.burnRate.toFixed(1)}%)  |  참석 : 실인원 ${club.uniqueCount}명 (회당 ${club.avgAttendees}명)  |  상품비 : ${formatAmount(club.prizeSpend)}원`, {
+                    x: 0.95, y: 1.23, w: 8.1, h: 0.35,
+                    fontSize: 9.5, bold: true, color: '1E293B', fontFace: font
+                });
+
+                const timelineColW = [0.9, 1.8, 0.5, 0.9, 0.9, 0.8, 0.7, 1.9];
+                const timelineHeaders = ['진행 일자', '행사명 (비고)', '인원', '총 결제액', '회사 지원금', '개인 자부담', '상품비', '참석자 명단 요약'];
+                const tHeaderRow = timelineHeaders.map(h => ({
+                    text: h,
+                    options: { fill: '1E293B', color: 'FFFFFF', bold: true, align: 'center', fontSize: 8.5 }
+                }));
+
+                const tRows = [tHeaderRow];
+                if (club.entries.length === 0) {
+                    tRows.push([
+                        { text: '-', options: { align: 'center', fontSize: 8.5 } },
+                        { text: '해당 연도 등록된 정산 내역이 없습니다.', options: { align: 'left', fontSize: 8.5 } },
+                        { text: '0명', options: { align: 'center', fontSize: 8.5 } },
+                        { text: '0원', options: { align: 'right', fontSize: 8.5 } },
+                        { text: '0원', options: { align: 'right', fontSize: 8.5 } },
+                        { text: '0원', options: { align: 'right', fontSize: 8.5 } },
+                        { text: '0원', options: { align: 'right', fontSize: 8.5 } },
+                        { text: '-', options: { align: 'left', fontSize: 8.5 } }
+                    ]);
+                } else {
+                    club.entries.forEach((e, eIdx) => {
+                        const isAlt = eIdx % 2 === 1;
+                        const bg = isAlt ? 'F8FAFC' : 'FFFFFF';
+                        const dateStr = (e.settlementDate || (e.date ? new Date(e.date).toISOString().slice(0, 10) : '-')).slice(0, 10);
+                        const eventDesc = e.description || e.eventDescription || `${club.name} 정기 모임`;
+                        const attCount = (e.attendees && e.attendees.length) ? `${e.attendees.length}명` : `${e.attendeeCount || 0}명`;
+                        const spendStr = formatAmount(e.totalCost || 0) + '원';
+                        const suppStr = formatAmount(e.finalSupportAmount || 0) + '원';
+                        const selfStr = formatAmount(e.totalSelfPay || 0) + '원';
+                        const prizeStr = formatAmount(getHistoryPrizeCost(e)) + '원';
+
+                        const attNames = (e.attendees || []).map(a => a.name || a).filter(Boolean);
+                        const attSummary = attNames.length > 3
+                            ? `${attNames.slice(0, 3).join(', ')} 외 ${attNames.length - 3}명`
+                            : (attNames.join(', ') || '-');
+
+                        tRows.push([
+                            dateStr, eventDesc, attCount, spendStr, suppStr, selfStr, prizeStr, attSummary
+                        ].map((val, cIdx) => ({
+                            text: val,
+                            options: {
+                                fill: bg,
+                                align: (cIdx === 1 || cIdx === 7) ? 'left' : (cIdx === 0 || cIdx === 2) ? 'center' : 'right',
+                                fontSize: 8
+                            }
+                        })));
+                    });
+
+                    tRows.push([
+                        '합계',
+                        `총 ${club.eventCount}회 진행`,
+                        `${club.attendeesSum}명`,
+                        formatAmount(club.spend) + '원',
+                        formatAmount(club.support) + '원',
+                        formatAmount(club.selfPay) + '원',
+                        formatAmount(club.prizeSpend) + '원',
+                        `고유 실인원 ${club.uniqueCount}명`
+                    ].map((val, cIdx) => ({
+                        text: val,
+                        options: {
+                            fill: 'EFF6FF',
+                            color: '1E40AF',
+                            bold: true,
+                            align: (cIdx === 1 || cIdx === 7) ? 'left' : (cIdx === 0 || cIdx === 2) ? 'center' : 'right',
+                            fontSize: 8.5
+                        }
+                    })));
+                }
+
+                sc.addTable(tRows, {
+                    x: 0.8, y: 1.8, w: 8.4, colW: timelineColW,
+                    fontFace: font,
+                    border: { type: 'solid', pt: 0.5, color: 'CBD5E1' }
+                });
+            });
+
+            const fileName = `${targetYear}년_사내동호회_활동및정산_결산보고서.pptx`;
+            await pptx.writeFile({ fileName });
+            return fileName;
+        }
+    };
+
+    async function openYearEndPptModal() {
+        if (AppState.currentPin !== '000000') return;
+        const modal = document.getElementById('year-end-ppt-modal');
+        if (!modal) return;
+
+        modal.classList.remove('hidden');
+
+        const yearSelect = document.getElementById('year-end-ppt-year-select');
+        const previewBox = document.getElementById('year-end-ppt-preview-box');
+        if (!yearSelect || !previewBox) return;
+
+        previewBox.innerHTML = '<div style="font-size:0.85rem; color:var(--text-secondary); text-align:center; padding:1rem;">데이터를 불러오는 중입니다...</div>';
+
+        let historyList = lastHistoryList;
+        if (!historyList || historyList.length === 0) {
+            if (firebaseDb) {
+                try {
+                    const [snapshot, deletedSnap] = await Promise.all([
+                        firebaseDb.ref('globalHistory').once('value'),
+                        firebaseDb.ref('deletedHistoryIds').once('value')
+                    ]);
+                    const historyData = snapshot.val() || {};
+                    const cachedDeletedIds = deletedSnap.val() || {};
+                    historyList = Object.values(historyData)
+                        .filter(e => e && !cachedDeletedIds[String(e.id)])
+                        .sort(compareHistoryEntriesNewestFirst);
+                    lastHistoryList = historyList;
+                } catch (e) {
+                    console.error('globalHistory 로드 실패:', e);
+                }
+            }
+        }
+
+        const years = YearEndPptGenerator.getAvailableYears(historyList);
+        const currentYear = new Date().getFullYear();
+
+        yearSelect.innerHTML = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}년 결산</option>`).join('');
+
+        function updatePreview() {
+            const selYear = parseInt(yearSelect.value, 10) || currentYear;
+            const data = YearEndPptGenerator.collectYearData(selYear, historyList, AppState.clubRegistry);
+
+            const suppRatio = data.totalSpend > 0 ? ((data.totalSupport / data.totalSpend) * 100).toFixed(1) : '0.0';
+            const selfRatio = data.totalSpend > 0 ? ((data.totalSelfPay / data.totalSpend) * 100).toFixed(1) : '0.0';
+
+            previewBox.innerHTML = `
+                <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.6rem; font-size:0.84rem;">
+                    <div style="background:rgba(255,255,255,0.04); padding:0.6rem 0.75rem; border-radius:8px;">
+                        <span style="color:var(--text-secondary); font-size:0.75rem; display:block;">총 집행액 (총 지출)</span>
+                        <strong style="font-size:1.05rem; color:var(--text-primary);">${formatAmount(data.totalSpend)}원</strong>
+                        <div style="font-size:0.72rem; color:var(--text-secondary); margin-top:0.2rem;">총 ${data.totalEventCount}회 행사</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.04); padding:0.6rem 0.75rem; border-radius:8px;">
+                        <span style="color:var(--text-secondary); font-size:0.75rem; display:block;">연간 총 배정 예산</span>
+                        <strong style="font-size:1.05rem; color:#38bdf8;">${formatAmount(data.totalBudget)}원</strong>
+                        <div style="font-size:0.72rem; color:#34d399; margin-top:0.2rem;">소진율 ${data.totalBurnRate.toFixed(1)}%</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.04); padding:0.6rem 0.75rem; border-radius:8px;">
+                        <span style="color:var(--text-secondary); font-size:0.75rem; display:block;">회사 지원금 (법인)</span>
+                        <strong style="font-size:0.95rem; color:#34d399;">${formatAmount(data.totalSupport)}원</strong>
+                        <div style="font-size:0.72rem; color:var(--text-secondary); margin-top:0.15rem;">전체의 ${suppRatio}%</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.04); padding:0.6rem 0.75rem; border-radius:8px;">
+                        <span style="color:var(--text-secondary); font-size:0.75rem; display:block;">임직원 자부담 (개인)</span>
+                        <strong style="font-size:0.95rem; color:#f87171;">${formatAmount(data.totalSelfPay)}원</strong>
+                        <div style="font-size:0.72rem; color:var(--text-secondary); margin-top:0.15rem;">전체의 ${selfRatio}%</div>
+                    </div>
+                </div>
+                <div style="margin-top:0.75rem; padding-top:0.6rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-secondary);">
+                    <span>👥 실참석자: <strong style="color:var(--text-primary);">${data.companyUniqueCount}명</strong> (연인원 ${data.totalAttendeesSum}명)</span>
+                    <span>🎁 상품비: <strong style="color:#fbbf24;">${formatAmount(data.prizeSpend)}원</strong></span>
+                </div>
+            `;
+        }
+
+        yearSelect.onchange = updatePreview;
+        updatePreview();
+    }
+
+    function closeYearEndPptModal() {
+        const modal = document.getElementById('year-end-ppt-modal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    async function handleDownloadYearEndPpt() {
+        const yearSelect = document.getElementById('year-end-ppt-year-select');
+        const btn = document.getElementById('download-year-end-ppt-btn');
+        const btnText = document.getElementById('year-end-ppt-btn-text');
+        const btnIcon = document.getElementById('year-end-ppt-btn-icon');
+        const selYear = parseInt(yearSelect ? yearSelect.value : new Date().getFullYear(), 10) || new Date().getFullYear();
+
+        if (btn) btn.disabled = true;
+        if (btnIcon) btnIcon.textContent = '⏳';
+        if (btnText) btnText.textContent = 'PPT 생성 중...';
+
+        try {
+            let historyList = lastHistoryList;
+            if (!historyList || historyList.length === 0) {
+                if (firebaseDb) {
+                    const [snapshot, deletedSnap] = await Promise.all([
+                        firebaseDb.ref('globalHistory').once('value'),
+                        firebaseDb.ref('deletedHistoryIds').once('value')
+                    ]);
+                    const historyData = snapshot.val() || {};
+                    const cachedDeletedIds = deletedSnap.val() || {};
+                    historyList = Object.values(historyData)
+                        .filter(e => e && !cachedDeletedIds[String(e.id)])
+                        .sort(compareHistoryEntriesNewestFirst);
+                    lastHistoryList = historyList;
+                }
+            }
+
+            await YearEndPptGenerator.generateAndDownload(selYear, historyList, AppState.clubRegistry);
+            if (btnIcon) btnIcon.textContent = '✅';
+            if (btnText) btnText.textContent = '다운로드 완료!';
+            setTimeout(() => {
+                if (btnIcon) btnIcon.textContent = '📥';
+                if (btnText) btnText.textContent = 'PPTX 다운로드';
+                if (btn) btn.disabled = false;
+                closeYearEndPptModal();
+            }, 1200);
+        } catch (err) {
+            console.error('PPT 다운로드 실패:', err);
+            alert(`PPT 다운로드 중 오류가 발생했습니다: ${err.message || err}`);
+            if (btnIcon) btnIcon.textContent = '📥';
+            if (btnText) btnText.textContent = 'PPTX 다운로드';
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    document.getElementById('admin-export-ppt-btn')?.addEventListener('click', openYearEndPptModal);
+    document.getElementById('history-export-ppt-btn')?.addEventListener('click', openYearEndPptModal);
+    document.getElementById('close-year-end-ppt-modal')?.addEventListener('click', closeYearEndPptModal);
+    document.getElementById('cancel-year-end-ppt-btn')?.addEventListener('click', closeYearEndPptModal);
+    document.getElementById('download-year-end-ppt-btn')?.addEventListener('click', handleDownloadYearEndPpt);
+    document.getElementById('year-end-ppt-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'year-end-ppt-modal') closeYearEndPptModal();
     });
 
     ['audit-log-month-filter', 'audit-log-action-filter', 'audit-log-search-input'].forEach(id => {
@@ -5801,7 +6455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const clubNameWrapperEl = document.querySelector('.club-name-wrapper');
         if (clubNameWrapperEl) clubNameWrapperEl.classList.toggle('hidden', isAdmin);
 
-        const adminOnlyIds = ['admin-tab-btn', 'club-history-tab-btn', 'charts-tab-btn', 'admin-audit-log-btn'];
+        const adminOnlyIds = ['admin-tab-btn', 'club-history-tab-btn', 'charts-tab-btn', 'admin-audit-log-btn', 'admin-export-ppt-btn', 'history-export-ppt-btn'];
         const memberOnlyIds = ['settlement-tab-btn', 'attendees-tab-btn', 'history-tab-btn'];
         adminOnlyIds.forEach(id => {
             const el = document.getElementById(id);
@@ -5931,6 +6585,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.288', date: '2026.10.14', items: ['연간 클럽 결산 및 마감 PPT 보고서 자동 생성 기능 추가 (관리자 전용)', '한 해 동안의 전사 클럽 활동 및 비용 정산(총 배정 예산, 실집행액, 지원금 vs 자부담, 용도별 지출, 임직원 고유 참여율, 상품비 50만원 한도 현황 및 클럽별 상세 타임라인)을 정리한 경영진 보고용 파워포인트(.pptx) 파일 다운로드 지원', '결산 연도 선택 및 지표 요약 미리보기 모달 제공'] },
         { ver: '1.6.287', date: '2026.10.14', items: ['모바일 전체 폰트 크기 및 카드 패딩 슬림화(과도한 줄바꿈 전면 완화)', '월별 차트 막대 위 금액 초컴팩트(N만) 표기 및 9.5px 폰트로 텍스트 겹침 완벽 해결', '모바일 차트 내부 5줄 범례 숨김으로 막대 그래프 가시 영역 2배 확장'] },
         { ver: '1.6.286', date: '2026.10.14', items: ['모바일 관리자 모드 클럽 목록이 압축·찌그러져 보이는 레이아웃 버그 수정(flex-shrink: 0 및 overflow 보정)', '차트 상단 여백 및 Y축 여유 공간(grace 15%, suggestedMax 1.3배) 확대로 막대 위 금액/건수/라벨 잘림 원천 차단', '가로 막대 100% 소진율 등 막대 내부 라벨 가독성 고대비(#ffffff + 텍스트 그림자) 개선'] },
         { ver: '1.6.285', date: '2026.09.22', items: ['로그아웃 클릭 시 브라우저 confirm 대신 앱 커스텀 확인 모달(showConfirmModal)로 전환 및 로그아웃 즉시 로그인 화면으로 전환'] },
