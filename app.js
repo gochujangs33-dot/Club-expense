@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.285';
-const APP_VERSION_DATE = '2026.09.22';
+const APP_VERSION      = '1.6.286';
+const APP_VERSION_DATE = '2026.10.14';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
 function updatePerPersonSelfPayIcon(perPersonSelfPay) {
@@ -5931,6 +5931,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.286', date: '2026.10.14', items: ['모바일 관리자 모드 클럽 목록이 압축·찌그러져 보이는 레이아웃 버그 수정(flex-shrink: 0 및 overflow 보정)', '차트 상단 여백 및 Y축 여유 공간(grace 15%, suggestedMax 1.3배) 확대로 막대 위 금액/건수/라벨 잘림 원천 차단', '가로 막대 100% 소진율 등 막대 내부 라벨 가독성 고대비(#ffffff + 텍스트 그림자) 개선'] },
         { ver: '1.6.285', date: '2026.09.22', items: ['로그아웃 클릭 시 브라우저 confirm 대신 앱 커스텀 확인 모달(showConfirmModal)로 전환 및 로그아웃 즉시 로그인 화면으로 전환'] },
         { ver: '1.6.284', date: '2026.09.22', items: ['올해 사용 가능한 총 클럽예산(clubTotalBudget)을 실시간 리스너(.on)로 전환해 초기 인증 완료 및 변경 시 즉시 동기화 보장'] },
         { ver: '1.6.283', date: '2026.09.22', items: ['Firebase API Key 오탈자 수정(39자리 정상화) — 익명 자동 인증 및 비공개 DB 정상 연동'] },
@@ -6884,7 +6885,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const chartColor = clubColorMap[club.name] || resolveClubBaseColor(clubId, club);
             const row = document.createElement('div');
             row.className = 'expense-row';
-            row.style.cssText = 'padding:0.6rem 0.75rem; height:auto; align-items:center; flex-wrap:wrap;';
+            row.style.cssText = 'padding:0.6rem 0.75rem; height:auto; align-items:center; flex-wrap:wrap; flex-shrink:0;';
             row.innerHTML = `
                 <div class="expense-row-left" style="flex:1.4; min-width:90px;">
                     <span class="expense-row-title" style="font-size:0.9rem; white-space:normal; line-height:1.3;"><span style="color:var(--text-muted); margin-right:0.3em; font-weight:400;">${idx + 1}.</span>${AppState.escapeHtml(club.name)}</span>
@@ -7490,7 +7491,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!opts || !opts.getLabel) return;
             const { ctx } = chart;
             ctx.save();
-            ctx.font = "600 12px 'Malgun Gothic', '맑은 고딕', 'Segoe UI', sans-serif";
+            const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640;
+            ctx.font = isMobile
+                ? "600 11px 'Malgun Gothic', '맑은 고딕', 'Segoe UI', sans-serif"
+                : "600 12px 'Malgun Gothic', '맑은 고딕', 'Segoe UI', sans-serif";
             ctx.textBaseline = 'middle';
 
             if (chart.config.type === 'doughnut') {
@@ -7535,11 +7539,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         const dsBg = chart.data.datasets[0].backgroundColor;
                         const bg = Array.isArray(dsBg) ? dsBg[i] : dsBg;
                         ctx.textAlign = 'right';
-                        ctx.fillStyle = (opts.getColor ? opts.getColor(i) : null) || pickTextColorForBg(bg);
+                        // 막대 내부 표시 시 배경색과 고대비 텍스트(#ffffff 또는 pickTextColorForBg) 및 텍스트 그림자로 가독성 확보
+                        ctx.fillStyle = pickTextColorForBg(bg);
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                        ctx.shadowBlur = 4;
                         ctx.fillText(text, bar.x - 8, bar.y);
+                        ctx.shadowBlur = 0;
                     } else {
                         ctx.textAlign = 'left';
                         ctx.fillStyle = (opts.getColor ? opts.getColor(i) : opts.color) || '#e2e8f0';
+                        ctx.shadowBlur = 0;
                         ctx.fillText(text, bar.x + 8, bar.y);
                     }
                 });
@@ -7547,6 +7556,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 세로 막대(단일/스택): 스택 합계를 맨 위 캡에 표시
                 const n = chart.data.labels.length;
                 const metas = chart.data.datasets.map((_, di) => chart.getDatasetMeta(di));
+                const chartArea = chart.chartArea || { top: 0, bottom: chart.height };
                 for (let idx = 0; idx < n; idx++) {
                     let topEl = null, total = 0;
                     metas.forEach((meta, di) => {
@@ -7558,8 +7568,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     const text = opts.getLabel(idx, total);
                     if (!text) continue;
                     ctx.textAlign = 'center';
-                    ctx.fillStyle = opts.color || '#e2e8f0';
-                    ctx.fillText(text, topEl.x, topEl.y - 10);
+                    // 막대가 차트 최상단에 매우 근접한 경우 캔버스 밖으로 잘리지 않도록 막대 내부 상단에 고대비로 표시
+                    const isNearTop = topEl.y < chartArea.top + 16;
+                    if (isNearTop) {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                        ctx.shadowBlur = 4;
+                        ctx.fillText(text, topEl.x, topEl.y + 12);
+                        ctx.shadowBlur = 0;
+                    } else {
+                        // 캔버스 최상단(y=0) 밖으로 튀어나가지 않도록 최소 Y좌표 보장 (상단 잘림 원천 방지)
+                        const textY = Math.max(12, topEl.y - 10);
+                        ctx.fillStyle = opts.color || '#e2e8f0';
+                        ctx.shadowBlur = 0;
+                        ctx.fillText(text, topEl.x, textY);
+                    }
                 }
             }
             ctx.restore();
@@ -7741,8 +7764,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const stacked = sortedClubs.length > 1;
         // 차트 표기는 한국 원화 단위(억·만·천)로 통일한다.
-        // 축에는 단위를 간결하게, 막대 합계에는 원 단위까지 표시한다.
-        const formatKoreanWon = (value, includeWon = false) => {
+        // 축에는 단위를 간결하게, 막대 합계에는 원 단위까지 표시한다. 모바일에서는 컴팩트 단위로 겹침 방지.
+        const formatKoreanWon = (value, includeWon = false, isCompact = false) => {
             const amount = Math.round(Number(value) || 0);
             if (amount === 0) return includeWon ? '0원' : '0';
 
@@ -7752,9 +7775,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const restWon = restAfterEok % 10000;
             const parts = [];
             if (eok) parts.push(`${eok}억`);
-            if (man) parts.push(`${man.toLocaleString('ko-KR')}만`);
-            if (restWon >= 1000) parts.push(`${Math.floor(restWon / 1000)}천`);
-            if (restWon % 1000) parts.push(`${restWon % 1000}`);
+            if (man) {
+                if (isCompact && restWon >= 1000) {
+                    const decimal = Math.round((man + (restWon / 10000)) * 10) / 10;
+                    return `${decimal}만${includeWon ? '원' : ''}`;
+                }
+                parts.push(`${man.toLocaleString('ko-KR')}만`);
+            }
+            if (!isCompact) {
+                if (restWon >= 1000) parts.push(`${Math.floor(restWon / 1000)}천`);
+                if (restWon % 1000) parts.push(`${restWon % 1000}`);
+            } else if (!man && restWon >= 1000) {
+                parts.push(`${Math.floor(restWon / 1000)}천`);
+            }
             return `${parts.join(' ')}${includeWon ? '원' : ''}`;
         };
         // 스택 합계 라벨이 막대 위쪽에 잘리지 않도록 y축 최대치에 여유 확보
@@ -7769,7 +7802,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 ...barChartEntranceOptions(animateEntrance),
-                layout: { padding: { top: 22 } },
+                layout: { padding: { top: 32, left: 6, right: 10, bottom: 6 } },
                 plugins: {
                     legend: { labels: { color: '#cbd5e1', boxWidth: 12, boxHeight: 12, borderRadius: 4, padding: 12 } },
                     tooltip: {
@@ -7779,14 +7812,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     chartValueLabel: {
                         color: '#e2e8f0',
-                        getLabel: (_idx, total) => formatKoreanWon(total, true)
+                        getLabel: (_idx, total) => {
+                            const isMobileScreen = typeof window !== 'undefined' && window.innerWidth <= 640;
+                            return formatKoreanWon(total, true, isMobileScreen);
+                        }
                     }
                 },
                 scales: {
                     x: { stacked, ticks: { color: '#94a3b8', font: { size: 12, weight: '500' } }, grid: { color: 'rgba(255,255,255,0.04)' } },
                     y: {
                         stacked,
-                        suggestedMax: maxTotal * 1.15 || undefined,
+                        suggestedMax: Math.ceil(maxTotal * 1.3) || undefined,
+                        grace: '15%',
                         title: { display: true, text: '금액 (원)', color: '#94a3b8', font: { size: 12, weight: '600' } },
                         ticks: { color: '#94a3b8', callback: value => formatKoreanWon(value) },
                         grid: { color: 'rgba(255,255,255,0.05)' },
@@ -7871,8 +7908,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         getColor: (i) => getUsageRiskColor(usageRatio[i])
                     }
                 },
+                layout: { padding: { right: 16 } },
                 scales: {
-                    x: { ticks: { color: '#94a3b8', callback: (v) => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, max: 120 },
+                    x: { ticks: { color: '#94a3b8', callback: (v) => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, max: 125 },
                     y: { ticks: { color: '#cbd5e1', font: { size: 12, weight: '500' } }, grid: { display: false } }
                 }
             }

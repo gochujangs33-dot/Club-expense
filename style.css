@@ -1135,6 +1135,7 @@ input[aria-invalid="true"] {
     animation: none;
     overflow: visible;
     min-height: auto;
+    flex-shrink: 0;
 }
 
 .scroll-y::-webkit-scrollbar {
@@ -3312,7 +3313,9 @@ html[data-app-theme="light"] .audit-log-details { border-top-color: rgba(72, 91,
         grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: stretch;
         gap: 0.55rem;
-        overflow: hidden;
+        overflow: visible;
+        flex-shrink: 0;
+        min-height: auto;
     }
     #club-list-container .expense-row-left,
     #club-list-container .expense-row-right { grid-column: 1 / -1; }
