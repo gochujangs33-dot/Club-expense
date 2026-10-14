@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.294';
-const APP_VERSION_DATE = '2026.10.14';
+const APP_VERSION      = '1.6.295';
+const APP_VERSION_DATE = '2026.10.15';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
 function updatePerPersonSelfPayIcon(perPersonSelfPay) {
@@ -6995,6 +6995,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.295', date: '2026.10.15', items: ['상품비 안내 토스트 팝업 글자색 누락 버그 수정(라이트 테마에서 어두운 텍스트가 다크 배경에 묻혀 보이지 않던 현상 해결)', '상품비 안내 팝업 전용 스타일링 및 라이트 테마 카드 톤(순백색 배경·선명한 텍스트·연회색 버튼) 완벽 일체화', '상품비 안내 팝업 내 상태 아이콘(🎁/🚫/⚠️) 및 키보드(Enter/Esc) 닫기 편의 기능 지원'] },
         { ver: '1.6.294', date: '2026.10.14', items: ['관리자 클럽 및 예산 관리 목록 라이트 테마 색상 보정(어둡게 뜨던 예산·기존사용·상품비·잔여예산 타일 배경 및 인풋·버튼 스타일 라이트 테마 일체화)'] },
         { ver: '1.6.293', date: '2026.10.14', items: ['비용 항목 추가 폼 내 법인카드 결제 금액 입력 칸 너비 최적화 및 우측에 영수증 첨부 버튼 나란히 배치(줄바꿈 방지 및 데스크톱/모바일 칼정렬)'] },
         { ver: '1.6.292', date: '2026.10.14', items: ['라이트 테마 색상 매칭 보정(클럽별 정산 이력 카드·요약 타일·테이블 헤더 및 읽기전용 인풋 스타일 일체화)', '상단 클럽 선택창 배경 화살표(down-arrow) 중복 렌더링 제거로 깔끔한 타이틀 스타일 복원', '비용 항목 추가 폼 내 입력 필드(금액/카테고리/법인카드/개인카드) 수직 여백(gap/margin) 정돈으로 칸 달라붙음 해결'] },
@@ -10471,19 +10472,32 @@ function showPrizeModal(message, onOk, type) {
     const overlay = document.getElementById('prize-modal-overlay');
     const msgEl = document.getElementById('prize-modal-msg');
     const iconEl = document.getElementById('prize-modal-icon');
+    const okBtn = document.getElementById('prize-modal-ok');
     if (!overlay || !msgEl) { alert(message); if (onOk) onOk(); return; }
 
     msgEl.textContent = message;
     if (iconEl) iconEl.textContent = type === 'block' ? '🚫' : type === 'warn' ? '⚠️' : '🎁';
     overlay.style.display = 'flex';
+    if (okBtn) okBtn.focus();
 
-    const okBtn = document.getElementById('prize-modal-ok');
-    const handler = () => {
+    let isClosed = false;
+    const cleanup = () => {
+        if (isClosed) return;
+        isClosed = true;
         overlay.style.display = 'none';
-        okBtn.removeEventListener('click', handler);
+        if (okBtn) okBtn.removeEventListener('click', handleOk);
+        document.removeEventListener('keydown', handleKey);
         if (onOk) onOk();
     };
-    okBtn.addEventListener('click', handler);
+    const handleOk = () => cleanup();
+    const handleKey = (e) => {
+        if (e.key === 'Escape' || e.key === 'Enter') {
+            e.preventDefault();
+            cleanup();
+        }
+    };
+    if (okBtn) okBtn.addEventListener('click', handleOk);
+    document.addEventListener('keydown', handleKey);
 }
 
 function formatMediaSize(bytes) {
