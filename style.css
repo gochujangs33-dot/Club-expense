@@ -639,27 +639,30 @@ button, input, select, label, a {
 
 .club-name-wrapper {
     margin: 0.5rem 0 0.25rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .club-name-input {
     background: transparent;
     border: none;
-    border-bottom: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.25);
     border-radius: 0;
     color: var(--color-secondary);
     font-family: var(--font-heading);
     font-size: 1.15rem;
-    font-weight: 600;
+    font-weight: 700;
     text-align: center;
-    width: min(280px, 80vw);
-    padding: 0.25rem 0.5rem;
+    width: min(300px, 85vw);
+    padding: 0.35rem 1.6rem;
     outline: none;
     transition: border-color 0.25s ease;
     letter-spacing: 0.02em;
 }
 
 .club-name-input::placeholder {
-    color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.25);
     font-weight: 400;
 }
 
@@ -671,7 +674,14 @@ button, input, select, label, a {
 
 select.club-name-input {
     cursor: pointer;
-    appearance: auto;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: transparent !important;
+    background-image: none !important;
+    padding: 0.35rem 0.5rem !important;
+    text-align: center;
+    text-align-last: center;
 }
 
 select.club-name-input option {
@@ -847,6 +857,12 @@ select.club-name-input option {
     gap: 1.25rem;
 }
 
+#expense-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+}
+
 .input-group {
     display: flex;
     flex-direction: column;
@@ -858,6 +874,30 @@ select.club-name-input option {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+#corp-amount-group,
+#personal-amount-group {
+    width: 100%;
+    flex: 1 1 100%;
+    margin-top: 0.65rem;
+    margin-bottom: 0.4rem;
+}
+
+#corp-amount-group > div:first-child,
+#personal-amount-group > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: nowrap;
+}
+
+#corp-amount-group label[for="expense-corporate-amount-input"],
+#personal-amount-group label[for="expense-personal-amount-input"] {
+    min-width: 62px;
+    font-weight: 700;
+    color: var(--text-primary);
 }
 
 .flex-2 { flex: 2; }
@@ -3036,7 +3076,16 @@ html[data-app-theme="light"] .card {
 html[data-app-theme="light"] .card:hover { box-shadow: 0 14px 34px rgba(49, 69, 108, 0.15); }
 html[data-app-theme="light"] .card-header { border-bottom-color: rgba(72, 91, 128, 0.12); }
 html[data-app-theme="light"] .club-name-input {
-    border-bottom-color: rgba(72, 91, 128, 0.24);
+    border-bottom-color: rgba(72, 91, 128, 0.35);
+    color: #17243b;
+}
+html[data-app-theme="light"] select.club-name-input {
+    background: transparent !important;
+    background-image: none !important;
+    padding: 0.35rem 0.5rem !important;
+    color: #17243b !important;
+    text-align: center;
+    text-align-last: center;
 }
 html[data-app-theme="light"] .club-name-input::placeholder { color: rgba(72, 91, 128, 0.42); }
 
@@ -3057,6 +3106,9 @@ html[data-app-theme="light"] textarea:focus {
 }
 html[data-app-theme="light"] select {
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2353647e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    background-size: 1rem !important;
 }
 html[data-app-theme="light"] select option { background: #f2f5f8; color: #17243b; }
 html[data-app-theme="light"] input:-webkit-autofill,
@@ -3140,6 +3192,107 @@ html[data-app-theme="light"] #edit-user-pin-input {
 html[data-app-theme="light"] .scroll-y::-webkit-scrollbar-track { background: rgba(72, 91, 128, 0.05); }
 html[data-app-theme="light"] .scroll-y::-webkit-scrollbar-thumb { background: rgba(72, 91, 128, 0.22); }
 html[data-app-theme="light"] .audit-log-details { border-top-color: rgba(72, 91, 128, 0.18); }
+
+/* 읽기 전용 인풋 및 사진 프리뷰 라이트 테마 보정 */
+html[data-app-theme="light"] .readonly-input,
+html[data-app-theme="light"] input[readonly] {
+    background: #e9eef4 !important;
+    color: #334155 !important;
+    border-color: rgba(72, 91, 128, 0.22) !important;
+}
+html[data-app-theme="light"] #event-photo-preview,
+html[data-app-theme="light"] #feedback-photo-preview {
+    background: #e9eef4 !important;
+}
+html[data-app-theme="light"] .input-hint {
+    color: #4f46e5;
+}
+html[data-app-theme="light"] #prize-remaining-hint {
+    color: #059669 !important;
+}
+
+/* 클럽별 정산 이력 및 사용 요약 라이트 테마 완벽 보정 */
+html[data-app-theme="light"] .admin-inline-club-usage-card {
+    background: #ffffff !important;
+    border-color: rgba(72, 91, 128, 0.18) !important;
+    box-shadow: 0 4px 16px rgba(49, 69, 108, 0.08);
+}
+html[data-app-theme="light"] .admin-inline-club-usage-header {
+    border-bottom-color: rgba(72, 91, 128, 0.14) !important;
+}
+html[data-app-theme="light"] .admin-history-club-heading strong {
+    color: #1e293b !important;
+}
+html[data-app-theme="light"] .admin-history-club-count {
+    color: #64748b !important;
+}
+html[data-app-theme="light"] .admin-history-club-group {
+    background: #ffffff !important;
+    border-color: rgba(72, 91, 128, 0.18) !important;
+    box-shadow: 0 4px 16px rgba(49, 69, 108, 0.08);
+}
+html[data-app-theme="light"] .admin-history-club-group > summary {
+    background: #f1f5f9 !important;
+}
+html[data-app-theme="light"] .admin-history-club-summary-btn {
+    background: rgba(14, 165, 233, 0.12) !important;
+    border-color: rgba(14, 165, 233, 0.35) !important;
+    color: #0284c7 !important;
+}
+
+html[data-app-theme="light"] .club-usage-total-card {
+    background: #f8fafc !important;
+    border-color: rgba(72, 91, 128, 0.15) !important;
+}
+html[data-app-theme="light"] .club-usage-total-card span {
+    color: #64748b !important;
+}
+html[data-app-theme="light"] .club-usage-total-card strong {
+    color: #1e293b !important;
+}
+html[data-app-theme="light"] .club-usage-total-card.budget strong { color: #0284c7 !important; }
+html[data-app-theme="light"] .club-usage-total-card.remaining strong { color: #059669 !important; }
+html[data-app-theme="light"] .club-usage-total-card.remaining.over-budget strong { color: #dc2626 !important; }
+html[data-app-theme="light"] .club-usage-total-card.support strong { color: #059669 !important; }
+html[data-app-theme="light"] .club-usage-total-card.selfpay strong { color: #e11d48 !important; }
+html[data-app-theme="light"] .club-usage-total-card.prize strong { color: #d97706 !important; }
+
+html[data-app-theme="light"] .club-usage-summary-table-wrap {
+    border-color: rgba(72, 91, 128, 0.16) !important;
+    background: #ffffff !important;
+}
+html[data-app-theme="light"] .club-usage-summary-table th {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+    border-bottom: 1.5px solid rgba(72, 91, 128, 0.18) !important;
+}
+html[data-app-theme="light"] .club-usage-summary-table td {
+    border-bottom: 1px solid rgba(72, 91, 128, 0.1) !important;
+    color: #1e293b !important;
+}
+html[data-app-theme="light"] .club-usage-summary-table tbody tr {
+    background: #ffffff !important;
+}
+html[data-app-theme="light"] .club-usage-summary-table tbody tr:hover {
+    background: #f8fafc !important;
+}
+html[data-app-theme="light"] .club-usage-attendee-button {
+    background: rgba(14, 165, 233, 0.12) !important;
+    border-color: rgba(14, 165, 233, 0.35) !important;
+    color: #0284c7 !important;
+}
+html[data-app-theme="light"] .club-usage-delete-button {
+    background: #fee2e2 !important;
+    border-color: rgba(239, 68, 68, 0.32) !important;
+    color: #dc2626 !important;
+}
+html[data-app-theme="light"] .club-usage-delete-button:hover:not(:disabled) {
+    background: #fecaca !important;
+}
+html[data-app-theme="light"] .club-usage-date-button {
+    color: #1e293b !important;
+    border-bottom-color: rgba(2, 132, 199, 0.5) !important;
+}
 
 @media (max-width: 820px) {
     .charts-premium-grid > .card,
