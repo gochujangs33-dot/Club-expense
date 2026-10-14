@@ -710,6 +710,27 @@ select.club-name-input option {
     width: 100%;
 }
 
+@media (min-width: 869px) {
+    .panel-right {
+        position: sticky;
+        top: 1rem;
+        align-self: flex-start;
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+        padding-right: 0.25rem;
+    }
+    .panel-right::-webkit-scrollbar {
+        width: 5px;
+    }
+    .panel-right::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+    }
+    .panel-right::-webkit-scrollbar-track {
+        background: transparent;
+    }
+}
+
 @media (max-width: 868px) {
     .layout-grid {
         grid-template-columns: 1fr;
@@ -2848,6 +2869,20 @@ body:has(.update-banner:not(.hidden)) {
     box-shadow: 0 10px 24px rgba(0,0,0,0.12), inset 0 1px rgba(255,255,255,0.05);
     transition: transform 0.2s ease, border-color 0.2s ease;
 }
+.charts-kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--kpi-accent, #6366f1);
+    opacity: 0.85;
+}
+.charts-kpi-card.kpi-budget { --kpi-accent: #6366f1; }
+.charts-kpi-card.kpi-used { --kpi-accent: #fb923c; }
+.charts-kpi-card.kpi-remaining { --kpi-accent: #10b981; }
+.charts-kpi-card.kpi-count { --kpi-accent: #38bdf8; }
 .charts-kpi-card::after {
     content: '';
     position: absolute;
@@ -2867,6 +2902,25 @@ body:has(.update-banner:not(.hidden)) {
 .charts-kpi-card.kpi-used .charts-kpi-val { color: #fb923c; }
 .charts-kpi-card.kpi-remaining .charts-kpi-val { color: #34d399; }
 .charts-kpi-card.kpi-count .charts-kpi-val { color: #60a5fa; }
+.kpi-mini-gauge-wrap { position: relative; z-index: 1; }
+.kpi-mini-gauge-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    margin-top: 0.3rem;
+    overflow: hidden;
+}
+html[data-app-theme="light"] .kpi-mini-gauge-track {
+    background: rgba(0, 0, 0, 0.08);
+}
+#charts-usage-gauge-fill {
+    width: 0%;
+    height: 100%;
+    background: #fb923c;
+    border-radius: 2px;
+    transition: width 0.4s ease, background 0.3s ease;
+}
 
 .charts-filter-card {
     margin-bottom: 0.85rem;

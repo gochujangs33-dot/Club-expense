@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.289';
+const APP_VERSION      = '1.6.290';
 const APP_VERSION_DATE = '2026.10.14';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -6987,6 +6987,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.290', date: '2026.10.14', items: ['[대시보드] Bento 지표 카드 상단 컬러 액센트 바 및 실시간 예산 소진율 미니 게이지 바 연동', '[정산화면] 데스크톱 2-Column 분할 유지 및 우측 실시간 정산·예산 요약 패널 Sticky 고정(스크롤 무관 항상 노출)', '모바일/PC 반응형 레이아웃 및 다크/라이트 테마 가독성 유지'] },
         { ver: '1.6.289', date: '2026.10.14', items: ['연간 결산 PPT 보고서 비주얼 디자인 스타일링 및 슬라이드 레이아웃 전면 고도화', '고해상도 캔버스 차트 2종(재원별·용도별 2대 도넛 차트 및 클럽별 예산 소진율 수평 막대 차트) 자동 렌더링 및 슬라이드 삽입', '[신규] 클럽별 핵심 성과 벤치마크 슬라이드(최다 참여·최다 활동·모범 예산 클럽 랭킹 및 경영 인사이트) 및 엔딩 슬라이드(Closing) 추가', '결산 모달 UI 소진율 프로그레스 게이지 바 및 생성 단계별(데이터 취합→차트 렌더링→슬라이드 빌드) 실시간 피드백 지원'] },
         { ver: '1.6.288', date: '2026.10.14', items: ['연간 클럽 결산 및 마감 PPT 보고서 자동 생성 기능 추가 (관리자 전용)', '한 해 동안의 전사 클럽 활동 및 비용 정산(총 배정 예산, 실집행액, 지원금 vs 자부담, 용도별 지출, 임직원 고유 참여율, 상품비 50만원 한도 현황 및 클럽별 상세 타임라인)을 정리한 경영진 보고용 파워포인트(.pptx) 파일 다운로드 지원', '결산 연도 선택 및 지표 요약 미리보기 모달 제공'] },
         { ver: '1.6.287', date: '2026.10.14', items: ['모바일 전체 폰트 크기 및 카드 패딩 슬림화(과도한 줄바꿈 전면 완화)', '월별 차트 막대 위 금액 초컴팩트(N만) 표기 및 9.5px 폰트로 텍스트 겹침 완벽 해결', '모바일 차트 내부 5줄 범례 숨김으로 막대 그래프 가시 영역 2배 확장'] },
@@ -8336,6 +8337,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const usageRate = totalBudget > 0 ? Math.round((usedBudget / totalBudget) * 1000) / 10 : 0;
             usageRateEl.textContent = `예산 소진율 ${usageRate}%`;
             usageRateEl.style.color = getUsageRiskColor(usageRate);
+            const usageGaugeFillEl = document.getElementById('charts-usage-gauge-fill');
+            if (usageGaugeFillEl) {
+                const gaugePct = Math.min(100, Math.max(0, usageRate));
+                usageGaugeFillEl.style.width = `${gaugePct}%`;
+                usageGaugeFillEl.style.background = getUsageRiskColor(usageRate);
+            }
         }
     }
 
