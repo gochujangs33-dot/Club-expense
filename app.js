@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.293';
+const APP_VERSION      = '1.6.294';
 const APP_VERSION_DATE = '2026.10.14';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -6995,6 +6995,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.294', date: '2026.10.14', items: ['관리자 클럽 및 예산 관리 목록 라이트 테마 색상 보정(어둡게 뜨던 예산·기존사용·상품비·잔여예산 타일 배경 및 인풋·버튼 스타일 라이트 테마 일체화)'] },
         { ver: '1.6.293', date: '2026.10.14', items: ['비용 항목 추가 폼 내 법인카드 결제 금액 입력 칸 너비 최적화 및 우측에 영수증 첨부 버튼 나란히 배치(줄바꿈 방지 및 데스크톱/모바일 칼정렬)'] },
         { ver: '1.6.292', date: '2026.10.14', items: ['라이트 테마 색상 매칭 보정(클럽별 정산 이력 카드·요약 타일·테이블 헤더 및 읽기전용 인풋 스타일 일체화)', '상단 클럽 선택창 배경 화살표(down-arrow) 중복 렌더링 제거로 깔끔한 타이틀 스타일 복원', '비용 항목 추가 폼 내 입력 필드(금액/카테고리/법인카드/개인카드) 수직 여백(gap/margin) 정돈으로 칸 달라붙음 해결'] },
         { ver: '1.6.291', date: '2026.10.14', items: ['로그아웃 및 정산 완료 시 삭제 안내(휴지통 🗑️ 아이콘/삭제 확인) 팝업이 뜨던 안내 문구 버그 수정', '확인 모달(showConfirmModal)에 작업 유형별 커스텀 제목·아이콘(🚪 로그아웃, 💾 정산 완료 등) 및 전용 확인 버튼 지원 추가'] },
@@ -7974,7 +7975,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text" inputmode="numeric" class="club-prior-used-input" data-id="${AppState.escapeHtml(clubId)}"
                         value="${priorUsed ? formatAmount(priorUsed) : ''}" placeholder="0"
                         data-tooltip="앱 사용 전 올해 이미 지출한 금액 — 입력하면 잔여 예산에서 자동 차감됩니다"
-                        style="width:100px; padding:0.25rem 0.4rem; font-size:0.82rem; text-align:center; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); border-radius:6px; color:inherit;">
+                        style="width:100px; padding:0.25rem 0.4rem; font-size:0.82rem; text-align:center; border-radius:6px;">
                 </div>
                 <div style="flex:1.1; min-width:90px; text-align:center;">
                     <div style="font-size:0.7rem; color:var(--text-secondary);">🎁 상품비 사용</div>
@@ -7989,11 +7990,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-add-club-budget btn-secondary" data-id="${AppState.escapeHtml(clubId)}"
                         data-tooltip="이 클럽의 배정 예산에 금액을 더합니다 (기존 배정 예산 + 입력한 금액)"
                         style="padding:0.3rem 0.6rem; font-size:0.78rem;">${t('btn.add_budget')}</button>
-                    <button class="btn-toggle-overlimit" data-id="${AppState.escapeHtml(clubId)}" data-current="${overLimitApproved ? '1' : '0'}"
+                    <button class="btn-toggle-overlimit ${overLimitApproved ? 'is-approved' : ''}" data-id="${AppState.escapeHtml(clubId)}" data-current="${overLimitApproved ? '1' : '0'}"
                         data-tooltip="이사진 승인 시 이 클럽의 다음 정산 1건에 한해 인당 85,000원 초과 지원을 허용합니다 (클럽 잔여 예산은 여전히 초과 불가). 정산이 확정되면 사용 여부와 관계없이 자동으로 미승인 상태로 되돌아갑니다."
-                        style="padding:0.15rem 0.35rem; font-size:0.64rem; border-radius:5px; cursor:pointer; white-space:nowrap; ${overLimitApproved
-                            ? 'background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.55); color:#fca5a5;'
-                            : 'background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:var(--text-secondary);'}">${overLimitApproved ? '🔓 85K 승인됨' : '🔒 85K 미승인'}</button>
+                        style="padding:0.15rem 0.35rem; font-size:0.64rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${overLimitApproved ? '🔓 85K 승인됨' : '🔒 85K 미승인'}</button>
                     <button class="btn-edit-club btn-secondary" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">${t('btn.edit')}</button>
                     <button class="btn-delete-club btn-text-danger" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">${t('btn.delete')}</button>
                 </div>

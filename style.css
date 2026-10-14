@@ -1247,6 +1247,24 @@ input[aria-invalid="true"] {
     flex-shrink: 0;
 }
 
+#club-list-container .club-prior-used-input {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: inherit;
+}
+
+#club-list-container .btn-toggle-overlimit {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--text-secondary);
+}
+
+#club-list-container .btn-toggle-overlimit.is-approved {
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.55);
+    color: #fca5a5;
+}
+
 .scroll-y::-webkit-scrollbar {
     width: 6px;
 }
@@ -3342,6 +3360,95 @@ html[data-app-theme="light"] .club-usage-date-button {
     border-bottom-color: rgba(2, 132, 199, 0.5) !important;
 }
 
+/* 관리자 클럽 및 예산 관리 라이트 테마 보정 */
+html[data-app-theme="light"] #club-list-container .expense-row {
+    background: #ffffff !important;
+    border: 1px solid rgba(72, 91, 128, 0.18) !important;
+    box-shadow: 0 4px 16px rgba(49, 69, 108, 0.06);
+    color: #1e293b !important;
+}
+
+html[data-app-theme="light"] #club-list-container .expense-row:hover {
+    background: #ffffff !important;
+}
+
+html[data-app-theme="light"] #club-list-container .expense-row-title {
+    color: #1e293b !important;
+}
+
+html[data-app-theme="light"] #club-list-container .club-chart-color-wrap {
+    color: #64748b !important;
+}
+
+html[data-app-theme="light"] #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) {
+    background: #f8fafc !important;
+    border: 1px solid rgba(72, 91, 128, 0.14) !important;
+    color: #1e293b !important;
+}
+
+html[data-app-theme="light"] #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) > div:first-child {
+    color: #64748b !important;
+    font-weight: 600;
+}
+
+html[data-app-theme="light"] #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) > div:nth-child(2) {
+    color: #1e293b !important;
+    font-weight: 700;
+}
+
+html[data-app-theme="light"] #club-list-container .club-prior-used-input {
+    background: #ffffff !important;
+    border: 1px solid rgba(72, 91, 128, 0.28) !important;
+    color: #1e293b !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html[data-app-theme="light"] #club-list-container .club-prior-used-input:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15) !important;
+}
+
+html[data-app-theme="light"] #club-list-container .btn-add-club-budget,
+html[data-app-theme="light"] #club-list-container .btn-edit-club {
+    background: #f1f5f9 !important;
+    border: 1px solid rgba(72, 91, 128, 0.22) !important;
+    color: #1e293b !important;
+}
+
+html[data-app-theme="light"] #club-list-container .btn-add-club-budget:hover,
+html[data-app-theme="light"] #club-list-container .btn-edit-club:hover {
+    background: #e2e8f0 !important;
+}
+
+html[data-app-theme="light"] #club-list-container .btn-toggle-overlimit {
+    background: #f8fafc !important;
+    border: 1px solid rgba(72, 91, 128, 0.24) !important;
+    color: #475569 !important;
+}
+
+html[data-app-theme="light"] #club-list-container .btn-toggle-overlimit.is-approved {
+    background: #fef2f2 !important;
+    border: 1px solid rgba(239, 68, 68, 0.45) !important;
+    color: #dc2626 !important;
+}
+
+html[data-app-theme="light"] #club-list-container .btn-delete-club {
+    background: #fee2e2 !important;
+    border: 1px solid rgba(239, 68, 68, 0.32) !important;
+    color: #dc2626 !important;
+    border-radius: 6px;
+}
+
+html[data-app-theme="light"] #club-list-container .btn-delete-club:hover {
+    background: #fecaca !important;
+}
+
+html[data-app-theme="light"] #dedup-clubs-btn {
+    background: #fff1f2 !important;
+    border: 1px solid rgba(239, 68, 68, 0.35) !important;
+    color: #e11d48 !important;
+}
+
 @media (max-width: 820px) {
     .charts-premium-grid > .card,
     .charts-premium-grid > .chart-span-wide,
@@ -3599,9 +3706,13 @@ html[data-app-theme="light"] .club-usage-date-button {
     #club-list-container .expense-row-right { grid-column: 1 / -1; }
     #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) {
         min-width: 0 !important;
-        padding: 0.45rem;
+        padding: 0.5rem 0.45rem;
         border-radius: 8px;
         background: rgba(15, 23, 42, 0.42);
+    }
+    html[data-app-theme="light"] #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) {
+        background: #f8fafc !important;
+        border: 1px solid rgba(72, 91, 128, 0.14) !important;
     }
     #club-list-container .club-prior-used-input { width: 100% !important; max-width: none; }
     #club-list-container .expense-row-right {
