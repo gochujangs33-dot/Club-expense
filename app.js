@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.290';
+const APP_VERSION      = '1.6.291';
 const APP_VERSION_DATE = '2026.10.14';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -6181,7 +6181,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         }, 2000);
                     }
                 },
-                '확인'
+                '저장 및 정산 완료',
+                '정산 완료 확인',
+                '💾'
             );
         });
     }
@@ -6958,14 +6960,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     logoutBtn.addEventListener('click', () => {
-        showConfirmModal(t('confirm.logout') || '로그아웃 하시겠습니까?', () => {
-            switchToOfflineMode();
-            pinErrorText.classList.add('hidden');
-            resetPinInput();
-            document.getElementById('login-mode-section').classList.remove('hidden');
-            document.getElementById('register-mode-section').classList.add('hidden');
-            pinModal.classList.remove('hidden');
-        });
+        showConfirmModal(
+            t('confirm.logout') || '로그아웃 하시겠습니까?',
+            () => {
+                switchToOfflineMode();
+                pinErrorText.classList.add('hidden');
+                resetPinInput();
+                document.getElementById('login-mode-section').classList.remove('hidden');
+                document.getElementById('register-mode-section').classList.add('hidden');
+                pinModal.classList.remove('hidden');
+            },
+            '로그아웃',
+            '로그아웃 안내',
+            '🚪'
+        );
     });
 
     loginBtn.addEventListener('click', () => {
@@ -6987,6 +6995,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.291', date: '2026.10.14', items: ['로그아웃 및 정산 완료 시 삭제 안내(휴지통 🗑️ 아이콘/삭제 확인) 팝업이 뜨던 안내 문구 버그 수정', '확인 모달(showConfirmModal)에 작업 유형별 커스텀 제목·아이콘(🚪 로그아웃, 💾 정산 완료 등) 및 전용 확인 버튼 지원 추가'] },
         { ver: '1.6.290', date: '2026.10.14', items: ['[대시보드] Bento 지표 카드 상단 컬러 액센트 바 및 실시간 예산 소진율 미니 게이지 바 연동', '[정산화면] 데스크톱 2-Column 분할 유지 및 우측 실시간 정산·예산 요약 패널 Sticky 고정(스크롤 무관 항상 노출)', '모바일/PC 반응형 레이아웃 및 다크/라이트 테마 가독성 유지'] },
         { ver: '1.6.289', date: '2026.10.14', items: ['연간 결산 PPT 보고서 비주얼 디자인 스타일링 및 슬라이드 레이아웃 전면 고도화', '고해상도 캔버스 차트 2종(재원별·용도별 2대 도넛 차트 및 클럽별 예산 소진율 수평 막대 차트) 자동 렌더링 및 슬라이드 삽입', '[신규] 클럽별 핵심 성과 벤치마크 슬라이드(최다 참여·최다 활동·모범 예산 클럽 랭킹 및 경영 인사이트) 및 엔딩 슬라이드(Closing) 추가', '결산 모달 UI 소진율 프로그레스 게이지 바 및 생성 단계별(데이터 취합→차트 렌더링→슬라이드 빌드) 실시간 피드백 지원'] },
         { ver: '1.6.288', date: '2026.10.14', items: ['연간 클럽 결산 및 마감 PPT 보고서 자동 생성 기능 추가 (관리자 전용)', '한 해 동안의 전사 클럽 활동 및 비용 정산(총 배정 예산, 실집행액, 지원금 vs 자부담, 용도별 지출, 임직원 고유 참여율, 상품비 50만원 한도 현황 및 클럽별 상세 타임라인)을 정리한 경영진 보고용 파워포인트(.pptx) 파일 다운로드 지원', '결산 연도 선택 및 지표 요약 미리보기 모달 제공'] },
@@ -8101,7 +8110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 중복이 있는 그룹만 추출
             const dupGroups = Object.values(groups).filter(g => g.length > 1);
             if (dupGroups.length === 0) {
-                showConfirmModal('중복된 클럽이 없습니다.');
+                showConfirmModal('중복된 클럽이 없습니다.', null, '확인', '알림', 'ℹ️');
                 return;
             }
             const totalDups = dupGroups.reduce((s, g) => s + g.length - 1, 0);
@@ -8173,7 +8182,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ([id, c]) => id !== editingClubId && c.name.trim().toLowerCase() === nameLower
             );
             if (duplicate) {
-                showConfirmModal(`'${name}' 이름의 클럽이 이미 존재합니다.\n동일한 이름의 클럽은 추가할 수 없습니다.`);
+                showConfirmModal(`'${name}' 이름의 클럽이 이미 존재합니다.\n동일한 이름의 클럽은 추가할 수 없습니다.`, null, '확인', '알림', '⚠️');
                 return;
             }
 
@@ -10387,8 +10396,9 @@ function showEditModal(title, hint, defaultValue, onConfirm) {
 }
 
 // 확인 커스텀 모달 (테마 적용)
-// okLabel 미지정 → 삭제 스타일(빨강), 지정 시 확인 스타일(파랑)
-function showConfirmModal(message, onConfirm, okLabel) {
+// 확인 커스텀 모달 (테마 적용)
+// okLabel 미지정 → 삭제 스타일(빨강), 지정 시 확인 스타일(파랑/보라)
+function showConfirmModal(message, onConfirm, okLabel, customTitle, customIcon) {
     const overlay   = document.getElementById('confirm-modal-overlay');
     const msgEl     = document.getElementById('confirm-modal-msg');
     const okBtn     = document.getElementById('confirm-modal-ok');
@@ -10403,23 +10413,37 @@ function showConfirmModal(message, onConfirm, okLabel) {
     msgEl.textContent = message;
 
     if (isDelete) {
-        if (box)    box.style.borderColor   = 'rgba(239,68,68,0.55)';
-        if (box)    box.style.boxShadow     = '0 0 40px rgba(239,68,68,0.22), 0 12px 48px rgba(0,0,0,0.7)';
-        if (iconEl) iconEl.textContent      = '🗑️';
-        if (titleEl){ titleEl.textContent   = '삭제 확인'; titleEl.style.color = 'rgba(239,68,68,0.7)'; }
+        if (box) {
+            box.style.borderColor = 'rgba(239,68,68,0.55)';
+            box.style.boxShadow   = '0 0 40px rgba(239,68,68,0.22), 0 12px 48px rgba(0,0,0,0.7)';
+        }
+        if (iconEl) iconEl.textContent = customIcon || '🗑️';
+        if (titleEl) {
+            titleEl.textContent = customTitle || '삭제 확인';
+            titleEl.style.color = 'rgba(239,68,68,0.7)';
+        }
         okBtn.textContent     = '삭제';
         okBtn.style.background = 'rgba(239,68,68,0.25)';
         okBtn.style.border     = '2px solid rgba(239,68,68,0.65)';
         okBtn.style.color      = '#fca5a5';
     } else {
-        if (box)    box.style.borderColor   = 'rgba(99,102,241,0.55)';
-        if (box)    box.style.boxShadow     = '0 0 40px rgba(99,102,241,0.18), 0 12px 48px rgba(0,0,0,0.7)';
-        if (iconEl) iconEl.textContent      = '✅';
-        if (titleEl){ titleEl.textContent   = '확인'; titleEl.style.color = 'rgba(99,102,241,0.8)'; }
+        if (box) {
+            box.style.borderColor = 'rgba(99,102,241,0.55)';
+            box.style.boxShadow   = '0 0 40px rgba(99,102,241,0.18), 0 12px 48px rgba(0,0,0,0.7)';
+        }
+        if (iconEl) iconEl.textContent = customIcon || '✅';
+        if (titleEl) {
+            titleEl.textContent = customTitle || '확인';
+            titleEl.style.color = 'rgba(99,102,241,0.8)';
+        }
         okBtn.textContent     = okLabel;
         okBtn.style.background = 'rgba(99,102,241,0.25)';
         okBtn.style.border     = '2px solid rgba(99,102,241,0.65)';
         okBtn.style.color      = '#c7d2fe';
+    }
+
+    if (cancelBtn) {
+        cancelBtn.style.display = onConfirm ? 'inline-block' : 'none';
     }
 
     overlay.style.display = 'flex';
