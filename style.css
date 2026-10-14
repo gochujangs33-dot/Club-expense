@@ -545,6 +545,25 @@ button, input, select, label, a {
         width: 100%;
     }
 
+    .card-amount-row {
+        gap: 0.5rem;
+    }
+    .card-amount-row > label {
+        width: 54px;
+        min-width: 54px;
+        font-size: 0.88rem;
+    }
+    .card-amount-input {
+        flex: 1 1 auto;
+        min-width: 100px;
+        width: auto;
+        max-width: none;
+    }
+    .receipt-action-group label.btn-secondary {
+        padding: 0.45rem 0.75rem;
+        font-size: 0.82rem;
+    }
+
     /* 헤더 */
     .logo-icon { font-size: 1.5rem; }
     .app-header h1 { font-size: 1.6rem; }
@@ -881,23 +900,52 @@ select.club-name-input option {
 #personal-amount-group {
     width: 100%;
     flex: 1 1 100%;
-    margin-top: 0.65rem;
-    margin-bottom: 0.4rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.35rem;
 }
 
-#corp-amount-group > div:first-child,
-#personal-amount-group > div:first-child {
+.card-amount-row {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.75rem;
+    width: 100%;
     flex-wrap: nowrap;
 }
 
-#corp-amount-group label[for="expense-corporate-amount-input"],
-#personal-amount-group label[for="expense-personal-amount-input"] {
+.card-amount-row > label {
+    width: 62px;
     min-width: 62px;
+    flex-shrink: 0;
+    margin: 0;
     font-weight: 700;
+    font-size: 0.95rem;
     color: var(--text-primary);
+}
+
+.card-amount-input {
+    flex: 0 1 210px;
+    width: 210px;
+    min-width: 130px;
+    max-width: 240px;
+}
+
+.receipt-action-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+
+.receipt-action-group label.btn-secondary {
+    margin: 0;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.52rem 1.05rem;
+    white-space: nowrap;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .flex-2 { flex: 2; }
@@ -3511,19 +3559,24 @@ html[data-app-theme="light"] .club-usage-date-button {
     }
     #corp-amount-group > div:first-child,
     #personal-amount-group > div:first-child {
-        display: grid !important;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 0.5rem !important;
+        display: flex !important;
         align-items: center !important;
+        gap: 0.5rem !important;
+        flex-wrap: nowrap !important;
     }
     #corp-amount-group input,
     #personal-amount-group input {
+        flex: 1 1 auto !important;
         min-width: 0 !important;
-        width: 100%;
+        width: auto !important;
+        max-width: 200px !important;
     }
     #corp-receipt-group,
     #personal-receipt-group {
-        grid-column: 1 / -1;
+        grid-column: auto !important;
+        flex-shrink: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
     }
 
     .form-actions { flex-wrap: wrap; }

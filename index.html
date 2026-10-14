@@ -27,7 +27,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Vanilla CSS stylesheet -->
-    <link rel="stylesheet" href="style.css?v=1.6.292">
+    <link rel="stylesheet" href="style.css?v=1.6.293">
     <script src="./lib/i18n.js"></script>
     <style>
     .settle-date-btn {
@@ -203,30 +203,30 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="input-row">
-                                    <div class="input-group flex-1 hidden" id="corp-amount-group" style="display:flex; flex-direction:column;">
-                                        <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-                                            <label for="expense-corporate-amount-input" data-i18n="label.corp_card" style="margin:0; white-space:nowrap;">법인카드</label>
-                                            <input type="text" inputmode="numeric" id="expense-corporate-amount-input" placeholder="법인카드 결제 금액" style="flex:1; min-width:120px;">
-                                            <div id="corp-receipt-group" style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
-                                                <label for="expense-receipt-corp-input" class="btn-secondary" data-i18n="btn.receipt" style="margin:0; cursor:pointer; font-size:0.85rem; padding:0.45rem 0.9rem; white-space:nowrap;">영수증</label>
+                                <div class="input-row" id="card-inputs-row">
+                                    <div class="input-group flex-1 hidden" id="corp-amount-group">
+                                        <div class="card-amount-row">
+                                            <label for="expense-corporate-amount-input" data-i18n="label.corp_card">법인카드</label>
+                                            <input type="text" inputmode="numeric" id="expense-corporate-amount-input" placeholder="법인카드 결제 금액" class="card-amount-input">
+                                            <div id="corp-receipt-group" class="receipt-action-group">
+                                                <label for="expense-receipt-corp-input" class="btn-secondary" data-i18n="btn.receipt">영수증</label>
                                                 <input type="file" id="expense-receipt-corp-input" accept="image/*" style="display:none;">
-                                                <small id="receipt-corp-status" class="input-hint hidden" data-i18n="hint.receipt_ready" style="color: var(--color-secondary); font-weight: 500;">✓ 영수증 대기 완료</small>
-                                                <button type="button" id="delete-receipt-corp-btn" class="btn-text-danger hidden" data-i18n="btn.delete_receipt" style="font-size:0.78rem; padding:0.15rem 0.5rem;">× 영수증 삭제</button>
+                                                <small id="receipt-corp-status" class="input-hint hidden" data-i18n="hint.receipt_ready">✓ 영수증 대기 완료</small>
+                                                <button type="button" id="delete-receipt-corp-btn" class="btn-text-danger hidden" data-i18n="btn.delete_receipt">× 영수증 삭제</button>
                                             </div>
                                         </div>
                                         <div id="corp-extra-hint" style="display:none; font-size:0.8rem; color:#4ade80; margin-top:0.3rem; padding:0.25rem 0.1rem;">
                                         </div>
                                     </div>
-                                    <div class="input-group flex-1 hidden" id="personal-amount-group" style="display:flex; flex-direction:column;">
-                                        <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-                                            <label for="expense-personal-amount-input" data-i18n="label.personal_card" style="margin:0; white-space:nowrap;">개인카드</label>
-                                            <input type="text" inputmode="numeric" id="expense-personal-amount-input" placeholder="개인카드 결제 금액" style="flex:1; min-width:120px;">
-                                            <div id="personal-receipt-group" style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
-                                                <label for="expense-receipt-personal-input" class="btn-secondary" data-i18n="btn.receipt" style="margin:0; cursor:pointer; font-size:0.85rem; padding:0.45rem 0.9rem; white-space:nowrap;">영수증</label>
+                                    <div class="input-group flex-1 hidden" id="personal-amount-group">
+                                        <div class="card-amount-row">
+                                            <label for="expense-personal-amount-input" data-i18n="label.personal_card">개인카드</label>
+                                            <input type="text" inputmode="numeric" id="expense-personal-amount-input" placeholder="개인카드 결제 금액" class="card-amount-input">
+                                            <div id="personal-receipt-group" class="receipt-action-group">
+                                                <label for="expense-receipt-personal-input" class="btn-secondary" data-i18n="btn.receipt">영수증</label>
                                                 <input type="file" id="expense-receipt-personal-input" accept="image/*" style="display:none;">
-                                                <small id="receipt-personal-status" class="input-hint hidden" data-i18n="hint.receipt_ready" style="color: var(--color-secondary); font-weight: 500;">✓ 영수증 대기 완료</small>
-                                                <button type="button" id="delete-receipt-personal-btn" class="btn-text-danger hidden" data-i18n="btn.delete_receipt" style="font-size:0.78rem; padding:0.15rem 0.5rem;">× 영수증 삭제</button>
+                                                <small id="receipt-personal-status" class="input-hint hidden" data-i18n="hint.receipt_ready">✓ 영수증 대기 완료</small>
+                                                <button type="button" id="delete-receipt-personal-btn" class="btn-text-danger hidden" data-i18n="btn.delete_receipt">× 영수증 삭제</button>
                                             </div>
                                         </div>
                                         <small class="input-hint" id="split-auto-hint" data-i18n="hint.split_auto" style="display:none;">총금액 - 법인카드 금액로 자동 계산됨</small>
