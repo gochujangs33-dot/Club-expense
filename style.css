@@ -957,7 +957,7 @@ label {
     color: var(--text-secondary);
 }
 
-input, select {
+input, select, textarea {
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid var(--card-border);
     color: var(--text-primary);
@@ -972,7 +972,7 @@ input, select {
     min-width: 0;
 }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
     background: rgba(15, 23, 42, 0.85);
@@ -3160,15 +3160,28 @@ html[data-app-theme="light"] select,
 html[data-app-theme="light"] textarea,
 html[data-app-theme="light"] .search-box,
 html[data-app-theme="light"] .register-form-container input {
-    background-color: #e9eef4;
-    border-color: rgba(72, 91, 128, 0.2);
+    background-color: #ffffff;
+    border-color: rgba(72, 91, 128, 0.22);
     color: #17243b;
 }
 html[data-app-theme="light"] input:focus,
 html[data-app-theme="light"] select:focus,
 html[data-app-theme="light"] textarea:focus {
-    background-color: #f3f6f9;
+    background-color: #ffffff;
     border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+}
+
+html[data-app-theme="light"] #feedback-message-input,
+html[data-app-theme="light"] #email-body-field,
+html[data-app-theme="light"] #result-total-self-pay-input {
+    background-color: #ffffff !important;
+    border-color: rgba(72, 91, 128, 0.24) !important;
+    color: #17243b !important;
+}
+html[data-app-theme="light"] #feedback-message-input::placeholder,
+html[data-app-theme="light"] #email-body-field::placeholder {
+    color: rgba(72, 91, 128, 0.52) !important;
 }
 html[data-app-theme="light"] select {
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2353647e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
