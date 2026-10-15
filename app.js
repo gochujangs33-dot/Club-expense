@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.296';
+const APP_VERSION      = '1.6.297';
 const APP_VERSION_DATE = '2026.10.15';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -5477,36 +5477,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const overlay = document.createElement('div');
         overlay.id = 'emp-id-picker-popup';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.className = 'emp-picker-overlay';
 
         const box = document.createElement('div');
-        box.style.cssText = 'background:var(--bg-card,#1e1e2e);border:1px solid var(--border,#444);border-radius:14px;padding:1.4rem 1.6rem;min-width:240px;max-width:320px;box-shadow:0 12px 40px rgba(0,0,0,0.5);';
+        box.className = 'emp-picker-box';
 
         const title = document.createElement('p');
-        title.style.cssText = 'font-size:0.88rem;font-weight:700;margin:0 0 1rem;color:var(--color-secondary,#a855f7);';
+        title.className = 'emp-picker-title';
         title.textContent = `"${name}" 동명이인 — 사번을 선택하세요`;
         box.appendChild(title);
 
         entries.forEach(entry => {
-            // 이 클럽에서 해당 사번의 최근 참석 이력이 있으면 강조 표시 — 동명이인 중 어느 쪽이
-            // 이 클럽 소속일 가능성이 높은지 직관적으로 구분하기 위함
             const recent = AppState.getRecentClubAttendance(entry.id);
             const btn = document.createElement('button');
-            btn.style.cssText = recent
-                ? 'display:block;width:100%;margin-bottom:0.5rem;padding:0.65rem 0.9rem;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.55);border-radius:8px;color:var(--text-primary,#eee);font-size:0.88rem;text-align:left;cursor:pointer;transition:background 0.15s;'
-                : 'display:block;width:100%;margin-bottom:0.5rem;padding:0.65rem 0.9rem;background:var(--bg-input,#2a2a3e);border:1px solid var(--border,#444);border-radius:8px;color:var(--text-primary,#eee);font-size:0.88rem;text-align:left;cursor:pointer;transition:background 0.15s;';
+            btn.type = 'button';
+            btn.className = `emp-picker-btn ${recent ? 'is-recent' : ''}`;
             const recentBadge = recent
-                ? `<span style="display:block;margin-top:0.3rem;font-size:0.72rem;color:rgb(52,211,153);">✅ 이 클럽 최근 참석 (${AppState.escapeHtml(recent.dateStr)})</span>`
+                ? `<span class="emp-picker-recent-badge">✅ 이 클럽 최근 참석 (${AppState.escapeHtml(recent.dateStr)})</span>`
                 : '';
-            btn.innerHTML = `<span style="font-weight:600;">${AppState.escapeHtml(entry.name)}</span><span style="color:var(--text-secondary,#888);margin-left:0.5rem;">EMP ID: ${AppState.escapeHtml(entry.id)}</span>${recentBadge}`;
-            btn.addEventListener('mouseenter', () => btn.style.background = 'var(--color-secondary-light,rgba(168,85,247,0.18))');
-            btn.addEventListener('mouseleave', () => btn.style.background = recent ? 'rgba(52,211,153,0.12)' : 'var(--bg-input,#2a2a3e)');
+            btn.innerHTML = `<span class="emp-picker-name">${AppState.escapeHtml(entry.name)}</span><span class="emp-picker-id">EMP ID: ${AppState.escapeHtml(entry.id)}</span>${recentBadge}`;
             btn.addEventListener('click', () => { onSelect(entry); overlay.remove(); });
             box.appendChild(btn);
         });
 
         const cancelBtn = document.createElement('button');
-        cancelBtn.style.cssText = 'display:block;width:100%;margin-top:0.4rem;padding:0.5rem;background:transparent;border:1px solid var(--border,#444);color:var(--text-secondary,#888);border-radius:8px;cursor:pointer;font-size:0.82rem;';
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'emp-picker-cancel-btn';
         cancelBtn.textContent = '취소';
         cancelBtn.addEventListener('click', () => overlay.remove());
         box.appendChild(cancelBtn);
@@ -5515,6 +5511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
         document.body.appendChild(overlay);
     }
+    window.showEmpIdPickerPopup = showEmpIdPickerPopup;
 
     function showAttendeeDropdown(entries) {
         if (!attendeeDropdown) return;
@@ -6995,6 +6992,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.297', date: '2026.10.15', items: ['동명이인 사번 선택 팝업 글자색 시인성 버그 수정(어두운 배경과 텍스트 색상 겹침 해결)', '앱 내 전체 팝업/모달(동명이인·텍스트수정·회원정보수정·삭제확인·시설장비승인·초과승인·변경이력·PPT결산 등) 라이트/다크 테마 고대비 스타일 전면 보정', '하드코딩된 인라인 다크 배경 제거 및 테마별 카드·라벨·입력창·버튼 색상 최적화'] },
         { ver: '1.6.296', date: '2026.10.15', items: ['요청사항 입력창(textarea) 및 이메일 보고서·총 자부담 입력창 인라인 다크 배경 제거', '라이트 테마 환경에서 모달 입력창 순백색 배경(#ffffff) 및 또렷한 글자색(#17243b)·플레이스홀더 일체화', '기본 폼 컨트롤 스타일에 textarea 통합으로 다크/라이트 테마 자동 동기화'] },
         { ver: '1.6.295', date: '2026.10.15', items: ['상품비 안내 토스트 팝업 글자색 누락 버그 수정(라이트 테마에서 어두운 텍스트가 다크 배경에 묻혀 보이지 않던 현상 해결)', '상품비 안내 팝업 전용 스타일링 및 라이트 테마 카드 톤(순백색 배경·선명한 텍스트·연회색 버튼) 완벽 일체화', '상품비 안내 팝업 내 상태 아이콘(🎁/🚫/⚠️) 및 키보드(Enter/Esc) 닫기 편의 기능 지원'] },
         { ver: '1.6.294', date: '2026.10.14', items: ['관리자 클럽 및 예산 관리 목록 라이트 테마 색상 보정(어둡게 뜨던 예산·기존사용·상품비·잔여예산 타일 배경 및 인풋·버튼 스타일 라이트 테마 일체화)'] },
@@ -7187,11 +7185,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                 <div style="margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(139,92,246,0.15);">
                     <div style="display:flex; align-items:baseline; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
-                        <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted);">${g.date}</span>
-                        <span style="font-size:0.75rem; color:#a78bfa;">${vRange}</span>
+                        <span class="changelog-date" style="font-size:0.8rem; font-weight:700;">${g.date}</span>
+                        <span class="changelog-vrange" style="font-size:0.75rem;">${vRange}</span>
                     </div>
                     <ul style="margin:0; padding-left:1.1rem; display:flex; flex-direction:column; gap:0.2rem;">
-                        ${g.items.map(i => `<li style="font-size:0.78rem; color:#cbd5e1; line-height:1.45;">${i}</li>`).join('')}
+                        ${g.items.map(i => `<li class="changelog-item" style="font-size:0.78rem; line-height:1.45;">${i}</li>`).join('')}
                     </ul>
                 </div>`;
             }).join('');
@@ -10369,15 +10367,15 @@ function showEditModal(title, hint, defaultValue, onConfirm) {
 
     const overlay = document.createElement('div');
     overlay.id = 'edit-modal-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
+    overlay.className = 'edit-modal-overlay';
     overlay.innerHTML = `
-        <div style="background:var(--card-bg,#1e1e2e);border:2px solid rgba(99,102,241,0.55);border-radius:1rem;padding:1.5rem;width:min(90vw,360px);box-shadow:0 12px 48px rgba(0,0,0,0.7);">
-            <div style="font-size:1rem;font-weight:700;color:#c7d2fe;margin-bottom:0.75rem;">✏️ ${title}</div>
-            <div style="font-size:0.8rem;color:var(--text-muted,#94a3b8);margin-bottom:0.5rem;">${hint}</div>
-            <input id="edit-modal-input" type="text" value="${defaultValue.replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;padding:0.5rem 0.75rem;border-radius:0.5rem;border:1px solid rgba(99,102,241,0.5);background:rgba(255,255,255,0.05);color:#e2e8f0;font-size:0.95rem;outline:none;margin-bottom:1rem;">
-            <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
-                <button id="edit-modal-cancel" style="padding:0.4rem 1rem;border-radius:0.5rem;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#94a3b8;cursor:pointer;">취소</button>
-                <button id="edit-modal-ok" style="padding:0.4rem 1rem;border-radius:0.5rem;border:2px solid rgba(99,102,241,0.65);background:rgba(99,102,241,0.25);color:#c7d2fe;cursor:pointer;font-weight:600;">저장</button>
+        <div class="edit-modal-box">
+            <div class="edit-modal-title">✏️ ${title}</div>
+            <div class="edit-modal-hint">${hint}</div>
+            <input id="edit-modal-input" type="text" value="${defaultValue.replace(/"/g,'&quot;')}" class="edit-modal-input">
+            <div class="edit-modal-actions">
+                <button id="edit-modal-cancel" class="edit-modal-cancel-btn">취소</button>
+                <button id="edit-modal-ok" class="edit-modal-ok-btn">저장</button>
             </div>
         </div>`;
     document.body.appendChild(overlay);
@@ -10409,6 +10407,7 @@ function showConfirmModal(message, onConfirm, okLabel, customTitle, customIcon) 
     if (!overlay || !msgEl) { if (confirm(message)) onConfirm && onConfirm(); return; }
 
     const isDelete = !okLabel;
+    const isLight  = document.documentElement.getAttribute('data-app-theme') === 'light';
     const box      = document.getElementById('confirm-modal-box');
     const iconEl   = document.getElementById('confirm-modal-icon');
     const titleEl  = document.getElementById('confirm-modal-title');
@@ -10417,32 +10416,32 @@ function showConfirmModal(message, onConfirm, okLabel, customTitle, customIcon) 
 
     if (isDelete) {
         if (box) {
-            box.style.borderColor = 'rgba(239,68,68,0.55)';
-            box.style.boxShadow   = '0 0 40px rgba(239,68,68,0.22), 0 12px 48px rgba(0,0,0,0.7)';
+            box.style.borderColor = isLight ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.55)';
+            box.style.boxShadow   = isLight ? '0 16px 48px rgba(239,68,68,0.15)' : '0 0 40px rgba(239,68,68,0.22), 0 12px 48px rgba(0,0,0,0.7)';
         }
         if (iconEl) iconEl.textContent = customIcon || '🗑️';
         if (titleEl) {
             titleEl.textContent = customTitle || '삭제 확인';
-            titleEl.style.color = 'rgba(239,68,68,0.7)';
+            titleEl.style.color = isLight ? '#dc2626' : 'rgba(239,68,68,0.7)';
         }
         okBtn.textContent     = '삭제';
-        okBtn.style.background = 'rgba(239,68,68,0.25)';
-        okBtn.style.border     = '2px solid rgba(239,68,68,0.65)';
-        okBtn.style.color      = '#fca5a5';
+        okBtn.style.background = isLight ? '#dc2626' : 'rgba(239,68,68,0.25)';
+        okBtn.style.border     = isLight ? 'none' : '2px solid rgba(239,68,68,0.65)';
+        okBtn.style.color      = isLight ? '#ffffff' : '#fca5a5';
     } else {
         if (box) {
-            box.style.borderColor = 'rgba(99,102,241,0.55)';
-            box.style.boxShadow   = '0 0 40px rgba(99,102,241,0.18), 0 12px 48px rgba(0,0,0,0.7)';
+            box.style.borderColor = isLight ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.55)';
+            box.style.boxShadow   = isLight ? '0 16px 48px rgba(15,23,42,0.18)' : '0 0 40px rgba(99,102,241,0.18), 0 12px 48px rgba(0,0,0,0.7)';
         }
         if (iconEl) iconEl.textContent = customIcon || '✅';
         if (titleEl) {
             titleEl.textContent = customTitle || '확인';
-            titleEl.style.color = 'rgba(99,102,241,0.8)';
+            titleEl.style.color = isLight ? '#4338ca' : 'rgba(99,102,241,0.8)';
         }
         okBtn.textContent     = okLabel;
-        okBtn.style.background = 'rgba(99,102,241,0.25)';
-        okBtn.style.border     = '2px solid rgba(99,102,241,0.65)';
-        okBtn.style.color      = '#c7d2fe';
+        okBtn.style.background = isLight ? '#4f46e5' : 'rgba(99,102,241,0.25)';
+        okBtn.style.border     = isLight ? 'none' : '2px solid rgba(99,102,241,0.65)';
+        okBtn.style.color      = isLight ? '#ffffff' : '#c7d2fe';
     }
 
     if (cancelBtn) {

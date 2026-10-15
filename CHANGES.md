@@ -2,6 +2,17 @@
 
 ---
 
+## v1.6.297 — 동명이인 팝업 및 전체 팝업/모달 라이트/다크 테마 색상 가독성 전면 보정
+
+- **동명이인 사번 선택 팝업 글자색 시인성 버그 수정**: 동명이인 사번 선택 팝업(`emp-id-picker-popup`)에서 정의되지 않은 CSS 변수 fallback으로 인해 어두운 남색 배경 위에 라이트 테마 흑청색 글씨가 올라가 글자가 전혀 보이지 않던 버그를 해결. 전용 클래스(`emp-picker-*`) 부여 및 라이트 테마(순백색 카드 `#ffffff`, 인디고 타이틀 `#4338ca`, 짙은 사번 목록 `#0f172a`, 최근 참석 강조 녹색 `#059669`, 취소 버튼 `#f1f5f9`)와 다크 테마(보라 테두리 `#111827`, 선명한 화이트 `#ffffff`)로 완벽 분리
+- **단일 텍스트 수정 모달 스타일 일체화**: 관리자 모드 등에서 쓰이는 텍스트 수정 모달(`edit-modal-overlay`)을 전용 클래스(`edit-modal-*`)로 개편하여 라이트 모드에서 순백색 카드, 인디고 타이틀/포커스, 짙은 텍스트 및 선명한 버튼 스타일 제공
+- **회원 정보 수정 모달 짝짝이 인풋 및 어두운 라벨 해결**: `edit-user-modal-overlay`에서 이름 인풋과 PIN 인풋의 배경색이 서로 다르고 라벨이 어두운 배경에 묻히던 문제를 해결하고 화이트 카드 톤과 진한 텍스트로 깔끔하게 정돈
+- **삭제/확인 공통 모달 테마 맞춤 보정**: `confirm-modal-overlay`가 라이트 모드에서도 짙은 검은색으로 고정되던 문제를 개선하여 화이트 카드와 선명한 레드/인디고 버튼 및 명확한 글자 대비 적용
+- **시설·장비 안내 및 초과 승인 모달 보정**: `facility-approval-modal` 및 `corp-overlimit-approval-modal`의 흐릿하던 라벨 및 버튼 글자색을 라이트/다크 테마 각각에서 최고의 가독성을 가지도록 스타일 보강
+- **전체 정적 모달 인라인 다크 배경 제거**: `year-end-ppt-modal`, `email-report-modal`, `add-club-budget-modal`, `club-not-found-modal`, `excel-saved-modal`, `reset-session-modal`, `feedback-modal`, `feedback-list-modal`, `pin-login-modal` 등에 남아 있던 인라인 `background: var(--bg-dark);`를 제거하여 CSS 테마 규칙에 따라 완벽하게 동기화되도록 정리
+
+---
+
 ## v1.6.296 — 요청사항 입력창(textarea) 및 입력 컨트롤 라이트 테마 색상 보정
 
 - **인라인 다크 배경 제거**: 요청사항 보내기 모달의 메시지 입력창(`#feedback-message-input`), 이메일 보고서 복사 필드(`#email-body-field`), 정산 결과 총 자부담 금액 입력창(`#result-total-self-pay-input`) 등에 남아 있던 다크 하드코딩 인라인 스타일(`background: rgba(15, 23, 42, 0.6)`)을 제거

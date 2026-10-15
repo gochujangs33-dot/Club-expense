@@ -3394,6 +3394,466 @@ html[data-app-theme="light"] .prize-modal-ok-btn:hover {
     box-shadow: 0 4px 12px rgba(49, 69, 108, 0.15) !important;
 }
 
+/* ── 동명이인 사번 선택 팝업 (emp-id-picker-popup) ─────────────── */
+.emp-picker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    z-index: 10500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emp-picker-box {
+    background: #111827;
+    border: 1.5px solid rgba(139, 92, 246, 0.45);
+    border-radius: 18px;
+    padding: 1.5rem 1.6rem 1.3rem;
+    min-width: 270px;
+    max-width: 360px;
+    width: calc(100% - 2.5rem);
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.18), 0 16px 48px rgba(0, 0, 0, 0.7);
+    box-sizing: border-box;
+}
+
+.emp-picker-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 1.1rem;
+    color: #c4b5fd;
+    text-align: center;
+    word-break: keep-all;
+    line-height: 1.4;
+}
+
+.emp-picker-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.6rem;
+    padding: 0.75rem 1rem;
+    background: #1f2937;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+}
+
+.emp-picker-btn:hover {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.55);
+}
+
+.emp-picker-btn.is-recent {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1.5px solid rgba(16, 185, 129, 0.55);
+}
+
+.emp-picker-btn.is-recent:hover {
+    background: rgba(16, 185, 129, 0.22);
+    border-color: rgba(16, 185, 129, 0.75);
+}
+
+.emp-picker-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #ffffff;
+    margin-right: 0.5rem;
+}
+
+.emp-picker-id {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.emp-picker-recent-badge {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #34d399;
+}
+
+.emp-picker-cancel-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.7rem;
+    padding: 0.6rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #cbd5e1;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.15s ease;
+}
+
+.emp-picker-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+/* 동명이인 팝업 라이트 테마 보정 */
+html[data-app-theme="light"] .emp-picker-box {
+    background: #ffffff !important;
+    border: 1.5px solid rgba(99, 102, 241, 0.35) !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18) !important;
+}
+
+html[data-app-theme="light"] .emp-picker-title {
+    color: #4338ca !important;
+}
+
+html[data-app-theme="light"] .emp-picker-btn {
+    background: #f8fafc !important;
+    border: 1.5px solid #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+html[data-app-theme="light"] .emp-picker-btn:hover {
+    background: rgba(99, 102, 241, 0.1) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+}
+
+html[data-app-theme="light"] .emp-picker-btn.is-recent {
+    background: rgba(16, 185, 129, 0.08) !important;
+    border: 1.5px solid rgba(16, 185, 129, 0.65) !important;
+}
+
+html[data-app-theme="light"] .emp-picker-btn.is-recent:hover {
+    background: rgba(16, 185, 129, 0.16) !important;
+    border-color: rgba(16, 185, 129, 0.85) !important;
+}
+
+html[data-app-theme="light"] .emp-picker-name {
+    color: #0f172a !important;
+}
+
+html[data-app-theme="light"] .emp-picker-id {
+    color: #475569 !important;
+}
+
+html[data-app-theme="light"] .emp-picker-recent-badge {
+    color: #059669 !important;
+}
+
+html[data-app-theme="light"] .emp-picker-cancel-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html[data-app-theme="light"] .emp-picker-cancel-btn:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+/* ── 단일 텍스트 수정 모달 (edit-modal-overlay) ─────────────────── */
+.edit-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    z-index: 10500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-modal-box {
+    background: #111827;
+    border: 2px solid rgba(99, 102, 241, 0.55);
+    border-radius: 18px;
+    padding: 1.6rem 1.5rem 1.4rem;
+    width: min(90vw, 360px);
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.2), 0 16px 48px rgba(0, 0, 0, 0.7);
+    box-sizing: border-box;
+}
+
+.edit-modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #c7d2fe;
+    margin-bottom: 0.55rem;
+}
+
+.edit-modal-hint {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    margin-bottom: 0.85rem;
+}
+
+.edit-modal-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    background: #1f2937;
+    color: #f8fafc;
+    font-size: 0.95rem;
+    outline: none;
+    margin-bottom: 1.15rem;
+    transition: border-color 0.15s;
+}
+
+.edit-modal-input:focus {
+    border-color: #818cf8;
+}
+
+.edit-modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+}
+
+.edit-modal-cancel-btn {
+    padding: 0.5rem 1.1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.edit-modal-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.edit-modal-ok-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    border: 1.5px solid rgba(99, 102, 241, 0.7);
+    background: rgba(99, 102, 241, 0.3);
+    color: #e0e7ff;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.edit-modal-ok-btn:hover {
+    background: rgba(99, 102, 241, 0.45);
+    color: #ffffff;
+}
+
+/* 텍스트 수정 모달 라이트 테마 보정 */
+html[data-app-theme="light"] .edit-modal-box {
+    background: #ffffff !important;
+    border: 1.5px solid rgba(99, 102, 241, 0.35) !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18) !important;
+}
+
+html[data-app-theme="light"] .edit-modal-title {
+    color: #4338ca !important;
+}
+
+html[data-app-theme="light"] .edit-modal-hint {
+    color: #64748b !important;
+}
+
+html[data-app-theme="light"] .edit-modal-input {
+    background: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+html[data-app-theme="light"] .edit-modal-input:focus {
+    border-color: #6366f1 !important;
+    background: #ffffff !important;
+}
+
+html[data-app-theme="light"] .edit-modal-cancel-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html[data-app-theme="light"] .edit-modal-cancel-btn:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+html[data-app-theme="light"] .edit-modal-ok-btn {
+    background: #4f46e5 !important;
+    border: 1.5px solid #4338ca !important;
+    color: #ffffff !important;
+}
+
+html[data-app-theme="light"] .edit-modal-ok-btn:hover {
+    background: #4338ca !important;
+}
+
+/* ── 회원 정보 수정 모달 (edit-user-modal) ─────────────────────── */
+html[data-app-theme="light"] .edit-user-modal-card {
+    background: #ffffff !important;
+    border: 1.5px solid rgba(99, 102, 241, 0.35) !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18) !important;
+}
+
+html[data-app-theme="light"] #edit-user-modal-title {
+    color: #4338ca !important;
+    font-weight: 800 !important;
+}
+
+html[data-app-theme="light"] .edit-user-label {
+    color: #334155 !important;
+    font-weight: 600 !important;
+}
+
+html[data-app-theme="light"] .edit-user-input,
+html[data-app-theme="light"] #edit-user-name-input,
+html[data-app-theme="light"] #edit-user-pin-input {
+    background: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+html[data-app-theme="light"] .edit-user-input:focus,
+html[data-app-theme="light"] #edit-user-name-input:focus,
+html[data-app-theme="light"] #edit-user-pin-input:focus {
+    border-color: #6366f1 !important;
+    background: #ffffff !important;
+}
+
+html[data-app-theme="light"] .edit-user-cancel-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html[data-app-theme="light"] .edit-user-cancel-btn:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+html[data-app-theme="light"] .edit-user-ok-btn {
+    background: #4f46e5 !important;
+    border: none !important;
+    color: #ffffff !important;
+}
+
+html[data-app-theme="light"] .edit-user-ok-btn:hover {
+    background: #4338ca !important;
+}
+
+/* ── 확인 공통 모달 (confirm-modal) 라이트 테마 보정 ─────────── */
+html[data-app-theme="light"] #confirm-modal-box {
+    background: #ffffff !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18) !important;
+}
+
+html[data-app-theme="light"] #confirm-modal-msg {
+    color: #0f172a !important;
+}
+
+html[data-app-theme="light"] #confirm-modal-cancel {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html[data-app-theme="light"] #confirm-modal-cancel:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+/* ── 시설·장비 모달 (facility-approval-modal) 라이트 테마 보정 ── */
+html[data-app-theme="light"] .facility-approval-box {
+    background: #ffffff !important;
+    border: 2px solid rgba(249, 115, 22, 0.55) !important;
+    box-shadow: 0 16px 48px rgba(249, 115, 22, 0.18) !important;
+}
+
+html[data-app-theme="light"] #facility-approval-title {
+    color: #c2410c !important;
+    font-weight: 800 !important;
+}
+
+html[data-app-theme="light"] #facility-approval-msg {
+    color: #0f172a !important;
+}
+
+html[data-app-theme="light"] #facility-approval-hint {
+    color: #475569 !important;
+}
+
+html[data-app-theme="light"] #facility-modal-limit {
+    color: #ea580c !important;
+    font-weight: 800 !important;
+}
+
+/* ── 초과 승인 모달 (corp-overlimit-approval-modal) 라이트 테마 보정 */
+html[data-app-theme="light"] .corp-overlimit-box {
+    background: #ffffff !important;
+    border: 2px solid rgba(249, 115, 22, 0.55) !important;
+    box-shadow: 0 16px 48px rgba(249, 115, 22, 0.18) !important;
+}
+
+html[data-app-theme="light"] #corp-overlimit-modal-label {
+    color: #c2410c !important;
+    font-weight: 800 !important;
+}
+
+html[data-app-theme="light"] #corp-overlimit-modal-msg {
+    color: #0f172a !important;
+}
+
+html[data-app-theme="light"] #corp-overlimit-no-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html[data-app-theme="light"] #corp-overlimit-no-btn:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+/* ── 변경이력 모달 (changelog-modal) 라이트 테마 보정 ─────────── */
+html[data-app-theme="light"] .changelog-modal-card {
+    background: #ffffff !important;
+    border: 1.5px solid rgba(139, 92, 246, 0.35) !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18) !important;
+}
+
+html[data-app-theme="light"] #changelog-modal-title {
+    color: #1e1b4b !important;
+}
+
+html[data-app-theme="light"] #changelog-close-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #6d28d9 !important;
+}
+
+html[data-app-theme="light"] #changelog-close-btn:hover {
+    background: #ede9fe !important;
+    border-color: #a78bfa !important;
+}
+
+html[data-app-theme="light"] .changelog-date {
+    color: #334155 !important;
+}
+
+html[data-app-theme="light"] .changelog-vrange {
+    color: #7c3aed !important;
+}
+
+html[data-app-theme="light"] .changelog-item {
+    color: #0f172a !important;
+}
 
 /* 클럽별 정산 이력 및 사용 요약 라이트 테마 완벽 보정 */
 html[data-app-theme="light"] .admin-inline-club-usage-card {
