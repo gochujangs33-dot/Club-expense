@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.298';
+const APP_VERSION      = '1.6.299';
 const APP_VERSION_DATE = '2026.10.19';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -459,7 +459,8 @@ const AppState = {
     selfPayManuallyOverridden: false,
     annualBudget: 0,
     usedBudget: 0,
-    reportEmail: 'finance@club.com',
+    reportEmail: '',
+    saveExcelToDevice: true, // 작성 디바이스에 엑셀파일 저장 여부 (기본값 true)
     eventPhotos: [],
     clubName: '',
     clubId: '',
@@ -501,6 +502,8 @@ const AppState = {
             // annualBudget → clubRegistry.budget, usedBudget → 동적 계산 — localStorage 구버전 무시
             const savedReportEmail = localStorage.getItem('club_report_email');
             if (savedReportEmail) this.reportEmail = savedReportEmail;
+            const savedSaveExcel = localStorage.getItem('club_save_excel_device');
+            if (savedSaveExcel !== null) this.saveExcelToDevice = savedSaveExcel !== 'false';
             const savedEventPhotos = localStorage.getItem('club_event_photos');
             if (savedEventPhotos) {
                 try { this.eventPhotos = JSON.parse(savedEventPhotos); } catch(_) {}
@@ -871,6 +874,7 @@ const AppState = {
             localStorage.setItem('club_expense_attendees', JSON.stringify(this.attendees));
             localStorage.setItem('club_expense_directory', JSON.stringify(this.directory));
             localStorage.setItem('club_report_email', this.reportEmail || '');
+            localStorage.setItem('club_save_excel_device', this.saveExcelToDevice ? 'true' : 'false');
             // club_expense_rules → globalSettings/rules (관리자 전용, localStorage 저장 중단)
             // club_annual_budget → clubRegistry.budget (관리자 전용, localStorage 저장 중단)
             // club_used_budget → 동적 계산 (localStorage 저장 중단)
@@ -900,6 +904,7 @@ const AppState = {
                 clubName: this.clubName,   // 마지막 선택 클럽명 (편의용)
                 clubId: this.clubId || '', // 마지막 선택 클럽 ID (편의용)
                 reportEmail: this.reportEmail || '',
+                saveExcelToDevice: this.saveExcelToDevice !== false,
                 settlementHistory: this.buildPersonalHistoryForSync(),
                 eventPhotos: (this.eventPhotos && this.eventPhotos.length > 0) ? this.eventPhotos : null,
                 lastUpdated: Date.now()
@@ -1075,6 +1080,7 @@ const AppState = {
                                 if (data.clubName !== undefined) this.clubName = data.clubName;
                                 if (data.clubId !== undefined) this.clubId = data.clubId;
                                 if (data.reportEmail !== undefined) this.reportEmail = data.reportEmail;
+                                if (data.saveExcelToDevice !== undefined) this.saveExcelToDevice = data.saveExcelToDevice !== false;
                                 this.settlementHistory = data.settlementHistory || [];
                                 if (data.eventPhotos) {
                                     this.eventPhotos = Array.isArray(data.eventPhotos) ? data.eventPhotos : [data.eventPhotos];
@@ -2962,7 +2968,8 @@ const AppState = {
             this.rules
         );
         
-        const emailReceiver = this.reportEmail || 'finance@club.com';
+        const emailReceiver = (this.reportEmail || '').trim();
+        const senderEmail = 'Gochujangs33@gmail.com';
 
         // 실제 자부담: 수동 오버라이드 중이면 그 값, 아니면 항목별 개인카드 합계 기준 (v1.6.215+)
         const finalSelfPay = this.selfPayManuallyOverridden ? this.lastCalculatedSelfPay : Math.round(result.itemSelfPay);
@@ -2971,18 +2978,24 @@ const AppState = {
 
         // Build email subject
         const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-        const subject = `[동아리 정산] ${dateStr} 클럽 비용 정산 보고서 (${this.memberCount}명)`;
+        const clubNamePart = this.clubName ? `[${this.clubName}] ` : '';
+        const subject = `[클럽 비용 정산] ${clubNamePart}${dateStr} 정산 보고서 (${this.memberCount}명)`;
 
         // Build email body text
-        let body = `안녕하세요,\n\n${dateStr} 진행된 클럽 행사 비용 정산 내역을 보고합니다.\n\n`;
+        let body = `[발신 이메일] ${senderEmail}\n`;
+        body += `[수신 이메일] ${emailReceiver || '미지정'}\n`;
+        body += `[정산 클럽] ${this.clubName || '기본 클럽'}\n`;
+        body += `[작성자] ${this.userName || '정산 담당자'}\n\n`;
+        body += `안녕하세요,\n${dateStr} 진행된 [${this.clubName || '클럽'}] 비용 정산 내역을 보고합니다.\n\n`;
         body += `=========================================\n`;
         body += `■ 정산 요약\n`;
         body += `-----------------------------------------\n`;
+        body += `- 클럽명: ${this.clubName || '기본 클럽'}\n`;
         body += `- 총 소요 비용: ${SettlementCalculator.formatCurrency(result.totalCost)}\n`;
-        body += `- 최종 지원금: ${SettlementCalculator.formatCurrency(finalSupport)}\n`;
+        body += `- 회사 지원금: ${SettlementCalculator.formatCurrency(finalSupport)}\n`;
         body += `- 총 자부담 금액: ${SettlementCalculator.formatCurrency(finalSelfPay)}\n`;
-        body += `- 인당 자부담 비용(정책상 최소): ${SettlementCalculator.formatCurrency(result.perPersonSelfPay)}\n`;
-        body += `- 참석 정회원 수: ${result.memberCount}명\n`;
+        body += `- 인당 자부담 비용: ${SettlementCalculator.formatCurrency(Math.round(result.perPersonSelfPay))}\n`;
+        body += `- 참석 인원: ${result.memberCount}명\n`;
         body += `- 자부담 비율: ${(finalRatio * 100).toFixed(1)}%\n`;
         body += `=========================================\n\n`;
         
@@ -2992,9 +3005,14 @@ const AppState = {
             body += `등록된 비용 항목이 없습니다.\n`;
         } else {
             this.expenseItems.forEach((item, idx) => {
-                body += `${idx + 1}. [${categoryNameMap[item.category]}] ${item.description}: ${SettlementCalculator.formatCurrency(item.amount)}`;
-                if (item.receiptImage) {
-                    body += ` (영수증 첨부됨)`;
+                const catName = categoryNameMap[item.category] || item.category;
+                body += `${idx + 1}. [${catName}] ${item.description}: ${SettlementCalculator.formatCurrency(item.amount)}`;
+                if (item.cardType === 'split') {
+                    body += ` (법인 ${SettlementCalculator.formatCurrency(item.corporateAmount)} / 개인 ${SettlementCalculator.formatCurrency(item.personalAmount)})`;
+                } else if (item.cardType === 'corporate') {
+                    body += ` (전액 법인카드)`;
+                } else if (item.cardType === 'personal') {
+                    body += ` (전액 개인카드)`;
                 }
                 body += `\n`;
             });
@@ -3007,7 +3025,8 @@ const AppState = {
             body += `등록된 참석자가 없습니다.\n`;
         } else {
             this.attendees.forEach((att, idx) => {
-                body += `${idx + 1}. ${att.name} (사번: ${att.employeeId})\n`;
+                const empId = att.employeeId ? ` (사번: ${att.employeeId})` : '';
+                body += `${idx + 1}. ${att.name}${empId}\n`;
             });
         }
         body += `\n`;
@@ -3015,10 +3034,70 @@ const AppState = {
         body += `* 본 정산서는 클럽 비용 정산기를 통해 자동 생성되었습니다.\n`;
         
         return {
+            sender: senderEmail,
             receiver: emailReceiver,
             subject: subject,
             body: body
         };
+    },
+
+    // 이메일 발송 실행 (Share API, mailto, 클립보드 복사 등 다중 플랫폼 대응)
+    async sendReportEmail(recipient, sender = 'Gochujangs33@gmail.com', subject, body) {
+        // 1. Android 네이티브 브릿지 (앱 환경)
+        if (window.AndroidShare && typeof window.AndroidShare.shareFiles === 'function') {
+            try {
+                const files = await this.collectReportFiles();
+                const filesPayload = await Promise.all(files.map(async f => ({
+                    name: f.name,
+                    mimeType: f.type || 'application/octet-stream',
+                    base64: await this.fileToBase64(f)
+                })));
+                window.AndroidShare.shareFiles(JSON.stringify(filesPayload), subject, body, recipient);
+                return;
+            } catch (err) {
+                console.warn('AndroidShare 실패, 웹 공유로 폴백:', err);
+            }
+        }
+
+        // 2. Web Share API (모바일/태블릿 등 다중 파일 및 텍스트 공유 지원 브라우저)
+        if (navigator.canShare) {
+            try {
+                const files = await this.collectReportFiles();
+                if (files.length > 0 && navigator.canShare({ title: subject, text: body, files })) {
+                    await navigator.share({ title: subject, text: body, files });
+                    return;
+                }
+            } catch (shareErr) {
+                if (shareErr.name === 'AbortError') {
+                    console.log('사용자가 공유 시트를 닫음');
+                    return;
+                }
+                console.warn('Web Share 실패, mailto 폴백:', shareErr);
+            }
+        }
+
+        // 3. PC 및 일반 브라우저: 클립보드 본문 복사 및 mailto 링크 트리거
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(body);
+            }
+        } catch (_) {}
+
+        // mailto URL 길이 안전 처리 (브라우저 제한 고려)
+        let safeBody = body;
+        if (safeBody.length > 1500) {
+            safeBody = safeBody.slice(0, 1400) + '\n\n... (전체 세부 내역 및 참석자 명단은 클립보드에 복사되었습니다. 메일 본문에 붙여넣기[Ctrl+V]하실 수 있습니다)';
+        }
+
+        const mailtoUrl = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(safeBody)}`;
+        const tempLink = document.createElement('a');
+        tempLink.href = mailtoUrl;
+        tempLink.style.display = 'none';
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        setTimeout(() => {
+            if (tempLink.parentNode) tempLink.parentNode.removeChild(tempLink);
+        }, 500);
     },
 
     // 공식 정산 양식(template.xlsx)을 불러와 입력 데이터로 채운 엑셀 파일(File 객체) 생성
@@ -4145,28 +4224,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 금액 입력란 1000단위 콤마(,) 자동 적용
     ['expense-amount-input', 'expense-corporate-amount-input',
-     'expense-personal-amount-input', 'setting-used-budget', 'result-total-self-pay-input',
+     'expense-personal-amount-input', 'result-total-self-pay-input',
      'admin-setting-limit1', 'admin-setting-limit2', 'admin-setting-limit3', 'admin-setting-deduction4', 'admin-setting-prize-limit',
      'club-total-budget-input', 'club-budget-form-input'].forEach(id => {
         setupCurrencyInput(document.getElementById(id));
     });
 
-    // Settings panel: init budget fields from saved state
-    const annualBudgetInput = document.getElementById('setting-annual-budget');
-    const usedBudgetInput = document.getElementById('setting-used-budget');
-    const remainingDisplay = document.getElementById('setting-remaining-display');
+    // Settings panel: init email and save-to-device fields
+    const reportEmailInput = document.getElementById('setting-report-email');
+    const saveDeviceCheck = document.getElementById('setting-save-device-check');
 
     // Set settings form input values
-    const setSettingsFormValues = (rules) => {
-        const annualInput = document.getElementById('setting-annual-budget');
-        const usedInput = document.getElementById('setting-used-budget');
-        if (annualInput) annualInput.value = formatAmount(AppState.getClubBudget());
-        if (usedInput) usedInput.value = formatAmount(AppState.getClubUsedBudget());
-        if (typeof updateRemainingDisplay === 'function') {
-            updateRemainingDisplay();
-        }
+    const setSettingsFormValues = () => {
+        const emailEl = document.getElementById('setting-report-email');
+        const checkEl = document.getElementById('setting-save-device-check');
+        if (emailEl) emailEl.value = AppState.reportEmail || '';
+        if (checkEl) checkEl.checked = AppState.saveExcelToDevice !== false;
     };
-    setSettingsFormValues(AppState.rules);
+    setSettingsFormValues();
 
     // Initial Datalist rendering
     AppState.updateDatalist();
@@ -5743,13 +5818,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('toggle-settings-btn').addEventListener('click', () => {
         const panel = document.getElementById('settings-panel');
         panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
+            const emailEl = document.getElementById('setting-report-email');
+            const checkEl = document.getElementById('setting-save-device-check');
+            if (emailEl) emailEl.value = AppState.reportEmail || '';
+            if (checkEl) checkEl.checked = AppState.saveExcelToDevice !== false;
+        }
     });
 
-    // Save settings handler (usedBudget은 정산 이력에서 자동 계산되므로 저장 불필요)
+    // Save settings handler
     document.getElementById('save-settings-btn').addEventListener('click', () => {
+        const emailEl = document.getElementById('setting-report-email');
+        const checkEl = document.getElementById('setting-save-device-check');
+        if (emailEl) AppState.reportEmail = emailEl.value.trim();
+        if (checkEl) AppState.saveExcelToDevice = checkEl.checked;
         AppState.save();
         AppState.render();
-        if (typeof updateRemainingDisplay === 'function') updateRemainingDisplay();
+        alert('정산 및 발송 설정이 저장되었습니다.');
 
         // Hide panel after saving
         document.getElementById('settings-panel').classList.add('hidden');
@@ -6158,32 +6243,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sendEmailBtn) {
         sendEmailBtn.addEventListener('click', () => {
+            if (AppState.expenseItems.length === 0) {
+                alert('정산할 비용 항목을 하나 이상 등록해주세요.');
+                return;
+            }
+
+            // 회사 이메일 주소 확인
+            let recipientEmail = (AppState.reportEmail || '').trim();
+            if (!recipientEmail) {
+                const prompted = prompt('정산 보고서를 수신할 본인 회사 이메일 주소를 입력해주세요:\n(설정 ⚙️ 버튼에서도 언제든 변경하실 수 있습니다)', '');
+                if (prompted && prompted.trim()) {
+                    recipientEmail = prompted.trim();
+                    AppState.reportEmail = recipientEmail;
+                    AppState.save();
+                    const emailEl = document.getElementById('setting-report-email');
+                    if (emailEl) emailEl.value = recipientEmail;
+                } else {
+                    alert('받는 회사 이메일 주소를 입력하셔야 정산 완료 및 이메일 발송을 진행할 수 있습니다.');
+                    const panel = document.getElementById('settings-panel');
+                    if (panel) {
+                        panel.classList.remove('hidden');
+                        const emailEl = document.getElementById('setting-report-email');
+                        if (emailEl) emailEl.focus();
+                    }
+                    return;
+                }
+            }
+
+            const senderEmail = 'Gochujangs33@gmail.com';
+            const willSaveExcel = AppState.saveExcelToDevice !== false;
+
+            const confirmMsg = willSaveExcel
+                ? `정산 내역을 이메일로 발송하고, 작성 디바이스에 엑셀 파일을 저장한 뒤 정산을 완료하시겠습니까?\n\n` +
+                  `• 발신 메일: ${senderEmail}\n` +
+                  `• 수신 메일: ${recipientEmail}\n` +
+                  `• 디바이스 저장: 엑셀 파일 다운로드 (ON)\n\n` +
+                  `※ 확인 시 현재 데이터가 정산 이력에 저장되고 화면이 초기화됩니다.`
+                : `정산 내역을 이메일로 발송하고 정산을 완료하시겠습니까?\n\n` +
+                  `• 발신 메일: ${senderEmail}\n` +
+                  `• 수신 메일: ${recipientEmail}\n` +
+                  `• 디바이스 저장: 건너뜀 (OFF - 메일만 발송)\n\n` +
+                  `※ 확인 시 현재 데이터가 정산 이력에 저장되고 화면이 초기화됩니다.`;
+
             showConfirmModal(
-                '엑셀 파일로 저장하고 정산을 완료하시겠습니까?\n확인 시 현재 데이터가 초기화됩니다.',
+                confirmMsg,
                 async () => {
                     const originalText = sendEmailBtn.innerHTML;
                     let excelDownloaded = false;
-                    sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> ${t('state.generating')}`;
                     sendEmailBtn.disabled = true;
+                    sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> 정산 처리 중...`;
+
                     try {
-                        await AppState.downloadExcelOnly();
-                        excelDownloaded = true;
-                        sendEmailBtn.innerHTML = '<span class="btn-icon">⏳</span> 저장 중...';
+                        // 1. 디바이스 저장 옵션 체크 시 엑셀 다운로드 실행
+                        if (willSaveExcel) {
+                            sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> 엑셀 파일 저장 중...`;
+                            await AppState.downloadExcelOnly();
+                            excelDownloaded = true;
+                        }
+
+                        // 2. 이메일 보고서 생성 및 발송
+                        sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> 이메일 발송 준비 중...`;
+                        const report = AppState.generateEmailReport();
+                        await AppState.sendReportEmail(recipientEmail, senderEmail, report.subject, report.body);
+
+                        // 3. 정산 확정 (Firebase 이력 저장, 누적 카운트 반영, 세션 초기화)
+                        sendEmailBtn.innerHTML = '<span class="btn-icon">⏳</span> 정산 저장 중...';
                         const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
                         const completed = await runFinalizeSettlement(true);
                         if (!completed) return;
+
                         sendEmailBtn.innerHTML = `<span class='btn-icon'>✓</span> ${t('state.saved')}`;
+
+                        const saveNotice = willSaveExcel
+                            ? `📂 ${todayStr} 정산 엑셀 파일이 디바이스(다운로드 폴더)에 저장되었습니다.\n`
+                            : `📂 설정에 따라 디바이스 엑셀 저장은 건너뛰었습니다.\n`;
+
                         alert(
-                            `📂 ${todayStr} 정산 엑셀 파일이 생성되어 다운로드 폴더에 저장되었습니다.\n\n` +
-                            `✅ 전체 항목이 초기화되었습니다.\n` +
-                            `📧 저장된 파일을 이메일로 보내주세요.\n` +
-                            `📋 이번 정산 내역은 [정산 이력] 탭에서 확인하실 수 있습니다.`
+                            `✅ ${todayStr} 정산이 정상적으로 완료되었습니다!\n\n` +
+                            `📧 이메일 발송: [${senderEmail}] → [${recipientEmail}]\n` +
+                            saveNotice +
+                            `✅ 현재 입력 항목이 초기화되었습니다.\n` +
+                            `📋 이번 정산 내역은 [정산 이력] 탭에서 언제든 확인하실 수 있습니다.`
                         );
                     } catch (err) {
-                        console.error(err);
+                        console.error('정산 처리 실패:', err);
                         sendEmailBtn.innerHTML = `<span class='btn-icon'>❌</span> ${t('state.save_failed')}`;
-                        // 엑셀 생성 실패는 downloadExcelOnly()가 이미 안내한다. 원격 정산 저장 실패만 여기서 안내한다.
                         if (excelDownloaded) alert(t('alert.save_error_network'));
+                        else alert('정산 처리 중 오류가 발생했습니다: ' + (err.message || err));
                     } finally {
                         setTimeout(() => {
                             sendEmailBtn.innerHTML = originalText;
@@ -6191,7 +6337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }, 2000);
                     }
                 },
-                '저장 및 정산 완료',
+                willSaveExcel ? '저장 & 이메일 발송 및 정산 완료' : '이메일 발송 및 정산 완료',
                 '정산 완료 확인',
                 '💾'
             );
@@ -6344,29 +6490,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // 항상 관리자 설정 기준 예산 사용 (입력란 값이 아닌 registry 직접 조회)
         const annual = AppState.getClubBudget();
         const used = AppState.getClubUsedBudget();
-        if (annualBudgetInput) annualBudgetInput.value = formatAmount(annual);
-        if (usedBudgetInput) usedBudgetInput.value = formatAmount(used);
-        if (annual > 0) {
-            const rem = annual - used;
-            if (remainingDisplay) {
-                remainingDisplay.textContent = SettlementCalculator.formatCurrency(rem);
-                remainingDisplay.style.color = rem >= 0 ? 'var(--color-secondary)' : 'var(--warning-text)';
-            }
-        } else {
-            if (remainingDisplay) {
-                remainingDisplay.textContent = '미설정';
-                remainingDisplay.style.color = '';
+        const annualEl = document.getElementById('setting-annual-budget');
+        const usedEl = document.getElementById('setting-used-budget');
+        const remEl = document.getElementById('setting-remaining-display');
+        if (annualEl) annualEl.value = formatAmount(annual);
+        if (usedEl) usedEl.value = formatAmount(used);
+        if (remEl) {
+            if (annual > 0) {
+                const rem = annual - used;
+                remEl.textContent = SettlementCalculator.formatCurrency(rem);
+                remEl.style.color = rem >= 0 ? 'var(--color-secondary)' : 'var(--warning-text)';
+            } else {
+                remEl.textContent = '미설정';
+                remEl.style.color = '';
             }
         }
-    }
-
-    if (annualBudgetInput) {
-        annualBudgetInput.value = formatAmount(AppState.getClubBudget());
-        annualBudgetInput.addEventListener('input', updateRemainingDisplay);
-    }
-    if (usedBudgetInput) {
-        usedBudgetInput.value = AppState.usedBudget;
-        usedBudgetInput.addEventListener('input', updateRemainingDisplay);
     }
     updateRemainingDisplay();
 
@@ -7005,6 +7143,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.299', date: '2026.10.19', items: ['정산 설정(⚙️) 패널 개편: 기존 불필요한 총예산·누적예산 입력란을 제거하고 회사 이메일 주소(수신자) 입력 및 작성 디바이스 엑셀파일 저장 체크박스 메뉴 신설', '공통 발신 이메일 주소(Gochujangs33@gmail.com) 고정 적용 및 정산 완료 시 설정된 수신 이메일로 정산 보고서 자동 발송 연동', '파일 저장 및 정산 완료(💾) 클릭 시 디바이스 저장 옵션 체크 여부에 따라 엑셀 다운로드 분기 처리(체크 해제 시 파일 다운로드 없이 이메일만 발송, 체크 시 디바이스 저장 및 이메일 동시 발송)', '정산서 이메일 발송 시 Web Share API(모바일 파일 첨부) 및 스마트 mailto 클라이언트 자동 연동 지원'] },
         { ver: '1.6.298', date: '2026.10.19', items: ['연간 결산 PPT 보고서 클럽별 상세 타임라인 테이블 내 참석자 명단 요약 컬럼을 인원수(명) 전용으로 간소화(불필요한 "외 몇 명" 이름 나열 제거 및 테이블 가독성 향상)', '참석자 명단 인원 추가 후 정산 화면 참석자 수(memberCount)가 0으로 미반영되던 동기화 버그 전면 보완(클럽 최초 선택 시 초기화 방지, 탭 전환 시 자동 재렌더링 및 명부 동기화 보장)', '비용 항목 추가 폼 내 브라우저 이전 입력값 자동완성(autocomplete) 팝업 원천 차단 및 이전 카드 내역 오반영 방지', '비용 항목 입력 시 개인카드 하단에 실시간 예상 자부담 및 1인당 개인부담 안내 배너 추가(항목 추가 전 결제 참고용 실시간 계산 지원)'] },
         { ver: '1.6.297', date: '2026.10.15', items: ['동명이인 사번 선택 팝업 글자색 시인성 버그 수정(어두운 배경과 텍스트 색상 겹침 해결)', '앱 내 전체 팝업/모달(동명이인·텍스트수정·회원정보수정·삭제확인·시설장비승인·초과승인·변경이력·PPT결산 등) 라이트/다크 테마 고대비 스타일 전면 보정', '하드코딩된 인라인 다크 배경 제거 및 테마별 카드·라벨·입력창·버튼 색상 최적화'] },
         { ver: '1.6.296', date: '2026.10.15', items: ['요청사항 입력창(textarea) 및 이메일 보고서·총 자부담 입력창 인라인 다크 배경 제거', '라이트 테마 환경에서 모달 입력창 순백색 배경(#ffffff) 및 또렷한 글자색(#17243b)·플레이스홀더 일체화', '기본 폼 컨트롤 스타일에 textarea 통합으로 다크/라이트 테마 자동 동기화'] },
@@ -7893,8 +8032,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 입력값을 지우는 것 방지 (blur 시 change 핸들러가 저장 후 직접 재렌더함)
         if (document.activeElement && document.activeElement.classList &&
             document.activeElement.classList.contains('club-prior-used-input')) return;
-        if (clubTotalBudgetInput) {
-            clubTotalBudgetInput.value = formatAmount(AppState.clubTotalBudget || 0);
+        const totalBudgetEl = document.getElementById('club-total-budget-input');
+        if (totalBudgetEl) {
+            totalBudgetEl.value = formatAmount(AppState.clubTotalBudget || 0);
         }
 
         const _seenClubNames = new Set();
@@ -7907,15 +8047,17 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAdminStartGuide();
         const allocated = clubs.reduce((sum, [, c]) => sum + (c.budget || 0), 0);
         const remaining = (AppState.clubTotalBudget || 0) - allocated;
-        if (clubBudgetSummary) {
-            clubBudgetSummary.textContent = `${SettlementCalculator.formatCurrency(allocated)} / ${SettlementCalculator.formatCurrency(remaining)}`;
-            clubBudgetSummary.style.color = remaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)';
+        const budgetSummaryEl = document.getElementById('club-budget-summary');
+        if (budgetSummaryEl) {
+            budgetSummaryEl.textContent = `${SettlementCalculator.formatCurrency(allocated)} / ${SettlementCalculator.formatCurrency(remaining)}`;
+            budgetSummaryEl.style.color = remaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)';
         }
 
-        if (!clubListContainer) return;
-        clubListContainer.innerHTML = '';
+        const listContainer = document.getElementById('club-list-container');
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
         if (clubs.length === 0) {
-            clubListContainer.innerHTML = `<div class="empty-state"><span class="empty-icon">🏷️</span><p>${t('empty.no_clubs')}</p></div>`;
+            listContainer.innerHTML = `<div class="empty-state"><span class="empty-icon">🏷️</span><p>${t('empty.no_clubs')}</p></div>`;
             return;
         }
         const clubColorMap = getClubColorMap();

@@ -278,31 +278,34 @@
                                     <span class="card-icon">⚡</span>
                                     <h2 data-i18n="section.result">자동 정산 결과</h2>
                                 </div>
-                                <button id="toggle-settings-btn" class="btn-icon-only" title="정산 구간 설정">⚙️</button>
+                                <button id="toggle-settings-btn" class="btn-icon-only" title="정산 및 발송 설정">⚙️</button>
                             </div>
                         </div>
                         
                         <!-- Collapsible Settings Panel -->
                         <div id="settings-panel" class="settings-panel hidden">
-                            <h3 class="settings-title" data-i18n="section.budget">💰 연간 예산 관리</h3>
+                            <h3 class="settings-title">⚙️ 정산 및 발송 설정</h3>
                             <div class="settings-grid">
                                 <div class="input-group">
-                                    <label for="setting-annual-budget" data-i18n="label.annual_budget">올해 클럽 지원 총예산 (원)</label>
-                                    <input type="text" id="setting-annual-budget" value="0" readonly class="readonly-input">
-                                    <small class="input-hint" data-i18n="hint.annual_budget">💡 관리자 대시보드의 클럽 관리에서 선택한 클럽에 배정한 예산이 자동으로 표시됩니다.</small>
+                                    <label for="setting-report-email">회사 이메일 주소 (받는 사람)</label>
+                                    <input type="email" id="setting-report-email" placeholder="예: user@company.com" autocomplete="email">
+                                    <small class="input-hint">💡 정산 완료 시 정산 보고서를 수신할 본인 회사 이메일 주소를 입력하세요.</small>
                                 </div>
                                 <div class="input-group">
-                                    <label for="setting-used-budget" data-i18n="label.used_budget">올해 누적 사용 금액 (원)</label>
-                                    <input type="text" inputmode="numeric" id="setting-used-budget" value="0" readonly class="readonly-input">
-                                    <small class="input-hint" data-i18n="hint.used_budget">💡 이번 연도 정산 이력 합산 + 관리자가 설정한 이전 사용 금액 기준으로 자동 계산됩니다.</small>
+                                    <label for="setting-sender-email">보내는 이메일 주소 (공통)</label>
+                                    <input type="email" id="setting-sender-email" value="Gochujangs33@gmail.com" readonly class="readonly-input">
+                                    <small class="input-hint">💡 모든 사용자의 발신 메일 주소는 Gochujangs33@gmail.com 으로 공통 적용됩니다.</small>
                                 </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.35rem 0 0;">
-                                    <span data-i18n="label.remaining_display" style="font-size:0.82rem; color:var(--text-secondary);">→ 현재 잔여 예산</span>
-                                    <strong id="setting-remaining-display" style="font-size:0.95rem; color:var(--color-secondary);">미설정</strong>
+                                <div class="input-group" style="padding-top: 0.2rem;">
+                                    <label for="setting-save-device-check" style="display: flex; align-items: center; gap: 0.55rem; cursor: pointer; font-size: 0.88rem; font-weight: 600; color: var(--text-primary); user-select: none;">
+                                        <input type="checkbox" id="setting-save-device-check" checked style="width: 1.15rem; height: 1.15rem; cursor: pointer; accent-color: var(--color-primary);">
+                                        <span>작성 디바이스에 엑셀파일 저장하시겠습니까?</span>
+                                    </label>
+                                    <small class="input-hint" style="margin-top: 0.25rem;">💡 체크 시 디바이스에 엑셀이 저장되고, 체크 해제 시 파일 저장 없이 이메일만 발송합니다.</small>
                                 </div>
                             </div>
                             <div class="settings-actions">
-                                <button id="save-settings-btn" class="btn-primary-sm" data-i18n="btn.save_settings">설정 저장</button>
+                                <button id="save-settings-btn" class="btn-primary-sm">설정 저장</button>
                             </div>
                             <div class="divider"></div>
                         </div>
