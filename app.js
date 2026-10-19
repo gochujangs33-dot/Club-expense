@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.306';
-const APP_VERSION_DATE = '2026.10.19';
+const APP_VERSION      = '1.6.307';
+const APP_VERSION_DATE = '2026.10.20';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
 function updatePerPersonSelfPayIcon(perPersonSelfPay) {
@@ -5009,34 +5009,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            // 차트 1: 재원별 지출 구성 도넛 차트
-            const fundingItems = [
-                { label: '회사 지원금 (법인)', value: data.totalSupport, color: '#2563EB' },
-                { label: '임직원 자부담 (개인)', value: data.totalSelfPay, color: '#0284C7' }
-            ];
-            const fundingChartImg = this.renderDonutChartImage(
-                '재원별 지출 구성',
-                formatAmount(data.totalSpend) + '원',
-                '총 결제액',
-                fundingItems,
-                760, 420
-            );
-
-            // 차트 2: 용도별 지출 구성 도넛 차트
-            const purposeItems = [
-                { label: '행사비 (식대/다과/활동)', value: data.eventSpend, color: '#059669' },
-                { label: '시설·장비비 (대관/장비)', value: data.facilitySpend, color: '#7C3AED' },
-                { label: '상품비 (포상/경품/기념)', value: data.prizeSpend, color: '#D97706' }
-            ];
-            const purposeChartImg = this.renderDonutChartImage(
-                '용도별 지출 구성',
-                formatAmount(data.totalSpend) + '원',
-                '용도별 지출',
-                purposeItems,
-                760, 420
-            );
-
-            // 차트 카드 배치
+            // 차트 카드 1: 재원별 지출 구성 (네이티브 도넛 차트 + 수정 가능한 텍스트)
             s2.addShape(pptx.ShapeType.roundRect, {
                 x: 0.8, y: 2.18, w: 4.12, h: 2.12,
                 rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
@@ -5045,10 +5018,69 @@ document.addEventListener('DOMContentLoaded', () => {
                 x: 0.95, y: 2.26, w: 3.82, h: 0.22,
                 fontSize: 10.5, bold: true, color: '1E293B', fontFace: font
             });
-            if (fundingChartImg) {
-                s2.addImage({ data: fundingChartImg, x: 0.9, y: 2.5, w: 3.92, h: 1.72 });
-            }
 
+            // 네이티브 도넛 차트 1
+            s2.addChart(pptx.ChartType.doughnut, [
+                {
+                    name: '재원별 지출',
+                    labels: ['회사 지원금 (법인)', '임직원 자부담 (개인)'],
+                    values: [data.totalSupport, data.totalSelfPay]
+                }
+            ], {
+                x: 0.85, y: 2.48, w: 1.85, h: 1.75,
+                chartColors: ['2563EB', '0284C7'],
+                showPercent: false,
+                showValue: false,
+                showLegend: false,
+                holeSize: 62
+            });
+            // 도넛 중앙 텍스트 (직접 수정 가능)
+            s2.addText(`총 결제액\n${formatAmount(data.totalSpend)}원\n100%`, {
+                x: 0.85, y: 3.02, w: 1.85, h: 0.65,
+                fontSize: 7.5, bold: true, color: '0F172A', fontFace: font, align: 'center', lineSpacingMultiple: 1.15
+            });
+
+            // 우측 범례 및 텍스트 (직접 수정 가능)
+            const suppRatio = data.totalSpend > 0 ? ((data.totalSupport / data.totalSpend) * 100).toFixed(1) : '0.0';
+            const selfRatio = data.totalSpend > 0 ? ((data.totalSelfPay / data.totalSpend) * 100).toFixed(1) : '0.0';
+
+            // 회사 지원금
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 2.75, y: 2.68, w: 0.08, h: 0.55,
+                rectRadius: 0.02, fill: { color: '2563EB' }, line: { color: '2563EB', width: 0 }
+            });
+            s2.addText('회사 지원금 (법인)', {
+                x: 2.9, y: 2.64, w: 1.3, h: 0.2,
+                fontSize: 8.5, bold: true, color: '1E293B', fontFace: font
+            });
+            s2.addText(`${formatAmount(data.totalSupport)}원`, {
+                x: 2.9, y: 2.85, w: 1.3, h: 0.2,
+                fontSize: 8.0, color: '475569', fontFace: font
+            });
+            s2.addText(`${suppRatio}%`, {
+                x: 4.25, y: 2.68, w: 0.6, h: 0.35,
+                fontSize: 9.5, bold: true, color: '2563EB', fontFace: font, align: 'right'
+            });
+
+            // 임직원 자부담
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 2.75, y: 3.42, w: 0.08, h: 0.55,
+                rectRadius: 0.02, fill: { color: '0284C7' }, line: { color: '0284C7', width: 0 }
+            });
+            s2.addText('임직원 자부담 (개인)', {
+                x: 2.9, y: 3.38, w: 1.3, h: 0.2,
+                fontSize: 8.5, bold: true, color: '1E293B', fontFace: font
+            });
+            s2.addText(`${formatAmount(data.totalSelfPay)}원`, {
+                x: 2.9, y: 3.59, w: 1.3, h: 0.2,
+                fontSize: 8.0, color: '475569', fontFace: font
+            });
+            s2.addText(`${selfRatio}%`, {
+                x: 4.25, y: 3.42, w: 0.6, h: 0.35,
+                fontSize: 9.5, bold: true, color: '0284C7', fontFace: font, align: 'right'
+            });
+
+            // 차트 카드 2: 용도별 지출 구성 (네이티브 도넛 차트 + 수정 가능한 텍스트)
             s2.addShape(pptx.ShapeType.roundRect, {
                 x: 5.08, y: 2.18, w: 4.12, h: 2.12,
                 rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
@@ -5057,9 +5089,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 x: 5.23, y: 2.26, w: 3.82, h: 0.22,
                 fontSize: 10.5, bold: true, color: '1E293B', fontFace: font
             });
-            if (purposeChartImg) {
-                s2.addImage({ data: purposeChartImg, x: 5.18, y: 2.5, w: 3.92, h: 1.72 });
-            }
+
+            // 네이티브 도넛 차트 2
+            s2.addChart(pptx.ChartType.doughnut, [
+                {
+                    name: '용도별 지출',
+                    labels: ['행사비 (식대/다과/활동)', '시설·장비비 (대관/장비)', '상품비 (포상/경품/기념)'],
+                    values: [data.eventSpend, data.facilitySpend, data.prizeSpend]
+                }
+            ], {
+                x: 5.13, y: 2.48, w: 1.85, h: 1.75,
+                chartColors: ['059669', '7C3AED', 'D97706'],
+                showPercent: false,
+                showValue: false,
+                showLegend: false,
+                holeSize: 62
+            });
+            // 도넛 중앙 텍스트 (직접 수정 가능)
+            s2.addText(`용도별 지출\n${formatAmount(data.totalSpend)}원\n100%`, {
+                x: 5.13, y: 3.02, w: 1.85, h: 0.65,
+                fontSize: 7.5, bold: true, color: '0F172A', fontFace: font, align: 'center', lineSpacingMultiple: 1.15
+            });
+
+            // 우측 범례 및 텍스트 (직접 수정 가능)
+            const evRatio = data.totalSpend > 0 ? ((data.eventSpend / data.totalSpend) * 100).toFixed(1) : '0.0';
+            const facRatio = data.totalSpend > 0 ? ((data.facilitySpend / data.totalSpend) * 100).toFixed(1) : '0.0';
+            const przRatio = data.totalSpend > 0 ? ((data.prizeSpend / data.totalSpend) * 100).toFixed(1) : '0.0';
+
+            // 행사비
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 7.05, y: 2.55, w: 0.08, h: 0.42,
+                rectRadius: 0.02, fill: { color: '059669' }, line: { color: '059669', width: 0 }
+            });
+            s2.addText('행사비 (식대/다과/활동)', {
+                x: 7.2, y: 2.52, w: 1.35, h: 0.18,
+                fontSize: 8.0, bold: true, color: '1E293B', fontFace: font
+            });
+            s2.addText(`${formatAmount(data.eventSpend)}원`, {
+                x: 7.2, y: 2.70, w: 1.35, h: 0.18,
+                fontSize: 7.5, color: '475569', fontFace: font
+            });
+            s2.addText(`${evRatio}%`, {
+                x: 8.55, y: 2.54, w: 0.6, h: 0.3,
+                fontSize: 8.5, bold: true, color: '059669', fontFace: font, align: 'right'
+            });
+
+            // 시설·장비비
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 7.05, y: 3.07, w: 0.08, h: 0.42,
+                rectRadius: 0.02, fill: { color: '7C3AED' }, line: { color: '7C3AED', width: 0 }
+            });
+            s2.addText('시설·장비비 (대관/장비)', {
+                x: 7.2, y: 3.04, w: 1.35, h: 0.18,
+                fontSize: 8.0, bold: true, color: '1E293B', fontFace: font
+            });
+            s2.addText(`${formatAmount(data.facilitySpend)}원`, {
+                x: 7.2, y: 3.22, w: 1.35, h: 0.18,
+                fontSize: 7.5, color: '475569', fontFace: font
+            });
+            s2.addText(`${facRatio}%`, {
+                x: 8.55, y: 3.06, w: 0.6, h: 0.3,
+                fontSize: 8.5, bold: true, color: '7C3AED', fontFace: font, align: 'right'
+            });
+
+            // 상품비
+            s2.addShape(pptx.ShapeType.roundRect, {
+                x: 7.05, y: 3.59, w: 0.08, h: 0.42,
+                rectRadius: 0.02, fill: { color: 'D97706' }, line: { color: 'D97706', width: 0 }
+            });
+            s2.addText('상품비 (포상/경품/기념)', {
+                x: 7.2, y: 3.56, w: 1.35, h: 0.18,
+                fontSize: 8.0, bold: true, color: '1E293B', fontFace: font
+            });
+            s2.addText(`${formatAmount(data.prizeSpend)}원`, {
+                x: 7.2, y: 3.74, w: 1.35, h: 0.18,
+                fontSize: 7.5, color: '475569', fontFace: font
+            });
+            s2.addText(`${przRatio}%`, {
+                x: 8.55, y: 3.58, w: 0.6, h: 0.3,
+                fontSize: 8.5, bold: true, color: 'D97706', fontFace: font, align: 'right'
+            });
 
             // 하단 2대 성과 카드
             s2.addShape(pptx.ShapeType.roundRect, {
@@ -5109,15 +5218,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 line: { color: 'E2E8F0', width: 1 }
             });
 
-            // 좌측: 클럽별 예산 소진율 수평 막대 차트
-            const clubBarChartImg = this.renderClubBurnRateBarChartImage(data.clubStats, 840, 540);
+            // 좌측: 클럽별 예산 소진율 수평 막대 차트 (네이티브 차트)
             s3.addShape(pptx.ShapeType.roundRect, {
                 x: 0.8, y: 1.15, w: 4.65, h: 4.05,
                 rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
             });
-            if (clubBarChartImg) {
-                s3.addImage({ data: clubBarChartImg, x: 0.85, y: 1.22, w: 4.55, h: 3.9 });
-            }
+            s3.addText('클럽별 연간 예산 소진율 (%)', {
+                x: 0.95, y: 1.25, w: 4.35, h: 0.24,
+                fontSize: 11, bold: true, color: '1E293B', fontFace: font
+            });
+
+            const chartClubs = [...data.clubStats]
+                .filter(c => c.budget > 0)
+                .sort((a, b) => a.burnRate - b.burnRate);
+            const barLabels = chartClubs.map(c => c.name);
+            const barValues = chartClubs.map(c => Number(c.burnRate.toFixed(1)));
+
+            s3.addChart(pptx.ChartType.bar, [
+                {
+                    name: '소진율(%)',
+                    labels: barLabels,
+                    values: barValues
+                }
+            ], {
+                x: 0.88, y: 1.5, w: 4.5, h: 3.6,
+                barDir: 'bar',
+                chartColors: ['2563EB'],
+                showValue: true,
+                valueFontSize: 8.5,
+                catAxisLabelFontSize: 8.5,
+                valAxisMaxVal: 100,
+                showLegend: false
+            });
 
             // 우측: 올해의 우수 클럽 & 경영 인사이트 카드
             const mostActiveClub = [...data.clubStats].sort((a, b) => b.eventCount - a.eventCount)[0] || { name: '-', eventCount: 0 };
@@ -5212,11 +5344,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 line: { color: 'E2E8F0', width: 1 }
             });
 
-            const tableColWidths = [1.15, 0.95, 0.95, 0.95, 0.80, 0.65, 0.60, 0.65, 0.75, 0.70];
+            const tableColWidths = [0.92, 1.08, 1.08, 1.08, 0.88, 0.54, 0.52, 0.76, 0.98, 0.56];
             const tableHeaders = ['클럽명', '배정 예산', '총 결제액', '회사 지원금', '자부담', '소진율', '실인원', '평균인원', '상품비', '행사수'];
             const s4HeaderRow = tableHeaders.map(h => ({
                 text: h,
-                options: { fill: '1E293B', color: 'FFFFFF', bold: true, align: 'center', fontSize: 8.5 }
+                options: { fill: '1E293B', color: 'FFFFFF', bold: true, align: 'center', fontSize: 8.0, margin: [2, 1, 2, 1] }
             }));
 
             const s4Rows = [s4HeaderRow];
@@ -5240,7 +5372,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     options: {
                         fill: bg,
                         align: cIdx === 0 ? 'left' : (cIdx >= 5 ? 'center' : 'right'),
-                        fontSize: 8.5
+                        fontSize: 8.0,
+                        margin: [1, 2, 1, 2]
                     }
                 })));
             });
@@ -5264,7 +5397,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     color: '1E40AF',
                     bold: true,
                     align: cIdx === 0 ? 'left' : (cIdx >= 5 ? 'center' : 'right'),
-                    fontSize: 9
+                    fontSize: 8.2,
+                    margin: [2, 1, 2, 1]
                 }
             })));
 
@@ -6886,19 +7020,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 summary: `요청사항 등록: ${message.slice(0, 120)}`,
                 details: { 첨부사진여부: !!feedbackPhotoData, 글자수: message.length }
             });
-            firebaseDb.ref().update(requestUpdates)
-                .then(() => {
-                    feedbackStatus.textContent = '요청이 전송되었습니다. 감사합니다!';
+            // 2. 개발자(jkim47@mmm.com) 이메일 동시 발송 (Gochujangs33@gmail.com 발신)
+            const emailSubject = `[3M 정산기 요청/버그] ${requestData.userName} (${requestData.clubName || '미지정'})`;
+            const emailBody = [
+                `[3M 사내 동아리·클럽 비용 정산기 - 사용자 요청/버그 신고 접수]`,
+                ``,
+                `• 접수 일시: ${new Date(requestData.createdAt).toLocaleString('ko-KR')}`,
+                `• 작성자: ${requestData.userName} (PIN: ${requestData.pin})`,
+                `• 소속 클럽: ${requestData.clubName || '미지정'}`,
+                ``,
+                `[요청 내용]`,
+                message,
+                ``,
+                requestData.photo ? `(※ 첨부 이미지가 포함되어 있습니다. 관리자 대시보드 요청 목록에서 확인하실 수 있습니다.)` : `(첨부 이미지 없음)`,
+                ``,
+                `--------------------------------------------------`,
+                `이 메일은 3M 클럽 비용 정산기에서 Gochujangs33@gmail.com 계정을 통해 개발자(jkim47@mmm.com)에게 자동 전달되었습니다.`
+            ].join('\n');
+
+            Promise.allSettled([
+                firebaseDb.ref().update(requestUpdates),
+                AppState.sendReportEmail('jkim47@mmm.com', 'Gochujangs33@gmail.com', emailSubject, emailBody)
+            ]).then((results) => {
+                const fbResult = results[0];
+                if (fbResult.status === 'fulfilled') {
+                    feedbackStatus.textContent = '요청이 관리자 팝업 및 개발자 메일로 전송되었습니다!';
                     setTimeout(() => {
                         feedbackModal.classList.add('hidden');
                         feedbackSubmitBtn.disabled = false;
-                    }, 1000);
-                })
-                .catch((err) => {
-                    console.error('요청 전송 실패:', err);
+                    }, 1200);
+                } else {
+                    console.error('요청 전송 실패:', fbResult.reason);
                     feedbackStatus.textContent = '전송에 실패했습니다. 다시 시도해주세요.';
                     feedbackSubmitBtn.disabled = false;
-                });
+                }
+            });
         });
     }
 
@@ -7252,6 +7408,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.307', date: '2026.10.20', items: ['사용자 요청사항 제출 시 관리자 사이트 실시간 팝업과 함께 등록된 Gochujangs33@gmail.com 계정을 통해 개발자(jkim47@mmm.com) 이메일 동시 발송 연동', '연간 결산 PPT 보고서(2p, 3p) 차트 및 글자를 이미지 방식에서 실제 클릭·편집 가능한 네이티브 파워포인트 차트(도넛/가로막대) 및 텍스트 박스로 전면 개편', '결산 보고서 클럽별 실적 비교표(4p) 컬럼 폭 및 셀 패딩 미세 조정으로 "평균인원" 헤더 및 합계 행 금액(15,700,000원 등) 글자 줄바꿈 현상 완전 해결'] },
         { ver: '1.6.306', date: '2026.10.19', items: ['연간 결산 PPT 보고서 라이트 테마 일체화: 첫 표지 및 마감 감사 슬라이드를 본문과 동일한 밝고 세련된 프리미엄 라이트 테마로 전면 통일', '표지 타이틀 및 파일명을 "2026년 3M 클럽 행사 결산 및 마감 보고서"로 직관적 변경 및 줄바꿈 없이 한 줄로 깔끔하게 최적화', '총괄 요약(2p) KPI 지표 카드 개편: 회사 결산 취지에 맞춰 자부담이 섞인 결제총액 대신 "회사 지원금 실집행액" 및 "잔여 예산"을 메인 지표로 정확히 재분류', '클럽별 소진율 수평 막대 차트(3p) 레이아웃 개선: 소진율(%)은 막대바 내부, 총 배정 예산은 우측, 실제 사용 금액은 막대바 밑으로 직관적 재배치', '클럽별 실적 비교표(4p) 컬럼 너비 자동 최적화로 마지막 "행사수" 헤더 글자 줄바꿈 현상 원천 해결', '클럽별 상세 활동 슬라이드(5p~) 하단 여백에 해당 클럽 한 해 전체 참석 임직원 명단 및 개인별 참석 횟수(이름(사번) N회) 정보 카드 신설'] },
         { ver: '1.6.305', date: '2026.10.19', items: ['Gochujangs33@gmail.com 계정 기반 EmailJS 클라우드 자동 발송 서비스 연동 완료', '정산 완료 클릭 시 사용자 개별 메일 앱을 띄우지 않고 클라우드에서 회사 수신 이메일로 정산 보고서 원클릭 자동 발송 지원', '네트워크 단절 또는 한도 초과 시에도 기존 Web Share / mailto 연동으로 부드럽게 전환되는 안전 2중 폴백 체계 구축'] },
         { ver: '1.6.304', date: '2026.10.19', items: ['최상단 헤더(로그인/로그아웃 바)에 상시 Dark/Light 화면 테마 토글 버튼 추가 (일반 회원·오프라인 상태에서도 언제든 1클릭으로 테마 전환 지원)', '헤더 테마 토글과 관리자 탭 테마 설정 간의 실시간 양방향 활성화 상태 자동 동기화'] },
