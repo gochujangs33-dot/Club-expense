@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.304';
+const APP_VERSION      = '1.6.305';
 const APP_VERSION_DATE = '2026.10.19';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -3041,9 +3041,57 @@ const AppState = {
         };
     },
 
-    // 이메일 발송 실행 (Share API, mailto, 클립보드 복사 등 다중 플랫폼 대응)
+    // 이메일 발송 실행 (EmailJS 클라우드 자동 발송 우선, Web Share / mailto 폴백)
     async sendReportEmail(recipient, sender = 'Gochujangs33@gmail.com', subject, body) {
-        // 1. Android 네이티브 브릿지 (앱 환경)
+        const EMAILJS_SERVICE_ID  = 'service_yjm2gpq';
+        const EMAILJS_TEMPLATE_ID = 'template_t862eth';
+        const EMAILJS_PUBLIC_KEY  = 'hx7DFf4XX6BP68qm7';
+
+        // 1. EmailJS 클라우드 자동 발송 (Gochujangs33@gmail.com 발신)
+        let emailjsSuccess = false;
+        try {
+            if (window.emailjs && typeof window.emailjs.send === 'function') {
+                await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+                    to_email: recipient,
+                    subject: subject,
+                    message: body,
+                    from_name: '3M 클럽 비용 정산기'
+                }, EMAILJS_PUBLIC_KEY);
+                emailjsSuccess = true;
+                console.log('[EmailJS] SDK 자동 발송 완료');
+            } else {
+                // SDK 미로드 환경 대응: REST API 직접 호출
+                const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        service_id: EMAILJS_SERVICE_ID,
+                        template_id: EMAILJS_TEMPLATE_ID,
+                        user_id: EMAILJS_PUBLIC_KEY,
+                        template_params: {
+                            to_email: recipient,
+                            subject: subject,
+                            message: body,
+                            from_name: '3M 클럽 비용 정산기'
+                        }
+                    })
+                });
+                if (res.ok) {
+                    emailjsSuccess = true;
+                    console.log('[EmailJS] REST API 자동 발송 완료');
+                } else {
+                    console.warn('[EmailJS] REST API 발송 실패 상태코드:', res.status);
+                }
+            }
+        } catch (emailjsErr) {
+            console.warn('[EmailJS] 자동 발송 예외 발생, 로컬 공유로 전환:', emailjsErr);
+        }
+
+        if (emailjsSuccess) {
+            return { success: true, method: 'emailjs' };
+        }
+
+        // 2. Android 네이티브 브릿지 (앱 환경)
         if (window.AndroidShare && typeof window.AndroidShare.shareFiles === 'function') {
             try {
                 const files = await this.collectReportFiles();
@@ -3053,30 +3101,30 @@ const AppState = {
                     base64: await this.fileToBase64(f)
                 })));
                 window.AndroidShare.shareFiles(JSON.stringify(filesPayload), subject, body, recipient);
-                return;
+                return { success: true, method: 'android' };
             } catch (err) {
                 console.warn('AndroidShare 실패, 웹 공유로 폴백:', err);
             }
         }
 
-        // 2. Web Share API (모바일/태블릿 등 다중 파일 및 텍스트 공유 지원 브라우저)
+        // 3. Web Share API (모바일/태블릿 등 다중 파일 및 텍스트 공유 지원 브라우저)
         if (navigator.canShare) {
             try {
                 const files = await this.collectReportFiles();
                 if (files.length > 0 && navigator.canShare({ title: subject, text: body, files })) {
                     await navigator.share({ title: subject, text: body, files });
-                    return;
+                    return { success: true, method: 'webshare' };
                 }
             } catch (shareErr) {
                 if (shareErr.name === 'AbortError') {
                     console.log('사용자가 공유 시트를 닫음');
-                    return;
+                    return { success: false, method: 'aborted' };
                 }
                 console.warn('Web Share 실패, mailto 폴백:', shareErr);
             }
         }
 
-        // 3. PC 및 일반 브라우저: 클립보드 본문 복사 및 mailto 링크 트리거
+        // 4. PC 및 일반 브라우저: 클립보드 본문 복사 및 mailto 링크 트리거
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(body);
@@ -3098,6 +3146,8 @@ const AppState = {
         setTimeout(() => {
             if (tempLink.parentNode) tempLink.parentNode.removeChild(tempLink);
         }, 500);
+
+        return { success: true, method: 'mailto' };
     },
 
     // 공식 정산 양식(template.xlsx)을 불러와 입력 데이터로 채운 엑셀 파일(File 객체) 생성
@@ -6278,13 +6328,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const willSaveExcel = AppState.saveExcelToDevice !== false;
 
             const confirmMsg = willSaveExcel
-                ? `정산 내역을 이메일로 발송하고, 작성 디바이스에 엑셀 파일을 저장한 뒤 정산을 완료하시겠습니까?\n\n` +
-                  `• 발신 메일: ${senderEmail}\n` +
+                ? `정산 내역을 Gochujangs33@gmail.com 계정으로 자동 발송하고, 작성 기기에 엑셀 파일을 저장한 뒤 정산을 완료하시겠습니까?\n\n` +
+                  `• 발신 메일: ${senderEmail} (클라우드 자동 발송)\n` +
                   `• 수신 메일: ${recipientEmail}\n` +
                   `• 디바이스 저장: 엑셀 파일 다운로드 (ON)\n\n` +
                   `※ 확인 시 현재 데이터가 정산 이력에 저장되고 화면이 초기화됩니다.`
-                : `정산 내역을 이메일로 발송하고 정산을 완료하시겠습니까?\n\n` +
-                  `• 발신 메일: ${senderEmail}\n` +
+                : `정산 내역을 Gochujangs33@gmail.com 계정으로 자동 발송하고 정산을 완료하시겠습니까?\n\n` +
+                  `• 발신 메일: ${senderEmail} (클라우드 자동 발송)\n` +
                   `• 수신 메일: ${recipientEmail}\n` +
                   `• 디바이스 저장: 건너뜀 (OFF - 메일만 발송)\n\n` +
                   `※ 확인 시 현재 데이터가 정산 이력에 저장되고 화면이 초기화됩니다.`;
@@ -7147,6 +7197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.305', date: '2026.10.19', items: ['Gochujangs33@gmail.com 계정 기반 EmailJS 클라우드 자동 발송 서비스 연동 완료', '정산 완료 클릭 시 사용자 개별 메일 앱을 띄우지 않고 클라우드에서 회사 수신 이메일로 정산 보고서 원클릭 자동 발송 지원', '네트워크 단절 또는 한도 초과 시에도 기존 Web Share / mailto 연동으로 부드럽게 전환되는 안전 2중 폴백 체계 구축'] },
         { ver: '1.6.304', date: '2026.10.19', items: ['최상단 헤더(로그인/로그아웃 바)에 상시 Dark/Light 화면 테마 토글 버튼 추가 (일반 회원·오프라인 상태에서도 언제든 1클릭으로 테마 전환 지원)', '헤더 테마 토글과 관리자 탭 테마 설정 간의 실시간 양방향 활성화 상태 자동 동기화'] },
         { ver: '1.6.303', date: '2026.10.19', items: ['정산 이력 테이블에서 작성자와 상관없이 모든 회원이 해당 건의 엑셀 파일을 다시 다운로드할 수 있도록 권한 정책 개선', '정산 이력 테이블 행사 날짜 셀에 정산 담당자(👤 정산인: OOO) 정보 표기 및 다운로드 엑셀 파일명에 작성자 이름 자동 포함'] },
         { ver: '1.6.302', date: '2026.10.19', items: ['자동 정산 결과 화면 하단 메인 액션 버튼 문구를 "정산 완료"로 직관적 간소화 ("💾 파일 저장 및 정산 완료" → "💾 정산 완료")'] },
