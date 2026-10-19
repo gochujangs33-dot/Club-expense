@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.310';
+const APP_VERSION      = '1.6.311';
 const APP_VERSION_DATE = '2026.10.20';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -5224,12 +5224,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
             });
             s3.addText('클럽별 연간 예산 소진율 현황 (%)', {
-                x: 0.95, y: 1.25, w: 2.35, h: 0.24,
-                fontSize: 11, bold: true, color: '1E293B', fontFace: font
+                x: 0.95, y: 1.25, w: 2.60, h: 0.24,
+                fontSize: 10.5, bold: true, color: '1E293B', fontFace: font,
+                margin: 0, wrap: false
             });
             s3.addText('클럽별 고유 색상 · 배정 예산 대비', {
-                x: 3.10, y: 1.28, w: 2.20, h: 0.20,
-                fontSize: 7.2, color: '64748B', fontFace: font, align: 'right'
+                x: 3.20, y: 1.28, w: 2.10, h: 0.20,
+                fontSize: 7.2, color: '64748B', fontFace: font, align: 'right',
+                margin: 0, wrap: false
             });
 
             const clubColorMap = (typeof getClubColorMap === 'function') ? getClubColorMap() : {};
@@ -5264,7 +5266,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     s3.addText(c.name, {
                         x: 0.92, y: rowY + 0.02, w: 0.90, h: 0.20,
                         fontSize: 8.5, bold: true, color: clubHex, fontFace: font,
-                        align: 'left', valign: 'middle'
+                        align: 'left', valign: 'middle', margin: 0, wrap: false
                     });
 
                     // 2. 수평 막대 트랙 (배경 연회색 라운드 사각형)
@@ -5280,18 +5282,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         rectRadius: 0.03, fill: { color: clubHex }, line: { color: clubHex, width: 0 }
                     });
 
-                    // 4. 막대 위 소진율 텍스트 (% 표기, 직접 수정 가능)
-                    if (fillW >= 0.45) {
+                    // 4. 막대 위 소진율 텍스트 (% 표기, 직접 수정 가능, 여유있는 너비와 margin:0으로 절대 줄바꿈 방지)
+                    if (fillW >= 0.70) {
                         s3.addText(`${rate.toFixed(1)}%`, {
-                            x: trackX + fillW - 0.44, y: rowY + 0.03, w: 0.42, h: 0.18,
+                            x: trackX + fillW - 0.70, y: rowY + 0.03, w: 0.66, h: 0.18,
                             fontSize: 7.5, bold: true, color: 'FFFFFF', fontFace: font,
-                            align: 'right', valign: 'middle'
+                            align: 'right', valign: 'middle', margin: 0, wrap: false
                         });
                     } else {
                         s3.addText(`${rate.toFixed(1)}%`, {
-                            x: trackX + fillW + 0.05, y: rowY + 0.03, w: 0.42, h: 0.18,
+                            x: trackX + fillW + 0.05, y: rowY + 0.03, w: 0.66, h: 0.18,
                             fontSize: 7.5, bold: true, color: clubHex, fontFace: font,
-                            align: 'left', valign: 'middle'
+                            align: 'left', valign: 'middle', margin: 0, wrap: false
                         });
                     }
 
@@ -7472,6 +7474,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.311', date: '2026.10.20', items: ['연간 결산 보고서 PPT(3p) 클럽별 소진율 그래프 내부 퍼센테이지(%) 텍스트 박스 너비 확장 및 margin:0, wrap:false 강제 적용으로 소수점/퍼센트 줄바꿈(100. 0% 등) 완벽 해결', '시스템 사용자 설명회 발표자료(PPTX)를 고품격 엔터프라이즈 라이트 테마로 전면 개편', '설명회 PPT 전 슬라이드의 글자 크기, 행 높이(lineSpacing), 들여쓰기, 카드 여백을 최적화하여 텍스트 겹침·잘림·답답함 완전 해소'] },
         { ver: '1.6.310', date: '2026.10.20', items: ['[버그 해결] 차트 탭 그래프 캔버스가 간헐적으로 빈 화면으로 렌더링되지 않던 근본 원인 수정: index.html 내 누락되었던 Chart.js 라이브러리(./lib/chart.min.js) 스크립트 태그 복원', 'Chart.js 라이브러리 초기화 지연 시에도 누락 없이 100% 렌더링되도록 자동 재시도(Auto-retry) 안전장치 탑재'] },
         { ver: '1.6.309', date: '2026.10.20', items: ['연간 결산 PPT 클럽별 예산 소진율 그래프(3p) 원래 2단 레이아웃(막대/퍼센트 + 사용금액/잔여 + 배정금액) 완벽 복원 및 각 클럽별 고유 지정 색상(그래프 막대 및 좌측 클럽명 글자색) 적용', '소진율 막대그래프의 모든 텍스트(클럽명·배정금액·사용금액·퍼센트)를 PPT 독립 텍스트 상자로 배치하여 슬라이드 위에서 직접 타이핑 수정 가능하게 최적화', '클럽별 상세 활동 슬라이드(5p+) 상단 메타 박스 줄바꿈 배치: "연간 예산 · 총 집행액 · 상품비" 1줄, "참석 실인원" 2줄로 분리하여 끝자리 금액 잘림 현상 완전 해소', '관리자 모드 헤더 내 중복되던 기존 테마 토글 버튼 제거 (최상단 헤더의 상시 테마 토글 버튼으로 깔끔하게 일원화)'] },
         { ver: '1.6.308', date: '2026.10.20', items: ['연간 결산 PPT 소진율 막대 차트(3p) 전면 개편: Office 통합 차트 대신 슬라이드 상에서 즉시 클릭·수정 가능한 독립 텍스트 상자(클럽명·소진율) 및 벡터 막대 도형(트랙+채움)으로 전환', '보고서 전반 "고유 실인원" / "고유 N명" 표기를 "실인원 N명"으로 통일(2p KPI 카드 및 하단 성과 요약, 5p+ 활동 상세 테이블 합계 행 등)', '클럽별 상세 활동 테이블(5p+) 헤더에서 중복되는 "행사명 (비고)" 열을 생략하고 6개 열(진행일자/결제액/지원금/자부담/상품비/참석인원)로 넓고 쾌적하게 재배치', '슬라이드 전반 글자 크기·행 높이·여백·패딩 전면 재조정: KPI 카드 수직 간격 확대, 도넛 차트 범례 항목 균등 배치, 테이블 셀 상하 마진(3.5pt) 및 하단 참석자 명단 줄간격(1.35배) 확보로 답답함 완전 해소'] },

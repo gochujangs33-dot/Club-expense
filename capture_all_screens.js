@@ -15,6 +15,14 @@ const fs = require('fs');
     const memberContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page1 = await memberContext.newPage();
     await page1.goto('http://127.0.0.1:3000', { waitUntil: 'networkidle' });
+    await page1.evaluate(() => {
+        try {
+            localStorage.setItem('club_expense_admin_theme', 'light');
+            document.documentElement.dataset.appTheme = 'light';
+            document.querySelectorAll('.admin-themed-pane').forEach(p => p.dataset.adminTheme = 'light');
+        } catch (_) {}
+    });
+    await page1.waitForTimeout(500);
 
     // 1. 로그인 PIN 키패드 모달
     const loginCard = await page1.$('.pin-modal-card');
@@ -99,12 +107,28 @@ const fs = require('fs');
     const adminContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page2 = await adminContext.newPage();
     await page2.goto('http://127.0.0.1:3000', { waitUntil: 'networkidle' });
+    await page2.evaluate(() => {
+        try {
+            localStorage.setItem('club_expense_admin_theme', 'light');
+            document.documentElement.dataset.appTheme = 'light';
+            document.querySelectorAll('.admin-themed-pane').forEach(p => p.dataset.adminTheme = 'light');
+        } catch (_) {}
+    });
+    await page2.waitForTimeout(300);
 
     for (let i = 0; i < 6; i++) {
         await page2.click('button.pin-key[data-value="0"]');
         await page2.waitForTimeout(60);
     }
     await page2.waitForTimeout(1000);
+    await page2.evaluate(() => {
+        try {
+            if (typeof applyAdminTheme === 'function') applyAdminTheme('light');
+            document.documentElement.dataset.appTheme = 'light';
+            document.querySelectorAll('.admin-themed-pane').forEach(p => p.dataset.adminTheme = 'light');
+        } catch (_) {}
+    });
+    await page2.waitForTimeout(400);
 
     // 8. [관리자] 대시보드 관리 탭
     const adminTabBtn = await page2.$('#admin-tab-btn');
