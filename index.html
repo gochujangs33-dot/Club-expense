@@ -291,14 +291,9 @@
                                     <input type="email" id="setting-report-email" placeholder="예: user@company.com" autocomplete="email">
                                     <small class="input-hint">💡 정산 완료 시 정산 보고서를 수신할 본인 회사 이메일 주소를 입력하세요.</small>
                                 </div>
-                                <div class="input-group">
-                                    <label for="setting-sender-email">보내는 이메일 주소 (공통)</label>
-                                    <input type="email" id="setting-sender-email" value="Gochujangs33@gmail.com" readonly class="readonly-input">
-                                    <small class="input-hint">💡 모든 사용자의 발신 메일 주소는 Gochujangs33@gmail.com 으로 공통 적용됩니다.</small>
-                                </div>
                                 <div class="input-group" style="padding-top: 0.2rem;">
-                                    <label for="setting-save-device-check" style="display: flex; align-items: center; gap: 0.55rem; cursor: pointer; font-size: 0.88rem; font-weight: 600; color: var(--text-primary); user-select: none;">
-                                        <input type="checkbox" id="setting-save-device-check" checked style="width: 1.15rem; height: 1.15rem; cursor: pointer; accent-color: var(--color-primary);">
+                                    <label for="setting-save-device-check" class="settings-checkbox-label">
+                                        <input type="checkbox" id="setting-save-device-check" checked>
                                         <span>작성 디바이스에 엑셀파일 저장하시겠습니까?</span>
                                     </label>
                                     <small class="input-hint" style="margin-top: 0.25rem;">💡 체크 시 디바이스에 엑셀이 저장되고, 체크 해제 시 파일 저장 없이 이메일만 발송합니다.</small>

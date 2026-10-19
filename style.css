@@ -1112,27 +1112,53 @@ input[aria-invalid="true"] {
 }
 
 /* Settings Panel */
+/* Settings Panel */
 .settings-panel {
-    background: rgba(15, 23, 42, 0.4);
+    background: rgba(255, 255, 255, 0.035);
     border-radius: 14px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.1rem 1.15rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--card-border);
     animation: slideIn 0.25s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .settings-title {
     font-size: 0.95rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
 }
 
 .settings-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.85rem;
     margin-bottom: 1rem;
+}
+
+.settings-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    user-select: none;
+    line-height: 1.4;
+}
+
+.settings-checkbox-label input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+    margin: 0;
+    flex-shrink: 0;
 }
 
 .settings-row {
@@ -3140,6 +3166,33 @@ html[data-app-theme="light"] .card {
     box-shadow: var(--shadow-premium);
 }
 html[data-app-theme="light"] .card:hover { box-shadow: 0 14px 34px rgba(49, 69, 108, 0.15); }
+html[data-app-theme="light"] .settings-panel {
+    background: #ffffff;
+    border: 1px solid rgba(72, 91, 128, 0.22);
+    box-shadow: 0 4px 18px rgba(49, 69, 108, 0.08);
+}
+html[data-app-theme="light"] .settings-panel .settings-title {
+    color: #17243b;
+}
+html[data-app-theme="light"] .settings-panel label {
+    color: #17243b;
+    font-weight: 600;
+}
+html[data-app-theme="light"] .settings-panel .input-hint {
+    color: #53647e;
+}
+html[data-app-theme="light"] .settings-panel input[type="email"] {
+    background: #ffffff;
+    border: 1px solid rgba(72, 91, 128, 0.28);
+    color: #17243b;
+}
+html[data-app-theme="light"] .settings-panel input[type="email"]:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+html[data-app-theme="light"] .settings-checkbox-label {
+    color: #17243b;
+}
 html[data-app-theme="light"] .card-header { border-bottom-color: rgba(72, 91, 128, 0.12); }
 html[data-app-theme="light"] .club-name-input {
     border-bottom-color: rgba(72, 91, 128, 0.35);
