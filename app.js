@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.297';
-const APP_VERSION_DATE = '2026.10.15';
+const APP_VERSION      = '1.6.298';
+const APP_VERSION_DATE = '2026.10.19';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
 function updatePerPersonSelfPayIcon(perPersonSelfPay) {
@@ -1061,8 +1061,12 @@ const AppState = {
                             if (data) {
                                 // Firebase 데이터가 있을 경우 덮어쓰기
                                 if (data.expenseItems) this.expenseItems = data.expenseItems;
-                                if (data.memberCount !== undefined) this.memberCount = data.memberCount;
-                                if (data.attendees) this.attendees = data.attendees;
+                                if (data.attendees && Array.isArray(data.attendees)) {
+                                    this.attendees = data.attendees;
+                                    this.memberCount = this.attendees.length;
+                                } else if (data.memberCount !== undefined) {
+                                    this.memberCount = data.memberCount;
+                                }
                                 if (data.directory) this.directory = data.directory;
                                 // rules → globalSettings/rules 실시간 리스너 기준 (관리자 설정값 우선)
                                 // annualBudget → clubRegistry.budget 기준 (관리자 설정값 우선)
@@ -2250,6 +2254,9 @@ const AppState = {
     },
 
     render() {
+        if (Array.isArray(this.attendees)) {
+            this.memberCount = this.attendees.length;
+        }
         const result = SettlementCalculator.calculate(
             this.memberCount,
             this.expenseItems,
@@ -2341,6 +2348,11 @@ const AppState = {
         const memberCountInput = document.getElementById('member-count-input');
         if (memberCountInput) {
             memberCountInput.value = this.memberCount;
+        }
+
+        const prizeInput = document.getElementById('prev-prize-input');
+        if (prizeInput) {
+            prizeInput.value = formatAmount(this.previousPrizeTotal || 0);
         }
 
         // Update Tab badge and list labels
@@ -2939,6 +2951,7 @@ const AppState = {
 
         // 정적 data-i18n 요소 동기화 (언어 변경 시 즉시 반영)
         if (typeof applyTranslations === 'function') applyTranslations();
+        if (typeof updatePendingSelfPayPreview === 'function') updatePendingSelfPayPreview();
     },
 
     generateEmailReport() {
@@ -4004,7 +4017,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (prizeInput) prizeInput.value = formatAmount(AppState.previousPrizeTotal);
                 AppState.usedBudget = 0;
                 AppState.clubHistory = [];
-                AppState.clearClubData(previousClub);
+                // 이전에 유효한 클럽이 지정되어 있었던 경우에만 기존 작업 내용을 정리 (초기 미지정 상태에서 클럽을 최초 선택할 때는 입력한 참석자/내역 보존)
+                if (previousClub.name) {
+                    AppState.clearClubData(previousClub);
+                }
             }
             AppState.syncBudgetFromClub(AppState.clubName);
             AppState.save();
@@ -5134,8 +5150,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     fontSize: 9.5, bold: true, color: '1E293B', fontFace: font
                 });
 
-                const timelineColW = [0.9, 1.8, 0.5, 0.9, 0.9, 0.8, 0.7, 1.9];
-                const timelineHeaders = ['진행 일자', '행사명 (비고)', '인원', '총 결제액', '회사 지원금', '개인 자부담', '상품비', '참석자 명단 요약'];
+                const timelineColW = [1.0, 2.0, 1.1, 1.1, 1.0, 0.9, 1.3];
+                const timelineHeaders = ['진행 일자', '행사명 (비고)', '총 결제액', '회사 지원금', '개인 자부담', '상품비', '참석자 명단 요약'];
                 const tHeaderRow = timelineHeaders.map(h => ({
                     text: h,
                     options: { fill: '1E293B', color: 'FFFFFF', bold: true, align: 'center', fontSize: 8.5 }
@@ -5146,12 +5162,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     tRows.push([
                         { text: '-', options: { align: 'center', fontSize: 8.5 } },
                         { text: '해당 연도 등록된 정산 내역이 없습니다.', options: { align: 'left', fontSize: 8.5 } },
-                        { text: '0명', options: { align: 'center', fontSize: 8.5 } },
                         { text: '0원', options: { align: 'right', fontSize: 8.5 } },
                         { text: '0원', options: { align: 'right', fontSize: 8.5 } },
                         { text: '0원', options: { align: 'right', fontSize: 8.5 } },
                         { text: '0원', options: { align: 'right', fontSize: 8.5 } },
-                        { text: '-', options: { align: 'left', fontSize: 8.5 } }
+                        { text: '0명', options: { align: 'center', fontSize: 8.5 } }
                     ]);
                 } else {
                     club.entries.forEach((e, eIdx) => {
@@ -5165,18 +5180,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const selfStr = formatAmount(e.totalSelfPay || 0) + '원';
                         const prizeStr = formatAmount(getHistoryPrizeCost(e)) + '원';
 
-                        const attNames = (e.attendees || []).map(a => a.name || a).filter(Boolean);
-                        const attSummary = attNames.length > 3
-                            ? `${attNames.slice(0, 3).join(', ')} 외 ${attNames.length - 3}명`
-                            : (attNames.join(', ') || '-');
-
                         tRows.push([
-                            dateStr, eventDesc, attCount, spendStr, suppStr, selfStr, prizeStr, attSummary
+                            dateStr, eventDesc, spendStr, suppStr, selfStr, prizeStr, attCount
                         ].map((val, cIdx) => ({
                             text: val,
                             options: {
                                 fill: bg,
-                                align: (cIdx === 1 || cIdx === 7) ? 'left' : (cIdx === 0 || cIdx === 2) ? 'center' : 'right',
+                                align: (cIdx === 1) ? 'left' : (cIdx === 0 || cIdx === 6) ? 'center' : 'right',
                                 fontSize: 8
                             }
                         })));
@@ -5185,7 +5195,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     tRows.push([
                         '합계',
                         `총 ${club.eventCount}회 진행`,
-                        `${club.attendeesSum}명`,
                         formatAmount(club.spend) + '원',
                         formatAmount(club.support) + '원',
                         formatAmount(club.selfPay) + '원',
@@ -5197,7 +5206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             fill: 'EFF6FF',
                             color: '1E40AF',
                             bold: true,
-                            align: (cIdx === 1 || cIdx === 7) ? 'left' : (cIdx === 0 || cIdx === 2) ? 'center' : 'right',
+                            align: (cIdx === 1) ? 'left' : (cIdx === 0 || cIdx === 6) ? 'center' : 'right',
                             fontSize: 8.5
                         }
                     })));
@@ -5443,6 +5452,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // 관리자 탭 전환 시: globalHistory 최신화 (대시보드·클럽이력·차트 공통)
             if ((tabId === 'tab-admin' || tabId === 'tab-club-history' || tabId === 'tab-charts') && typeof renderAdminDashboard === 'function') {
                 renderAdminDashboard({ animateChartsOnLoad: tabId === 'tab-charts' });
+            }
+            // 비용 정산 탭 전환 시: 참석자 명단/명부 탭 등에서 추가/수정된 인원 및 정산 결과 즉시 재반영
+            if (tabId === 'tab-settlement') {
+                AppState.render();
             }
             // 이력 탭 전환 시: 동일 클럽의 전체 사용자 이력 로드
             if (tabId === 'tab-history') {
@@ -6992,6 +7005,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.298', date: '2026.10.19', items: ['연간 결산 PPT 보고서 클럽별 상세 타임라인 테이블 내 참석자 명단 요약 컬럼을 인원수(명) 전용으로 간소화(불필요한 "외 몇 명" 이름 나열 제거 및 테이블 가독성 향상)', '참석자 명단 인원 추가 후 정산 화면 참석자 수(memberCount)가 0으로 미반영되던 동기화 버그 전면 보완(클럽 최초 선택 시 초기화 방지, 탭 전환 시 자동 재렌더링 및 명부 동기화 보장)', '비용 항목 추가 폼 내 브라우저 이전 입력값 자동완성(autocomplete) 팝업 원천 차단 및 이전 카드 내역 오반영 방지', '비용 항목 입력 시 개인카드 하단에 실시간 예상 자부담 및 1인당 개인부담 안내 배너 추가(항목 추가 전 결제 참고용 실시간 계산 지원)'] },
         { ver: '1.6.297', date: '2026.10.15', items: ['동명이인 사번 선택 팝업 글자색 시인성 버그 수정(어두운 배경과 텍스트 색상 겹침 해결)', '앱 내 전체 팝업/모달(동명이인·텍스트수정·회원정보수정·삭제확인·시설장비승인·초과승인·변경이력·PPT결산 등) 라이트/다크 테마 고대비 스타일 전면 보정', '하드코딩된 인라인 다크 배경 제거 및 테마별 카드·라벨·입력창·버튼 색상 최적화'] },
         { ver: '1.6.296', date: '2026.10.15', items: ['요청사항 입력창(textarea) 및 이메일 보고서·총 자부담 입력창 인라인 다크 배경 제거', '라이트 테마 환경에서 모달 입력창 순백색 배경(#ffffff) 및 또렷한 글자색(#17243b)·플레이스홀더 일체화', '기본 폼 컨트롤 스타일에 textarea 통합으로 다크/라이트 테마 자동 동기화'] },
         { ver: '1.6.295', date: '2026.10.15', items: ['상품비 안내 토스트 팝업 글자색 누락 버그 수정(라이트 테마에서 어두운 텍스트가 다크 배경에 묻혀 보이지 않던 현상 해결)', '상품비 안내 팝업 전용 스타일링 및 라이트 테마 카드 톤(순백색 배경·선명한 텍스트·연회색 버튼) 완벽 일체화', '상품비 안내 팝업 내 상태 아이콘(🎁/🚫/⚠️) 및 키보드(Enter/Esc) 닫기 편의 기능 지원'] },
@@ -10112,6 +10126,7 @@ function updateCardTypeUI() {
         if (personalAmountInput) { personalAmountInput.value = '0'; }
         const corpExtraHint = document.getElementById('corp-extra-hint');
         if (corpExtraHint) corpExtraHint.style.display = 'none';
+        updatePendingSelfPayPreview();
         return;
     } else {
         personalCheck.disabled = false;
@@ -10170,6 +10185,63 @@ function updateCardTypeUI() {
             personalAmountInput.style.opacity = '0.65';
         }
     }
+    updatePendingSelfPayPreview();
+}
+
+// 비용 항목 추가/수정 폼 입력 시 이번 금액이 반영되었을 때의 예상 총 자부담 및 1인당 개인부담 실시간 프리뷰
+function updatePendingSelfPayPreview() {
+    const previewEl = document.getElementById('pending-self-pay-preview');
+    if (!previewEl) return;
+
+    const amountInput = document.getElementById('expense-amount-input');
+    const totalAmount = parseAmount(amountInput ? amountInput.value : '0') || 0;
+
+    if (totalAmount <= 0) {
+        previewEl.innerHTML = '';
+        previewEl.classList.add('hidden');
+        return;
+    }
+
+    const corpCheck = document.getElementById('expense-corp-check');
+    const personalCheck = document.getElementById('expense-personal-check');
+    const corpAmountInput = document.getElementById('expense-corporate-amount-input');
+
+    const corpOn = corpCheck ? corpCheck.checked : true;
+    const personalOn = personalCheck ? personalCheck.checked : false;
+
+    let pendingItemCorp = 0;
+    if (corpOn && !personalOn) {
+        pendingItemCorp = totalAmount;
+    } else if (!corpOn && personalOn) {
+        pendingItemCorp = 0;
+    } else if (corpOn && personalOn) {
+        const rawCorp = parseAmount(corpAmountInput ? corpAmountInput.value : '0') || 0;
+        pendingItemCorp = Math.min(totalAmount, Math.max(0, rawCorp));
+    } else {
+        pendingItemCorp = totalAmount;
+    }
+    const pendingItemPersonal = Math.max(0, totalAmount - pendingItemCorp);
+
+    // 기존 등록된 항목들의 개인카드 자부담 합계 (수정 모드 시 수정 대상 항목은 제외)
+    const editingId = AppState.editingItemId || null;
+    const existingItems = (AppState.expenseItems || []).filter(item => item.id !== editingId);
+    const existingSelfPay = existingItems.reduce((sum, item) => sum + (item.personalAmount || 0), 0);
+
+    const projectedTotalSelfPay = existingSelfPay + pendingItemPersonal;
+    const memberCount = AppState.memberCount || (AppState.attendees ? AppState.attendees.length : 0);
+    const projectedPerPerson = memberCount > 0 ? Math.round(projectedTotalSelfPay / memberCount) : 0;
+
+    if (projectedTotalSelfPay === 0) {
+        previewEl.className = 'pending-self-pay-preview zero-self-pay';
+        previewEl.innerHTML = `<span style="font-size:1rem;">😊</span> <span><strong>이번 금액 반영 시:</strong> 총 자부담 <strong>0원</strong> (개인부담 <strong>0원</strong> · 전액 지원)</span>`;
+    } else {
+        previewEl.className = 'pending-self-pay-preview';
+        const perPersonText = memberCount > 0
+            ? `개인부담 <strong>${formatAmount(projectedPerPerson)}원</strong>`
+            : `참석자 미등록`;
+        previewEl.innerHTML = `<span style="font-size:1rem;">💡</span> <span><strong>이번 금액 반영 시:</strong> 총 자부담 <strong>${formatAmount(projectedTotalSelfPay)}원</strong> (${perPersonText})</span>`;
+    }
+    previewEl.classList.remove('hidden');
 }
 
 // 행사비 인당 지원액이 정책 계산값(85,000원 이내 구간)을 초과할 때 이사진 승인 여부

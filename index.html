@@ -184,15 +184,15 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form id="expense-form" onsubmit="return false;">
+                            <form id="expense-form" onsubmit="return false;" autocomplete="off">
                                 <div class="input-group">
                                     <label for="expense-desc-input" data-i18n="label.expense_desc">내역 (항목명)</label>
-                                    <input type="text" id="expense-desc-input" data-i18n-ph="ph.expense_desc" placeholder="예: 저녁 식대, 대관료 등" required>
+                                    <input type="text" id="expense-desc-input" data-i18n-ph="ph.expense_desc" placeholder="예: 저녁 식대, 대관료 등" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                                 </div>
                                 <div class="input-row">
                                     <div class="input-group flex-2">
                                         <label for="expense-amount-input" data-i18n="label.expense_amount">금액 (원)</label>
-                                        <input type="text" inputmode="numeric" id="expense-amount-input" placeholder="예: 150,000" required>
+                                        <input type="text" inputmode="numeric" id="expense-amount-input" placeholder="예: 150,000" required autocomplete="off">
                                     </div>
                                     <div class="input-group flex-3">
                                         <label for="expense-category-select" data-i18n="label.expense_cat">구분 (카테고리)</label>
@@ -207,7 +207,7 @@
                                     <div class="input-group flex-1 hidden" id="corp-amount-group">
                                         <div class="card-amount-row">
                                             <label for="expense-corporate-amount-input" data-i18n="label.corp_card">법인카드</label>
-                                            <input type="text" inputmode="numeric" id="expense-corporate-amount-input" placeholder="법인카드 결제 금액" class="card-amount-input">
+                                            <input type="text" inputmode="numeric" id="expense-corporate-amount-input" placeholder="법인카드 결제 금액" class="card-amount-input" autocomplete="off">
                                             <div id="corp-receipt-group" class="receipt-action-group">
                                                 <label for="expense-receipt-corp-input" class="btn-secondary" data-i18n="btn.receipt">영수증</label>
                                                 <input type="file" id="expense-receipt-corp-input" accept="image/*" style="display:none;">
@@ -221,7 +221,7 @@
                                     <div class="input-group flex-1 hidden" id="personal-amount-group">
                                         <div class="card-amount-row">
                                             <label for="expense-personal-amount-input" data-i18n="label.personal_card">개인카드</label>
-                                            <input type="text" inputmode="numeric" id="expense-personal-amount-input" placeholder="개인카드 결제 금액" class="card-amount-input">
+                                            <input type="text" inputmode="numeric" id="expense-personal-amount-input" placeholder="개인카드 결제 금액" class="card-amount-input" autocomplete="off">
                                             <div id="personal-receipt-group" class="receipt-action-group">
                                                 <label for="expense-receipt-personal-input" class="btn-secondary" data-i18n="btn.receipt">영수증</label>
                                                 <input type="file" id="expense-receipt-personal-input" accept="image/*" style="display:none;">
@@ -229,7 +229,8 @@
                                                 <button type="button" id="delete-receipt-personal-btn" class="btn-text-danger hidden" data-i18n="btn.delete_receipt">× 영수증 삭제</button>
                                             </div>
                                         </div>
-                                        <small class="input-hint" id="split-auto-hint" data-i18n="hint.split_auto" style="display:none;">총금액 - 법인카드 금액로 자동 계산됨</small>
+                                        <small class="input-hint" id="split-auto-hint" data-i18n="hint.split_auto" style="display:none;">총금액 - 법인카드 금액으로 자동 계산됨</small>
+                                        <div id="pending-self-pay-preview" class="pending-self-pay-preview hidden" role="status" aria-live="polite"></div>
                                     </div>
                                 </div>
                                 <div class="form-actions">

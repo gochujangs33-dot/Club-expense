@@ -4375,6 +4375,44 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     .chart-canvas-wrap:has(#club-unique-attendees-chart) { height: 350px; }
 }
 
+/* 이번 금액 반영 시 예상 자부담 실시간 프리뷰 배너 */
+.pending-self-pay-preview {
+    margin-top: 0.5rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.45;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #a5b4fc;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+[data-app-theme="light"] .pending-self-pay-preview {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.08);
+}
+
+.pending-self-pay-preview.zero-self-pay {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #4ade80;
+}
+
+[data-app-theme="light"] .pending-self-pay-preview.zero-self-pay {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #15803d;
+    box-shadow: 0 2px 6px rgba(34, 197, 94, 0.08);
+}
+
 @media (max-width: 380px) {
     html {
         font-size: 13.5px; /* 초소형 화면(380px 이하)에서 글씨 크기 추가 축소로 줄바꿈 원천 방지 */
