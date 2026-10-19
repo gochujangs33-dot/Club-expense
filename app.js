@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.308';
+const APP_VERSION      = '1.6.309';
 const APP_VERSION_DATE = '2026.10.20';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -5218,23 +5218,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 line: { color: 'E2E8F0', width: 1 }
             });
 
-            // 좌측: 클럽별 예산 소진율 수평 막대 그래픽 (개별 텍스트 및 벡터 도형으로 직접 수정 가능)
+            // 좌측: 클럽별 연간 예산 소진율 현황 (원래 2단 레이아웃 복원 + 클럽별 고유 색상 및 텍스트 수정 가능)
             s3.addShape(pptx.ShapeType.roundRect, {
                 x: 0.8, y: 1.15, w: 4.65, h: 4.05,
                 rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
             });
-            s3.addText('클럽별 연간 예산 소진율 (%)', {
+            s3.addText('클럽별 연간 예산 소진율 현황 (%)', {
                 x: 0.95, y: 1.25, w: 2.35, h: 0.24,
                 fontSize: 11, bold: true, color: '1E293B', fontFace: font
             });
-            s3.addText('80%미만 안전 · 80~100% 주의 · 초과 위험', {
+            s3.addText('클럽별 고유 색상 · 배정 예산 대비', {
                 x: 3.10, y: 1.28, w: 2.20, h: 0.20,
                 fontSize: 7.2, color: '64748B', fontFace: font, align: 'right'
             });
 
+            const clubColorMap = (typeof getClubColorMap === 'function') ? getClubColorMap() : {};
             const chartClubs = [...data.clubStats]
                 .filter(c => c.budget > 0)
-                .sort((a, b) => a.burnRate - b.burnRate);
+                .sort((a, b) => b.burnRate - a.burnRate); // 소진율 순으로 자연스럽게 정렬
 
             if (chartClubs.length === 0) {
                 s3.addText('해당 연도 배정된 클럽 예산 정보가 없습니다.', {
@@ -5242,67 +5243,72 @@ document.addEventListener('DOMContentLoaded', () => {
                     fontSize: 9.5, color: '94A3B8', fontFace: font, align: 'center'
                 });
             } else {
-                const totalRows = chartClubs.length;
-                const startY = 1.60;
-                const availH = 3.25;
-                const rowH = Math.min(0.34, availH / totalRows);
-                const barH = Math.min(0.16, rowH * 0.55);
-                const trackW = 2.45;
-                const trackX = 2.15;
+                const displayClubs = chartClubs.slice(0, 8); // 상위 8개 클럽을 2단 구조로 여유있게 배치
+                const totalRows = displayClubs.length;
+                const startY = 1.56;
+                const availH = 3.48;
+                const rowH = availH / Math.max(totalRows, 1);
+                const barH = 0.16;
+                const trackW = 1.95;
+                const trackX = 1.88;
 
-                chartClubs.forEach((c, idx) => {
+                displayClubs.forEach((c, idx) => {
                     const rowY = startY + idx * rowH;
                     const rate = Math.max(0, c.burnRate || 0);
 
-                    // 1. 좌측 클럽명 (파워포인트에서 클릭하여 직접 텍스트 수정 가능)
+                    // 클럽 고유 색상 추출 (6자리 헥스코드)
+                    const rawColor = clubColorMap[c.name] || '#2563EB';
+                    const clubHex = (rawColor.startsWith('#') ? rawColor.slice(1) : rawColor).toUpperCase();
+
+                    // 1. 좌측 클럽명 (각 클럽별 고유 색상 글자색 + 클릭하여 직접 텍스트 수정 가능)
                     s3.addText(c.name, {
-                        x: 0.92, y: rowY, w: 1.18, h: rowH,
-                        fontSize: 8.5, bold: true, color: '1E293B', fontFace: font,
-                        align: 'right', valign: 'middle'
+                        x: 0.92, y: rowY + 0.02, w: 0.90, h: 0.20,
+                        fontSize: 8.5, bold: true, color: clubHex, fontFace: font,
+                        align: 'left', valign: 'middle'
                     });
 
-                    // 2. 배경 막대 트랙 (연회색 사각형)
+                    // 2. 수평 막대 트랙 (배경 연회색 라운드 사각형)
                     s3.addShape(pptx.ShapeType.roundRect, {
-                        x: trackX, y: rowY + (rowH - barH) / 2, w: trackW, h: barH,
+                        x: trackX, y: rowY + 0.04, w: trackW, h: barH,
                         rectRadius: 0.03, fill: { color: 'F1F5F9' }, line: { color: 'E2E8F0', width: 0.5 }
                     });
 
-                    // 3. 채움 막대 (소진율에 따른 너비 및 상태별 색상 적용)
+                    // 3. 채움 막대 (각 클럽별 고유 색상 막대 도형)
                     const fillW = Math.max(0.06, Math.min(trackW, (rate / 100) * trackW));
-                    let barColor = '2563EB'; // 기본 블루 (안전)
-                    if (rate > 100) barColor = 'EF4444'; // 초과 레드
-                    else if (rate >= 80) barColor = 'D97706'; // 주의 오렌지
-
                     s3.addShape(pptx.ShapeType.roundRect, {
-                        x: trackX, y: rowY + (rowH - barH) / 2, w: fillW, h: barH,
-                        rectRadius: 0.03, fill: { color: barColor }, line: { color: barColor, width: 0 }
+                        x: trackX, y: rowY + 0.04, w: fillW, h: barH,
+                        rectRadius: 0.03, fill: { color: clubHex }, line: { color: clubHex, width: 0 }
                     });
 
-                    // 4. 소진율 텍스트 (% 표기, 직접 수정 가능)
-                    s3.addText(`${rate.toFixed(1)}%`, {
-                        x: trackX + trackW + 0.08, y: rowY, w: 0.65, h: rowH,
-                        fontSize: 8.2, bold: true, color: barColor, fontFace: font,
+                    // 4. 막대 위 소진율 텍스트 (% 표기, 직접 수정 가능)
+                    if (fillW >= 0.45) {
+                        s3.addText(`${rate.toFixed(1)}%`, {
+                            x: trackX + fillW - 0.44, y: rowY + 0.03, w: 0.42, h: 0.18,
+                            fontSize: 7.5, bold: true, color: 'FFFFFF', fontFace: font,
+                            align: 'right', valign: 'middle'
+                        });
+                    } else {
+                        s3.addText(`${rate.toFixed(1)}%`, {
+                            x: trackX + fillW + 0.05, y: rowY + 0.03, w: 0.42, h: 0.18,
+                            fontSize: 7.5, bold: true, color: clubHex, fontFace: font,
+                            align: 'left', valign: 'middle'
+                        });
+                    }
+
+                    // 5. 막대 아래 사용 금액 및 잔여/초과 설명 (직접 수정 가능)
+                    const remainText = c.remaining >= 0 ? `잔여 ${formatAmount(c.remaining)}원` : `초과 ${formatAmount(Math.abs(c.remaining))}원`;
+                    s3.addText(`사용 금액: ${formatAmount(c.support)}원 (${remainText})`, {
+                        x: trackX, y: rowY + 0.22, w: trackW + 0.40, h: 0.16,
+                        fontSize: 7.2, color: '64748B', fontFace: font,
                         align: 'left', valign: 'middle'
                     });
-                });
 
-                // 하단 0%, 50%, 100% 눈금 가이드 라벨
-                const axisY = startY + totalRows * rowH + 0.04;
-                s3.addShape(pptx.ShapeType.line, {
-                    x: trackX, y: axisY, w: trackW, h: 0,
-                    line: { color: 'E2E8F0', width: 0.5 }
-                });
-                s3.addText('0%', {
-                    x: trackX - 0.15, y: axisY + 0.02, w: 0.3, h: 0.16,
-                    fontSize: 7.0, color: '94A3B8', fontFace: font, align: 'center'
-                });
-                s3.addText('50%', {
-                    x: trackX + trackW / 2 - 0.2, y: axisY + 0.02, w: 0.4, h: 0.16,
-                    fontSize: 7.0, color: '94A3B8', fontFace: font, align: 'center'
-                });
-                s3.addText('100%', {
-                    x: trackX + trackW - 0.25, y: axisY + 0.02, w: 0.4, h: 0.16,
-                    fontSize: 7.0, color: '94A3B8', fontFace: font, align: 'center'
+                    // 6. 우측 총 배정 금액 (직접 수정 가능)
+                    s3.addText(`배정 ${formatAmount(c.budget)}원`, {
+                        x: 3.88, y: rowY + 0.02, w: 1.45, h: 0.20,
+                        fontSize: 8.5, bold: true, color: '0F172A', fontFace: font,
+                        align: 'right', valign: 'middle'
+                    });
                 });
             }
 
@@ -5483,12 +5489,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 sc.addShape(pptx.ShapeType.roundRect, {
-                    x: 0.8, y: 1.15, w: 8.4, h: 0.46,
-                    rectRadius: 0.05, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+                    x: 0.8, y: 1.12, w: 8.4, h: 0.58,
+                    rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
                 });
-                sc.addText(`연간 예산 : ${formatAmount(club.budget)}원   |   총 집행액 : ${formatAmount(club.spend)}원 (지원금 소진율 ${club.burnRate.toFixed(1)}%)   |   참석 : 실인원 ${club.uniqueCount}명 (회당 ${club.avgAttendees}명)   |   상품비 : ${formatAmount(club.prizeSpend)}원`, {
-                    x: 0.95, y: 1.22, w: 8.1, h: 0.32,
-                    fontSize: 9.0, bold: true, color: '1E293B', fontFace: font
+                const metaLine1 = `연간 예산 : ${formatAmount(club.budget)}원   |   총 집행액 : ${formatAmount(club.spend)}원 (지원금 소진율 ${club.burnRate.toFixed(1)}%)   |   상품비 : ${formatAmount(club.prizeSpend)}원`;
+                const metaLine2 = `참석 : 실인원 ${club.uniqueCount}명 (회당 ${club.avgAttendees}명)`;
+                sc.addText(`${metaLine1}\n${metaLine2}`, {
+                    x: 0.95, y: 1.16, w: 8.1, h: 0.50,
+                    fontSize: 8.8, bold: true, color: '1E293B', fontFace: font,
+                    lineSpacingMultiple: 1.25
                 });
 
                 // 표: 클럽명은 슬라이드 제목에 이미 있으므로 행사명 컬럼을 생략하고 6개 열로 넓고 쾌적하게 배치
@@ -5554,7 +5563,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 sc.addTable(tRows, {
-                    x: 0.8, y: 1.74, w: 8.4, colW: timelineColW,
+                    x: 0.8, y: 1.78, w: 8.4, colW: timelineColW,
                     fontFace: font,
                     border: { type: 'solid', pt: 0.5, color: 'CBD5E1' }
                 });
@@ -5569,8 +5578,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 const tableApproxH = Math.max(0.65, tRows.length * 0.28);
-                const cardY = Math.min(3.95, Math.max(3.15, 1.74 + tableApproxH + 0.16));
-                const cardH = Math.max(1.15, 5.25 - cardY);
+                const cardY = Math.min(3.98, Math.max(3.18, 1.78 + tableApproxH + 0.16));
+                const cardH = Math.max(1.12, 5.25 - cardY);
 
                 sc.addShape(pptx.ShapeType.roundRect, {
                     x: 0.8, y: cardY, w: 8.4, h: cardH,
@@ -7463,6 +7472,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.309', date: '2026.10.20', items: ['연간 결산 PPT 클럽별 예산 소진율 그래프(3p) 원래 2단 레이아웃(막대/퍼센트 + 사용금액/잔여 + 배정금액) 완벽 복원 및 각 클럽별 고유 지정 색상(그래프 막대 및 좌측 클럽명 글자색) 적용', '소진율 막대그래프의 모든 텍스트(클럽명·배정금액·사용금액·퍼센트)를 PPT 독립 텍스트 상자로 배치하여 슬라이드 위에서 직접 타이핑 수정 가능하게 최적화', '클럽별 상세 활동 슬라이드(5p+) 상단 메타 박스 줄바꿈 배치: "연간 예산 · 총 집행액 · 상품비" 1줄, "참석 실인원" 2줄로 분리하여 끝자리 금액 잘림 현상 완전 해소', '관리자 모드 헤더 내 중복되던 기존 테마 토글 버튼 제거 (최상단 헤더의 상시 테마 토글 버튼으로 깔끔하게 일원화)'] },
         { ver: '1.6.308', date: '2026.10.20', items: ['연간 결산 PPT 소진율 막대 차트(3p) 전면 개편: Office 통합 차트 대신 슬라이드 상에서 즉시 클릭·수정 가능한 독립 텍스트 상자(클럽명·소진율) 및 벡터 막대 도형(트랙+채움)으로 전환', '보고서 전반 "고유 실인원" / "고유 N명" 표기를 "실인원 N명"으로 통일(2p KPI 카드 및 하단 성과 요약, 5p+ 활동 상세 테이블 합계 행 등)', '클럽별 상세 활동 테이블(5p+) 헤더에서 중복되는 "행사명 (비고)" 열을 생략하고 6개 열(진행일자/결제액/지원금/자부담/상품비/참석인원)로 넓고 쾌적하게 재배치', '슬라이드 전반 글자 크기·행 높이·여백·패딩 전면 재조정: KPI 카드 수직 간격 확대, 도넛 차트 범례 항목 균등 배치, 테이블 셀 상하 마진(3.5pt) 및 하단 참석자 명단 줄간격(1.35배) 확보로 답답함 완전 해소'] },
         { ver: '1.6.307', date: '2026.10.20', items: ['사용자 요청사항 제출 시 관리자 사이트 실시간 팝업과 함께 등록된 Gochujangs33@gmail.com 계정을 통해 개발자(jkim47@mmm.com) 이메일 동시 발송 연동', '연간 결산 PPT 보고서(2p, 3p) 차트 및 글자를 이미지 방식에서 실제 클릭·편집 가능한 네이티브 파워포인트 차트(도넛/가로막대) 및 텍스트 박스로 전면 개편', '결산 보고서 클럽별 실적 비교표(4p) 컬럼 폭 및 셀 패딩 미세 조정으로 "평균인원" 헤더 및 합계 행 금액(15,700,000원 등) 글자 줄바꿈 현상 완전 해결'] },
         { ver: '1.6.306', date: '2026.10.19', items: ['연간 결산 PPT 보고서 라이트 테마 일체화: 첫 표지 및 마감 감사 슬라이드를 본문과 동일한 밝고 세련된 프리미엄 라이트 테마로 전면 통일', '표지 타이틀 및 파일명을 "2026년 3M 클럽 행사 결산 및 마감 보고서"로 직관적 변경 및 줄바꿈 없이 한 줄로 깔끔하게 최적화', '총괄 요약(2p) KPI 지표 카드 개편: 회사 결산 취지에 맞춰 자부담이 섞인 결제총액 대신 "회사 지원금 실집행액" 및 "잔여 예산"을 메인 지표로 정확히 재분류', '클럽별 소진율 수평 막대 차트(3p) 레이아웃 개선: 소진율(%)은 막대바 내부, 총 배정 예산은 우측, 실제 사용 금액은 막대바 밑으로 직관적 재배치', '클럽별 실적 비교표(4p) 컬럼 너비 자동 최적화로 마지막 "행사수" 헤더 글자 줄바꿈 현상 원천 해결', '클럽별 상세 활동 슬라이드(5p~) 하단 여백에 해당 클럽 한 해 전체 참석 임직원 명단 및 개인별 참석 횟수(이름(사번) N회) 정보 카드 신설'] },
