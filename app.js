@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.309';
+const APP_VERSION      = '1.6.310';
 const APP_VERSION_DATE = '2026.10.20';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -7472,6 +7472,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.310', date: '2026.10.20', items: ['[버그 해결] 차트 탭 그래프 캔버스가 간헐적으로 빈 화면으로 렌더링되지 않던 근본 원인 수정: index.html 내 누락되었던 Chart.js 라이브러리(./lib/chart.min.js) 스크립트 태그 복원', 'Chart.js 라이브러리 초기화 지연 시에도 누락 없이 100% 렌더링되도록 자동 재시도(Auto-retry) 안전장치 탑재'] },
         { ver: '1.6.309', date: '2026.10.20', items: ['연간 결산 PPT 클럽별 예산 소진율 그래프(3p) 원래 2단 레이아웃(막대/퍼센트 + 사용금액/잔여 + 배정금액) 완벽 복원 및 각 클럽별 고유 지정 색상(그래프 막대 및 좌측 클럽명 글자색) 적용', '소진율 막대그래프의 모든 텍스트(클럽명·배정금액·사용금액·퍼센트)를 PPT 독립 텍스트 상자로 배치하여 슬라이드 위에서 직접 타이핑 수정 가능하게 최적화', '클럽별 상세 활동 슬라이드(5p+) 상단 메타 박스 줄바꿈 배치: "연간 예산 · 총 집행액 · 상품비" 1줄, "참석 실인원" 2줄로 분리하여 끝자리 금액 잘림 현상 완전 해소', '관리자 모드 헤더 내 중복되던 기존 테마 토글 버튼 제거 (최상단 헤더의 상시 테마 토글 버튼으로 깔끔하게 일원화)'] },
         { ver: '1.6.308', date: '2026.10.20', items: ['연간 결산 PPT 소진율 막대 차트(3p) 전면 개편: Office 통합 차트 대신 슬라이드 상에서 즉시 클릭·수정 가능한 독립 텍스트 상자(클럽명·소진율) 및 벡터 막대 도형(트랙+채움)으로 전환', '보고서 전반 "고유 실인원" / "고유 N명" 표기를 "실인원 N명"으로 통일(2p KPI 카드 및 하단 성과 요약, 5p+ 활동 상세 테이블 합계 행 등)', '클럽별 상세 활동 테이블(5p+) 헤더에서 중복되는 "행사명 (비고)" 열을 생략하고 6개 열(진행일자/결제액/지원금/자부담/상품비/참석인원)로 넓고 쾌적하게 재배치', '슬라이드 전반 글자 크기·행 높이·여백·패딩 전면 재조정: KPI 카드 수직 간격 확대, 도넛 차트 범례 항목 균등 배치, 테이블 셀 상하 마진(3.5pt) 및 하단 참석자 명단 줄간격(1.35배) 확보로 답답함 완전 해소'] },
         { ver: '1.6.307', date: '2026.10.20', items: ['사용자 요청사항 제출 시 관리자 사이트 실시간 팝업과 함께 등록된 Gochujangs33@gmail.com 계정을 통해 개발자(jkim47@mmm.com) 이메일 동시 발송 연동', '연간 결산 PPT 보고서(2p, 3p) 차트 및 글자를 이미지 방식에서 실제 클릭·편집 가능한 네이티브 파워포인트 차트(도넛/가로막대) 및 텍스트 박스로 전면 개편', '결산 보고서 클럽별 실적 비교표(4p) 컬럼 폭 및 셀 패딩 미세 조정으로 "평균인원" 헤더 및 합계 행 금액(15,700,000원 등) 글자 줄바꿈 현상 완전 해결'] },
@@ -9159,7 +9160,15 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.restore();
         }
     };
-    if (typeof Chart !== 'undefined') Chart.register(chartValueLabelPlugin, lineRevealPlugin, doughnutClockwiseRevealPlugin);
+    let _chartPluginsRegistered = false;
+    function ensureChartPluginsRegistered() {
+        if (_chartPluginsRegistered || typeof Chart === 'undefined') return;
+        try {
+            Chart.register(chartValueLabelPlugin, lineRevealPlugin, doughnutClockwiseRevealPlugin);
+            _chartPluginsRegistered = true;
+        } catch (_) {}
+    }
+    ensureChartPluginsRegistered();
 
     // 클럽 고유 색상 — clubRegistry.chartColor가 최우선이며, 자동 색상은 조화로운 선별 팔레트 안에서
     // 고정 ID 해시로 배정한다. 차트별 정렬·필터가 바뀌어도 같은 클럽은 항상 같은 계열을 유지한다.
@@ -10299,6 +10308,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 차트 탭의 모든 그래프를 한 번에 갱신
     function renderAllCharts(historyList, { allowEntranceAnimation = false } = {}) {
+        if (typeof Chart === 'undefined') {
+            console.warn('[Chart] Chart.js 라이브러리가 아직 준비되지 않았습니다. 200ms 후 재시도합니다.');
+            setTimeout(() => {
+                if (typeof Chart !== 'undefined') {
+                    renderAllCharts(historyList, { allowEntranceAnimation });
+                }
+            }, 200);
+            return;
+        }
+        ensureChartPluginsRegistered();
         const animateEntrance = allowEntranceAnimation ? consumeChartEntranceAnimation() : false;
         updateChartsBudgetStats(historyList);
         renderOverallMonthlyChart(historyList, animateEntrance);
