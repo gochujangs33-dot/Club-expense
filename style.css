@@ -739,26 +739,15 @@ select.club-name-input option {
     width: 100%;
 }
 
+/* Panel Right - 자연스러운 전체 스크롤 레이아웃 보장 (우측 패널 내부 잘림 방지) */
 @media (min-width: 869px) {
     .panel-right {
-        position: sticky;
-        top: 1rem;
-        align-self: flex-start;
-        max-height: calc(100vh - 2rem);
-        overflow-y: auto;
-        padding-right: 0.25rem;
-    }
-    .panel-right::-webkit-scrollbar {
-        width: 5px;
-    }
-    .panel-right::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 4px;
-    }
-    .panel-right::-webkit-scrollbar-track {
-        background: transparent;
+        position: static;
+        max-height: none;
+        overflow: visible;
     }
 }
+
 
 @media (max-width: 868px) {
     .layout-grid {
@@ -3293,7 +3282,8 @@ html[data-app-theme="light"] .expense-category-badge,
 html[data-app-theme="light"] .card-toggle-track { background: rgba(72, 91, 128, 0.1); }
 html[data-app-theme="light"] .divider { background: rgba(72, 91, 128, 0.14); }
 html[data-app-theme="light"] .result-card {
-    background: linear-gradient(135deg, rgba(104, 91, 218, 0.1), rgba(241, 244, 248, 0.94));
+    background: var(--card-bg);
+    border-color: var(--card-border);
 }
 
 html[data-app-theme="light"] .modal { background-color: rgba(226, 234, 246, 0.9); }
