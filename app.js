@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.302';
+const APP_VERSION      = '1.6.303';
 const APP_VERSION_DATE = '2026.10.19';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -2790,8 +2790,8 @@ const AppState = {
                         header,
                         window.createInlineClubUsageSummary(clubName, currentYearEntries, currentYear, {
                             editableDates: canEditSharedHistory,
-                            // 엑셀 다시 받기는 기존처럼 본인이 작성한 이력만 제공한다.
-                            excelDownloads: entry => !entry.creatorPin || String(entry.creatorPin) === String(this.currentPin)
+                            // 작성자와 상관없이 모든 회원이 해당 건의 엑셀을 다시 다운로드 가능하도록 허용
+                            excelDownloads: true
                         })
                     );
                     historyContainer.appendChild(clubCard);
@@ -3352,9 +3352,13 @@ const AppState = {
             this.editingHistoryId = null;
             if (sdi) sdi.value = entry.settlementDate || new Date().toISOString().slice(0, 10);
             const file = await this.generateExcelFile();
+            const safeClubName = (entry.clubName || this.clubName || '클럽').replace(/[\\/:*?"<>|]/g, '_');
+            const fileDateStr = (entry.settlementDate || (entry.date ? String(entry.date).slice(0, 10) : new Date().toISOString().slice(0, 10))).replace(/-/g, '');
+            const creatorPart = entry.creatorName ? `_${entry.creatorName}` : '';
+            const downloadFileName = `${safeClubName}(${fileDateStr})${creatorPart}.xlsx`;
             const url = URL.createObjectURL(file);
             const a = document.createElement('a');
-            a.href = url; a.download = file.name;
+            a.href = url; a.download = downloadFileName;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
         } catch (err) {
@@ -7143,6 +7147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.303', date: '2026.10.19', items: ['정산 이력 테이블에서 작성자와 상관없이 모든 회원이 해당 건의 엑셀 파일을 다시 다운로드할 수 있도록 권한 정책 개선', '정산 이력 테이블 행사 날짜 셀에 정산 담당자(👤 정산인: OOO) 정보 표기 및 다운로드 엑셀 파일명에 작성자 이름 자동 포함'] },
         { ver: '1.6.302', date: '2026.10.19', items: ['자동 정산 결과 화면 하단 메인 액션 버튼 문구를 "정산 완료"로 직관적 간소화 ("💾 파일 저장 및 정산 완료" → "💾 정산 완료")'] },
         { ver: '1.6.301', date: '2026.10.19', items: ['라이트 테마에서 "자동 정산 결과" 카드 배경색을 다른 카드(순백/연회색)와 완벽히 동일하게 일치화 (보라/푸른빛 틴트 제거)', '데스크톱 환경에서 우측 패널의 sticky/max-height 제한을 해제하여 자동 정산 결과 카드 하단부(자부담 비율, 총 소요 비용, 잔여 예산, 정산 완료 버튼)가 잘리지 않고 온전히 노출되도록 전체 스크롤 레이아웃 최적화'] },
         { ver: '1.6.300', date: '2026.10.19', items: ['정산 설정(⚙️) 패널 색상 및 비주얼 테마 일체화: 다크/라이트 테마 전용 스타일(순백색 배경·명확한 보더·섀도우 및 텍스트 가독성 최적화) 적용으로 주위 카드와 완벽한 조화 달성', '정산 설정 패널에서 불필요한 "보내는 사람 주소(공통)" 입력칸 및 안내 텍스트 완전 제거 (수신 회사 이메일 및 디바이스 엑셀 저장 옵션으로 화면 간소화)'] },
@@ -9457,14 +9462,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 const canEdit = typeof editableDates === 'function'
                     ? editableDates(rowData.entry)
                     : editableDates;
-                if (index === 0 && canEdit) {
-                    const dateButton = document.createElement('button');
-                    dateButton.type = 'button';
-                    dateButton.className = 'club-usage-date-button';
-                    dateButton.textContent = value;
-                    dateButton.title = '이 정산 이력 수정';
-                    dateButton.addEventListener('click', () => AppState.loadHistoryEntryForEdit(rowData.entry));
-                    cell.appendChild(dateButton);
+                if (index === 0) {
+                    const dateWrap = document.createElement('div');
+                    dateWrap.className = 'club-usage-date-wrap';
+                    if (canEdit) {
+                        const dateButton = document.createElement('button');
+                        dateButton.type = 'button';
+                        dateButton.className = 'club-usage-date-button';
+                        dateButton.textContent = value;
+                        dateButton.title = '이 정산 이력 수정';
+                        dateButton.addEventListener('click', () => AppState.loadHistoryEntryForEdit(rowData.entry));
+                        dateWrap.appendChild(dateButton);
+                    } else {
+                        const dateSpan = document.createElement('span');
+                        dateSpan.textContent = value;
+                        dateWrap.appendChild(dateSpan);
+                    }
+                    if (rowData.entry.creatorName) {
+                        const creatorBadge = document.createElement('div');
+                        creatorBadge.className = 'club-usage-creator-badge';
+                        creatorBadge.style.cssText = 'font-size:0.72rem; color:var(--text-muted); margin-top:0.25rem; font-weight:normal; letter-spacing:-0.02em; white-space:nowrap;';
+                        creatorBadge.textContent = `👤 ${rowData.entry.creatorName}`;
+                        creatorBadge.title = `정산인: ${rowData.entry.creatorName}${rowData.entry.creatorPin ? ` (PIN: ${rowData.entry.creatorPin})` : ''}`;
+                        dateWrap.appendChild(creatorBadge);
+                    }
+                    cell.appendChild(dateWrap);
                 } else if (index === 1 && clickableAttendees) {
                     const attendeeButton = document.createElement('button');
                     attendeeButton.type = 'button';
