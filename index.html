@@ -27,7 +27,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Vanilla CSS stylesheet -->
-    <link rel="stylesheet" href="style.css?v=1.6.303">
+    <link rel="stylesheet" href="style.css?v=1.6.304">
     <script src="./lib/i18n.js"></script>
     <style>
     .settle-date-btn {
@@ -103,10 +103,14 @@
                     <button type="button" id="register-new-club-btn" class="btn-secondary" data-i18n="header.club_register">등록</button>
                 </div>
             </div>
-            <div class="login-status-wrapper" id="login-status-wrapper" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <div class="login-status-wrapper" id="login-status-wrapper" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
                 <span id="login-status-badge" class="badge-offline">📴 오프라인 모드 (기기 저장)</span>
                 <button id="header-logout-btn" class="btn-text" data-i18n="header.logout" style="font-size: 0.78rem; display: none; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(255, 255, 255, 0.05);">로그아웃</button>
                 <button id="header-login-btn" class="btn-text" data-i18n="header.login" style="font-size: 0.78rem; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(255, 255, 255, 0.05);">로그인</button>
+                <div class="admin-theme-control header-theme-control" role="group" aria-label="화면 테마 설정">
+                    <button type="button" class="admin-theme-btn active" data-admin-theme-value="dark" aria-pressed="true" title="다크 테마">Dark</button>
+                    <button type="button" class="admin-theme-btn" data-admin-theme-value="light" aria-pressed="false" title="라이트 테마">Light</button>
+                </div>
             </div>
             <div id="last-login-info" style="display:none; text-align:center; color:var(--text-muted); font-size:0.7rem; margin-top:0.25rem;"></div>
         </header>
