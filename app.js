@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.312';
+const APP_VERSION      = '1.6.313';
 const APP_VERSION_DATE = '2026.10.20';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -7474,6 +7474,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.313', date: '2026.10.20', items: ['비용 항목 추가/수정 실시간 프리뷰 배너("이번 금액 반영 시") 하단에 예상 총 자부담 비율(%) 실시간 표시 추가'] },
         { ver: '1.6.312', date: '2026.10.20', items: ['정산 결과 카드 내 정산 날짜 라벨 문구를 직관적인 "📅 정산 날짜 (변경 가능)"으로 간소화 및 레이아웃 정리'] },
         { ver: '1.6.311', date: '2026.10.20', items: ['연간 결산 보고서 PPT(3p) 클럽별 소진율 그래프 내부 퍼센테이지(%) 텍스트 박스 너비 확장 및 margin:0, wrap:false 강제 적용으로 소수점/퍼센트 줄바꿈(100. 0% 등) 완벽 해결', '시스템 사용자 설명회 발표자료(PPTX)를 고품격 엔터프라이즈 라이트 테마로 전면 개편', '설명회 PPT 전 슬라이드의 글자 크기, 행 높이(lineSpacing), 들여쓰기, 카드 여백을 최적화하여 텍스트 겹침·잘림·답답함 완전 해소'] },
         { ver: '1.6.310', date: '2026.10.20', items: ['[버그 해결] 차트 탭 그래프 캔버스가 간헐적으로 빈 화면으로 렌더링되지 않던 근본 원인 수정: index.html 내 누락되었던 Chart.js 라이브러리(./lib/chart.min.js) 스크립트 태그 복원', 'Chart.js 라이브러리 초기화 지연 시에도 누락 없이 100% 렌더링되도록 자동 재시도(Auto-retry) 안전장치 탑재'] },
@@ -10743,24 +10744,29 @@ function updatePendingSelfPayPreview() {
     }
     const pendingItemPersonal = Math.max(0, totalAmount - pendingItemCorp);
 
-    // 기존 등록된 항목들의 개인카드 자부담 합계 (수정 모드 시 수정 대상 항목은 제외)
+    // 기존 등록된 항목들의 개인카드 자부담 합계 및 총 소요 비용 (수정 모드 시 수정 대상 항목은 제외)
     const editingId = AppState.editingItemId || null;
     const existingItems = (AppState.expenseItems || []).filter(item => item.id !== editingId);
     const existingSelfPay = existingItems.reduce((sum, item) => sum + (item.personalAmount || 0), 0);
+    const existingTotalCost = existingItems.reduce((sum, item) => sum + (item.amount || 0), 0);
 
     const projectedTotalSelfPay = existingSelfPay + pendingItemPersonal;
+    const projectedTotalCost = existingTotalCost + totalAmount;
+    const projectedRatio = projectedTotalCost > 0 ? (projectedTotalSelfPay / projectedTotalCost * 100) : 0;
+    const projectedRatioText = `${projectedRatio.toFixed(1)}%`;
+
     const memberCount = AppState.memberCount || (AppState.attendees ? AppState.attendees.length : 0);
     const projectedPerPerson = memberCount > 0 ? Math.round(projectedTotalSelfPay / memberCount) : 0;
 
     if (projectedTotalSelfPay === 0) {
         previewEl.className = 'pending-self-pay-preview zero-self-pay';
-        previewEl.innerHTML = `<span style="font-size:1rem;">😊</span> <span><strong>이번 금액 반영 시:</strong> 총 자부담 <strong>0원</strong> (개인부담 <strong>0원</strong> · 전액 지원)</span>`;
+        previewEl.innerHTML = `<span class="preview-icon">😊</span><div class="preview-content"><div><strong>이번 금액 반영 시:</strong> 총 자부담 <strong>0원</strong> (개인부담 <strong>0원</strong> · 전액 지원)</div><div class="preview-sub"><span>예상 자부담 비율:</span> <strong>0.0%</strong></div></div>`;
     } else {
         previewEl.className = 'pending-self-pay-preview';
         const perPersonText = memberCount > 0
             ? `개인부담 <strong>${formatAmount(projectedPerPerson)}원</strong>`
             : `참석자 미등록`;
-        previewEl.innerHTML = `<span style="font-size:1rem;">💡</span> <span><strong>이번 금액 반영 시:</strong> 총 자부담 <strong>${formatAmount(projectedTotalSelfPay)}원</strong> (${perPersonText})</span>`;
+        previewEl.innerHTML = `<span class="preview-icon">💡</span><div class="preview-content"><div><strong>이번 금액 반영 시:</strong> 총 자부담 <strong>${formatAmount(projectedTotalSelfPay)}원</strong> (${perPersonText})</div><div class="preview-sub"><span>예상 자부담 비율:</span> <strong>${projectedRatioText}</strong></div></div>`;
     }
     previewEl.classList.remove('hidden');
 }

@@ -4455,10 +4455,37 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     border: 1px solid rgba(99, 102, 241, 0.35);
     color: #a5b4fc;
     display: flex;
-    align-items: center;
-    gap: 0.45rem;
+    align-items: flex-start;
+    gap: 0.5rem;
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.pending-self-pay-preview .preview-icon {
+    font-size: 1.05rem;
+    line-height: 1.25;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.pending-self-pay-preview .preview-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.pending-self-pay-preview .preview-sub {
+    margin-top: 0.25rem;
+    font-size: 0.77rem;
+    font-weight: 600;
+    opacity: 0.92;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pending-self-pay-preview .preview-sub strong {
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
 [data-app-theme="light"] .pending-self-pay-preview {
