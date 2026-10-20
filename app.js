@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.318';
+const APP_VERSION      = '1.6.319';
 const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -2369,11 +2369,6 @@ const AppState = {
             memberCountInput.value = this.memberCount;
         }
 
-        const prizeInput = document.getElementById('prev-prize-input');
-        if (prizeInput) {
-            prizeInput.value = formatAmount(this.previousPrizeTotal || 0);
-        }
-
         // Update Tab badge and list labels
         const badgeCount = document.getElementById('attendee-badge-count');
         if (badgeCount) badgeCount.textContent = this.attendees.length;
@@ -2391,16 +2386,28 @@ const AppState = {
             dirBadgeCount.textContent = dirIdTotal;
         }
 
-        // 상품비 잔여 한도 표시 (연 한도 - 클럽 확정 누적 - 이번 세션 상품비) — v1.6.233
+        // 상품비: 위에는 올해 잔여 한도, 밑에는 누적액 표시 (v1.6.319)
+        const prizeInput = document.getElementById('prev-prize-input');
         const prizeRemainingHint = document.getElementById('prize-remaining-hint');
+        const _prizeLimit = (this.rules && this.rules.prizeLimit) || 500000;
+        const _sessionPrize = (this.expenseItems || [])
+            .filter(i => i.category === ExpenseCategory.PRIZE)
+            .reduce((s, i) => s + (i.amount || 0), 0);
+        const _priorPrize = this.previousPrizeTotal || 0;
+        const _prizeLeft = Math.max(0, _prizeLimit - _priorPrize - _sessionPrize);
+
+        if (prizeInput) {
+            prizeInput.value = formatAmount(_prizeLeft);
+            prizeInput.style.color = _prizeLeft <= 0 ? 'var(--warning-text, #ef4444)' : '';
+        }
+
         if (prizeRemainingHint) {
-            const _prizeLimit = (this.rules && this.rules.prizeLimit) || 500000;
-            const _sessionPrize = (this.expenseItems || [])
-                .filter(i => i.category === ExpenseCategory.PRIZE)
-                .reduce((s, i) => s + (i.amount || 0), 0);
-            const _prizeLeft = Math.max(0, _prizeLimit - (this.previousPrizeTotal || 0) - _sessionPrize);
-            prizeRemainingHint.textContent = `🎁 올해 상품비 잔여 한도: ${_prizeLeft.toLocaleString()}원`;
-            prizeRemainingHint.style.color = _prizeLeft <= 0 ? '#f87171' : '#4ade80';
+            if (_sessionPrize > 0) {
+                prizeRemainingHint.textContent = `🎁 기존 누적 ${formatAmount(_priorPrize)}원 + 이번 ${formatAmount(_sessionPrize)}원 = 누적액 ${formatAmount(_priorPrize + _sessionPrize)}원 (연 한도 ${formatAmount(_prizeLimit)}원)`;
+            } else {
+                prizeRemainingHint.textContent = `🎁 기존 상품비 누적액: ${formatAmount(_priorPrize)}원 (연 한도 ${formatAmount(_prizeLimit)}원)`;
+            }
+            prizeRemainingHint.style.color = 'var(--text-secondary, #64748b)';
         }
 
         // Update Warnings UI
@@ -3014,29 +3021,26 @@ const AppState = {
             totalEl.textContent = `배정 ${SettlementCalculator.formatCurrency(clubBudget)}`;
         }
 
-        const prevUsed = Math.max(0, clubUsed || 0);
-        const thisSupport = Math.max(0, finalSupport || 0);
-        const totalUsed = prevUsed + thisSupport;
-        const afterRemaining = clubBudget - totalUsed;
-
-        const prevPct = Math.min(100, (prevUsed / clubBudget) * 100);
-        const thisPct = Math.min(Math.max(0, 100 - prevPct), (thisSupport / clubBudget) * 100);
-        const totalPct = (totalUsed / clubBudget) * 100;
+        // 현재 작성 중인 건은 실시간 반영하지 않고, 정산 완료 버튼 클릭 후 DB에 업데이트되었을 때만 반영 (v1.6.319)
+        const settledUsed = Math.max(0, clubUsed || 0);
+        const settledRemaining = clubBudget - settledUsed;
+        const settledPct = (settledUsed / clubBudget) * 100;
+        const boundedPct = Math.min(100, Math.max(0, settledPct));
 
         // 소진율에 따른 위험 색상 (100% 초과 시 경고 레드, 그 외 클럽 고유 색상)
-        const baseColor = totalPct > 100 ? '#ef4444' : clubColor;
+        const baseColor = settledPct > 100 ? '#ef4444' : clubColor;
 
         if (barPrevEl) {
-            barPrevEl.style.width = `${prevPct.toFixed(1)}%`;
+            barPrevEl.style.width = `${boundedPct.toFixed(1)}%`;
             barPrevEl.style.backgroundColor = baseColor;
         }
         if (barThisEl) {
-            barThisEl.style.width = `${thisPct.toFixed(1)}%`;
-            barThisEl.style.backgroundColor = baseColor;
+            barThisEl.style.width = '0%';
+            barThisEl.style.display = 'none';
         }
         if (pctEl) {
-            pctEl.textContent = `${totalPct.toFixed(1)}%`;
-            if (totalPct < 16) {
+            pctEl.textContent = `${settledPct.toFixed(1)}%`;
+            if (settledPct < 16) {
                 pctEl.style.color = 'var(--text-primary, #1e293b)';
                 pctEl.style.textShadow = 'none';
             } else {
@@ -3046,11 +3050,11 @@ const AppState = {
         }
 
         if (usedEl) {
-            usedEl.textContent = SettlementCalculator.formatCurrency(totalUsed);
+            usedEl.textContent = SettlementCalculator.formatCurrency(settledUsed);
         }
         if (remainingEl) {
-            remainingEl.textContent = SettlementCalculator.formatCurrency(afterRemaining);
-            remainingEl.style.color = afterRemaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)';
+            remainingEl.textContent = SettlementCalculator.formatCurrency(settledRemaining);
+            remainingEl.style.color = settledRemaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)';
         }
     },
 
@@ -7754,6 +7758,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.319', date: '2026.10.21', items: ['정산 화면 하단 클럽 예산 프로그레스 바 그래프를 작성 중 실시간 반영에서 "정산 완료 버튼 클릭 후 DB 확정 시" 반영되도록 개선 (현재 확정 저장된 사용액/잔여액 기준 고정)', '상품비 표시 순서 개편: 위쪽 입력란에 "올해 상품비 잔여 한도", 아래쪽 힌트에 "기존 상품비 누적액"이 명확하게 분리 표시되도록 UI 일체화'] },
         { ver: '1.6.318', date: '2026.10.21', items: ['클럽 관리 화면에서 "중복 클럽 정리" 버튼 제거', '전체 작업 로그(Audit Log) 대상 명확화 및 전면 개편: 정산 수정, 추가 배정, 85k 승인, 금액 수정(총 예산/클럽 배정예산), 신규 가입, 회원 삭제, 회원 정보 수정, 정산 구간 변경, 전사원 명부 변경(등록/수정/삭제/카운트) 등 핵심 작업 로그 기록 및 모달 내 항목 구분 필터 신설'] },
         { ver: '1.6.317', date: '2026.10.21', items: ['클럽 관리 목록의 "차트 색상" 네모박스와 글씨를 제거하고 클럽명 텍스트 자체에 지정된 고유 색상을 직접 적용', '클럽명 클릭 시 즉시 차트 색상을 변경할 수 있는 인라인 색상 피커(Color Picker) 대화상자 연동'] },
         { ver: '1.6.316', date: '2026.10.21', items: ['사용자 정산 화면 하단에 클럽 총 예산, 사용률(%), 사용 금액 및 잔여 예산을 한눈에 직관적으로 보여주는 가로 프로그레스 바 그래프 신설', '비용 항목 및 자부담 변동 시 기존 사용액과 이번 정산 지원금 누적 소진율을 2단 스택으로 실시간 시각화 반영'] },
