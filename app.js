@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.313';
+const APP_VERSION      = '1.6.314';
 const APP_VERSION_DATE = '2026.10.20';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -3813,11 +3813,162 @@ const AppState = {
         }
     },
 
+    // 관리자 DB(globalHistory) 실시간 조회하여 동일 클럽·동일 날짜 중복 정산 여부 확인
+    async checkDuplicateSettlement(clubId, clubName, settlementDate) {
+        const targetClubId = String(clubId || this.clubId || '').trim();
+        const targetClubName = String(clubName || this.clubName || '').trim().toLowerCase();
+
+        let targetDate = settlementDate;
+        if (!targetDate) {
+            const settleDateInput = document.getElementById('settlement-date-input');
+            const settleDateVal   = settleDateInput ? settleDateInput.value : '';
+            targetDate = (settleDateVal || new Date().toISOString().slice(0, 10)).trim();
+        } else {
+            targetDate = String(targetDate).trim();
+        }
+        // YYYY-MM-DD 정규화
+        const matchTarget = targetDate.match(/\d{4}-\d{2}-\d{2}/);
+        if (matchTarget) targetDate = matchTarget[0];
+
+        if (!targetDate || (!targetClubId && !targetClubName)) return null;
+
+        const currentEditingId = this.editingHistoryId ? String(this.editingHistoryId) : null;
+
+        // 1. 온라인: 관리자 DB(globalHistory + deletedHistoryIds) 실시간 조회
+        if (this.firebaseDb) {
+            try {
+                const [historySnap, deletedSnap] = await Promise.all([
+                    this.firebaseDb.ref('globalHistory').once('value'),
+                    this.firebaseDb.ref('deletedHistoryIds').once('value').catch(() => null)
+                ]);
+                const deletedIds = new Set(Object.keys(deletedSnap && deletedSnap.val() ? deletedSnap.val() : {}));
+
+                let duplicate = null;
+                historySnap.forEach(child => {
+                    if (duplicate) return true;
+                    const key = String(child.key);
+                    if (deletedIds.has(key)) return;
+                    if (currentEditingId && key === currentEditingId) return;
+
+                    const entry = child.val();
+                    if (!entry) return;
+                    if (currentEditingId && String(entry.id) === currentEditingId) return;
+
+                    let entryDate = String(entry.settlementDate || (entry.date ? entry.date.slice(0, 10) : '')).trim();
+                    const matchEntry = entryDate.match(/\d{4}-\d{2}-\d{2}/);
+                    if (matchEntry) entryDate = matchEntry[0];
+
+                    if (entryDate !== targetDate) return;
+
+                    const entryClubId = String(entry.clubId || '').trim();
+                    const entryClubName = String(entry.clubName || '').trim().toLowerCase();
+
+                    const isMatch = (targetClubId && entryClubId && targetClubId === entryClubId)
+                        || (targetClubName && entryClubName && targetClubName === entryClubName);
+
+                    if (isMatch) {
+                        duplicate = {
+                            id: entry.id || key,
+                            clubId: entryClubId || targetClubId,
+                            clubName: entry.clubName || targetClubName,
+                            settlementDate: entryDate,
+                            creatorName: entry.creatorName || '기존 등록자',
+                            creatorPin: entry.creatorPin || '',
+                            totalCost: entry.totalCost || 0,
+                            finalSupportAmount: entry.finalSupportAmount || 0,
+                            totalSelfPay: entry.totalSelfPay || 0,
+                            memberCount: entry.memberCount || 0
+                        };
+                    }
+                });
+
+                if (duplicate) return duplicate;
+            } catch (err) {
+                console.warn('관리자 DB globalHistory 중복 확인 조회 실패, 로컬 이력으로 폴백:', err);
+            }
+        }
+
+        // 2. 오프라인 또는 폴백: 로컬 settlementHistory 및 clubHistory 확인
+        const localList = [...(this.settlementHistory || []), ...(this.clubHistory || [])];
+        const checkedIds = new Set();
+        for (const entry of localList) {
+            if (!entry) continue;
+            const entryId = String(entry.id || '');
+            if (checkedIds.has(entryId)) continue;
+            checkedIds.add(entryId);
+
+            if (currentEditingId && entryId === currentEditingId) continue;
+
+            let entryDate = String(entry.settlementDate || (entry.date ? entry.date.slice(0, 10) : '')).trim();
+            const matchEntry = entryDate.match(/\d{4}-\d{2}-\d{2}/);
+            if (matchEntry) entryDate = matchEntry[0];
+
+            if (entryDate !== targetDate) continue;
+
+            const entryClubId = String(entry.clubId || '').trim();
+            const entryClubName = String(entry.clubName || '').trim().toLowerCase();
+            const isMatch = (targetClubId && entryClubId && targetClubId === entryClubId)
+                || (targetClubName && entryClubName && targetClubName === entryClubName);
+
+            if (isMatch) {
+                return {
+                    id: entry.id,
+                    clubId: entryClubId || targetClubId,
+                    clubName: entry.clubName || targetClubName,
+                    settlementDate: entryDate,
+                    creatorName: entry.creatorName || '기존 등록자',
+                    creatorPin: entry.creatorPin || '',
+                    totalCost: entry.totalCost || 0,
+                    finalSupportAmount: entry.finalSupportAmount || 0,
+                    totalSelfPay: entry.totalSelfPay || 0,
+                    memberCount: entry.memberCount || 0
+                };
+            }
+        }
+
+        return null;
+    },
+
+    // 중복 정산 감지 시 안내 에러 팝업 표시
+    showDuplicateSettlementAlert(duplicate) {
+        if (!duplicate) return;
+        const clubText = duplicate.clubName || this.clubName || '선택된 클럽';
+        const dateText = duplicate.settlementDate || '';
+        const creatorText = duplicate.creatorName ? `• 기존 등록자: ${duplicate.creatorName}\n` : '';
+        const amountText = duplicate.totalCost
+            ? `• 기존 정산 금액: ${formatAmount(duplicate.totalCost)}원 (회사 지원금: ${formatAmount(duplicate.finalSupportAmount || 0)}원)\n`
+            : '';
+
+        alert(
+            `🚨 [정산 등록 불가 - 중복 정산 감지]\n\n` +
+            `이미 관리자 DB에 동일한 날짜로 등록된 정산 내역이 존재합니다.\n\n` +
+            `• 대상 클럽: ${clubText}\n` +
+            `• 정산 날짜: ${dateText}\n` +
+            creatorText +
+            amountText +
+            `\n동일한 클럽은 같은 날짜에 중복으로 정산을 등록할 수 없습니다.\n` +
+            `정산 날짜(변경 가능)를 수정하시거나 [정산 이력] 탭에서 기존 내역을 확인해 주세요.`
+        );
+    },
+
     async finalizeSettlement(skipConfirm = false) {
         if (this.editingHistoryId) {
             alert('수정 모드에서는 엑셀 다운로드 시 이력이 업데이트됩니다. 수정을 취소하려면 "수정 취소" 버튼을 누르세요.');
             return false;
         }
+
+        // 사용자가 지정한 정산 날짜 (미입력 시 오늘)
+        const settleDateInput = document.getElementById('settlement-date-input');
+        const settleDateVal   = settleDateInput ? settleDateInput.value : '';
+        const settlementDate  = (settleDateVal || new Date().toISOString().slice(0, 10)).trim();
+
+        // ── 관리자 DB 중복 정산 검증 (동일 클럽 + 동일 날짜 차단) ──
+        const duplicate = await this.checkDuplicateSettlement(this.clubId, this.clubName, settlementDate);
+        if (duplicate) {
+            this.showDuplicateSettlementAlert(duplicate);
+            return false;
+        }
+
         if (!skipConfirm && !confirm(t('confirm.finalize_settlement'))) return false;
         if (this._finalizeInProgress) return false;
         this._finalizeInProgress = true;
@@ -3831,11 +3982,6 @@ const AppState = {
             const finalTotalSelfPay = this.selfPayManuallyOverridden ? this.lastCalculatedSelfPay : Math.round(result.itemSelfPay);
             const finalPerPersonSelfPay = this.memberCount > 0 ? finalTotalSelfPay / this.memberCount : result.perPersonSelfPay;
             const finalSelfPayRatio = result.totalCost > 0 ? finalTotalSelfPay / result.totalCost : 0;
-
-            // 사용자가 지정한 정산 날짜 (미입력 시 오늘)
-            const settleDateInput = document.getElementById('settlement-date-input');
-            const settleDateVal   = settleDateInput ? settleDateInput.value : '';
-            const settlementDate  = settleDateVal || new Date().toISOString().slice(0, 10);
 
             const newHistoryItem = {
                 id: Date.now(),
@@ -4218,6 +4364,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (editModeDoneBtn) {
         editModeDoneBtn.addEventListener('click', async () => {
             if (!AppState.editingHistoryId) return;
+
+            const _sdi = document.getElementById('settlement-date-input');
+            const settlementDate = (_sdi && _sdi.value)
+                ? _sdi.value : new Date().toISOString().slice(0, 10);
+
+            // 수정 시에도 다른 이력과 동일 클럽·동일 날짜 중복 검증
+            const duplicate = await AppState.checkDuplicateSettlement(AppState.clubId, AppState.clubName, settlementDate);
+            if (duplicate) {
+                AppState.showDuplicateSettlementAlert(duplicate);
+                return;
+            }
+
             editModeDoneBtn.disabled = true;
             editModeDoneBtn.textContent = '⏳ 저장 중...';
             try {
@@ -4226,9 +4384,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
                 const finalTotalSelfPay = AppState.selfPayManuallyOverridden
                     ? AppState.lastCalculatedSelfPay : Math.round(result.itemSelfPay);
-                const _sdi = document.getElementById('settlement-date-input');
-                const settlementDate = (_sdi && _sdi.value)
-                    ? _sdi.value : new Date().toISOString().slice(0, 10);
                 const updatedFields = {
                     memberCount: AppState.memberCount,
                     totalCost: result.totalCost,
@@ -6551,7 +6706,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const triggerMailtoBtn = document.getElementById('trigger-mailto-btn');
 
     if (sendEmailBtn) {
-        sendEmailBtn.addEventListener('click', () => {
+        sendEmailBtn.addEventListener('click', async () => {
             if (AppState.expenseItems.length === 0) {
                 alert('정산할 비용 항목을 하나 이상 등록해주세요.');
                 return;
@@ -6593,6 +6748,13 @@ document.addEventListener('DOMContentLoaded', () => {
                   `• 수신 메일: ${recipientEmail}\n` +
                   `• 디바이스 저장: 건너뜀 (OFF - 메일만 발송)\n\n` +
                   `※ 확인 시 현재 데이터가 정산 이력에 저장되고 화면이 초기화됩니다.`;
+
+            // ── 관리자 DB 중복 정산 사전 검증 (이메일 발송/엑셀 다운로드 전 원천 차단) ──
+            const duplicate = await AppState.checkDuplicateSettlement();
+            if (duplicate) {
+                AppState.showDuplicateSettlementAlert(duplicate);
+                return;
+            }
 
             showConfirmModal(
                 confirmMsg,
@@ -7474,6 +7636,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.314', date: '2026.10.20', items: ['비용 정산 확정/발송 시 관리자 DB(globalHistory)를 실시간 조회하여 동일 클럽·동일 날짜 중복 정산 방지 및 안내 팝업 기능 추가'] },
         { ver: '1.6.313', date: '2026.10.20', items: ['비용 항목 추가/수정 실시간 프리뷰 배너("이번 금액 반영 시") 하단에 예상 총 자부담 비율(%) 실시간 표시 추가'] },
         { ver: '1.6.312', date: '2026.10.20', items: ['정산 결과 카드 내 정산 날짜 라벨 문구를 직관적인 "📅 정산 날짜 (변경 가능)"으로 간소화 및 레이아웃 정리'] },
         { ver: '1.6.311', date: '2026.10.20', items: ['연간 결산 보고서 PPT(3p) 클럽별 소진율 그래프 내부 퍼센테이지(%) 텍스트 박스 너비 확장 및 margin:0, wrap:false 강제 적용으로 소수점/퍼센트 줄바꿈(100. 0% 등) 완벽 해결', '시스템 사용자 설명회 발표자료(PPTX)를 고품격 엔터프라이즈 라이트 테마로 전면 개편', '설명회 PPT 전 슬라이드의 글자 크기, 행 높이(lineSpacing), 들여쓰기, 카드 여백을 최적화하여 텍스트 겹침·잘림·답답함 완전 해소'] },
