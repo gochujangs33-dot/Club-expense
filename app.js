@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.315';
+const APP_VERSION      = '1.6.317';
 const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -2331,6 +2331,7 @@ const AppState = {
                 document.getElementById('result-this-support-sub').textContent = SettlementCalculator.formatCurrency(finalSupport);
                 document.getElementById('result-after-remaining').textContent = SettlementCalculator.formatCurrency(afterRemaining);
                 document.getElementById('result-after-remaining').style.color = afterRemaining >= 0 ? 'var(--color-secondary)' : 'var(--warning-text)';
+                this.updateClubBudgetProgress(clubBudget, clubUsed, finalSupport);
             } else {
                 budgetSection.classList.add('hidden');
             }
@@ -2958,6 +2959,87 @@ const AppState = {
         // 정적 data-i18n 요소 동기화 (언어 변경 시 즉시 반영)
         if (typeof applyTranslations === 'function') applyTranslations();
         if (typeof updatePendingSelfPayPreview === 'function') updatePendingSelfPayPreview();
+    },
+
+    updateClubBudgetProgress(clubBudget, clubUsed, finalSupport) {
+        const cardEl = document.getElementById('club-budget-progress-card');
+        if (!cardEl) return;
+        if (!clubBudget || clubBudget <= 0) {
+            cardEl.classList.add('hidden');
+            return;
+        }
+        cardEl.classList.remove('hidden');
+
+        const nameEl = document.getElementById('club-progress-name');
+        const barPrevEl = document.getElementById('club-progress-bar-prev');
+        const barThisEl = document.getElementById('club-progress-bar-this');
+        const pctEl = document.getElementById('club-progress-pct');
+        const totalEl = document.getElementById('club-progress-total');
+        const usedEl = document.getElementById('club-progress-used');
+        const remainingEl = document.getElementById('club-progress-remaining');
+
+        let clubName = '';
+        if (this.clubRegistry && this.clubId && this.clubRegistry[this.clubId]) {
+            clubName = this.clubRegistry[this.clubId].name || '';
+        }
+        if (!clubName) clubName = this.clubName || '클럽';
+
+        // 클럽 고유 색상 배정
+        const colorMap = (typeof getClubColorMap === 'function') ? getClubColorMap() : {};
+        let clubColor = colorMap[clubName];
+        if (!clubColor && typeof clubColorFor === 'function') {
+            clubColor = clubColorFor(clubName, colorMap, 1.0);
+        }
+        if (!clubColor) clubColor = '#df8238';
+
+        if (nameEl) {
+            nameEl.textContent = clubName;
+            nameEl.style.color = clubColor;
+            nameEl.title = clubName;
+        }
+
+        if (totalEl) {
+            totalEl.textContent = `배정 ${SettlementCalculator.formatCurrency(clubBudget)}`;
+        }
+
+        const prevUsed = Math.max(0, clubUsed || 0);
+        const thisSupport = Math.max(0, finalSupport || 0);
+        const totalUsed = prevUsed + thisSupport;
+        const afterRemaining = clubBudget - totalUsed;
+
+        const prevPct = Math.min(100, (prevUsed / clubBudget) * 100);
+        const thisPct = Math.min(Math.max(0, 100 - prevPct), (thisSupport / clubBudget) * 100);
+        const totalPct = (totalUsed / clubBudget) * 100;
+
+        // 소진율에 따른 위험 색상 (100% 초과 시 경고 레드, 그 외 클럽 고유 색상)
+        const baseColor = totalPct > 100 ? '#ef4444' : clubColor;
+
+        if (barPrevEl) {
+            barPrevEl.style.width = `${prevPct.toFixed(1)}%`;
+            barPrevEl.style.backgroundColor = baseColor;
+        }
+        if (barThisEl) {
+            barThisEl.style.width = `${thisPct.toFixed(1)}%`;
+            barThisEl.style.backgroundColor = baseColor;
+        }
+        if (pctEl) {
+            pctEl.textContent = `${totalPct.toFixed(1)}%`;
+            if (totalPct < 16) {
+                pctEl.style.color = 'var(--text-primary, #1e293b)';
+                pctEl.style.textShadow = 'none';
+            } else {
+                pctEl.style.color = '#ffffff';
+                pctEl.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.6)';
+            }
+        }
+
+        if (usedEl) {
+            usedEl.textContent = SettlementCalculator.formatCurrency(totalUsed);
+        }
+        if (remainingEl) {
+            remainingEl.textContent = SettlementCalculator.formatCurrency(afterRemaining);
+            remainingEl.style.color = afterRemaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)';
+        }
     },
 
     generateEmailReport() {
@@ -7345,6 +7427,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 afterRemainingEl.textContent = SettlementCalculator.formatCurrency(afterRemaining);
                 afterRemainingEl.style.color = afterRemaining >= 0 ? 'var(--color-secondary)' : 'var(--warning-text)';
             }
+            if (AppState.updateClubBudgetProgress) {
+                AppState.updateClubBudgetProgress(_clubBudgetForSelfPay, clubUsedForSelfPay, finalSupport);
+            }
         }
     }
 
@@ -7636,6 +7721,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.317', date: '2026.10.21', items: ['클럽 관리 목록의 "차트 색상" 네모박스와 글씨를 제거하고 클럽명 텍스트 자체에 지정된 고유 색상을 직접 적용', '클럽명 클릭 시 즉시 차트 색상을 변경할 수 있는 인라인 색상 피커(Color Picker) 대화상자 연동'] },
+        { ver: '1.6.316', date: '2026.10.21', items: ['사용자 정산 화면 하단에 클럽 총 예산, 사용률(%), 사용 금액 및 잔여 예산을 한눈에 직관적으로 보여주는 가로 프로그레스 바 그래프 신설', '비용 항목 및 자부담 변동 시 기존 사용액과 이번 정산 지원금 누적 소진율을 2단 스택으로 실시간 시각화 반영'] },
         { ver: '1.6.315', date: '2026.10.21', items: ['클럽 관리에서 "올해 기존 사용" 항목 완전 삭제 (클럽 등록 폼 입력칸·힌트 및 리스트 내 인라인 입력 필드 제거)', '클럽 목록 상단에 타이틀 라인 헤더(클럽명, 배정예산, 상품비(한도 50만원), 잔여 예산, 추가 배정, 85k, 관리) 신설', '클럽 목록 각 행의 중복 라벨을 제거하고 금액만 깔끔하게 직관적으로 표시되도록 일체형 그리드 테이블 레이아웃 적용'] },
         { ver: '1.6.314', date: '2026.10.20', items: ['비용 정산 확정/발송 시 관리자 DB(globalHistory)를 실시간 조회하여 동일 클럽·동일 날짜 중복 정산 방지 및 안내 팝업 기능 추가'] },
         { ver: '1.6.313', date: '2026.10.20', items: ['비용 항목 추가/수정 실시간 프리뷰 배너("이번 금액 반영 시") 하단에 예상 총 자부담 비율(%) 실시간 표시 추가'] },
@@ -8622,10 +8709,11 @@ document.addEventListener('DOMContentLoaded', () => {
             row.className = 'expense-row club-item-row';
             row.innerHTML = `
                 <div class="expense-row-left club-cell-name">
-                    <span class="expense-row-title" style="font-size:0.9rem; white-space:normal; line-height:1.3;"><span style="color:var(--text-muted); margin-right:0.3em; font-weight:400;">${idx + 1}.</span>${AppState.escapeHtml(club.name)}</span>
-                    <label class="club-chart-color-wrap" data-tooltip="이 색상은 모든 관리자 차트에서 이 클럽에 동일하게 적용됩니다">
+                    <label class="club-name-color-picker-label" data-tooltip="클럽명을 클릭하여 차트 색상을 변경합니다">
+                        <span style="color:var(--text-muted); margin-right:0.2em; font-weight:400; font-size:0.9rem;">${idx + 1}.</span>
+                        <span class="club-name-text" style="color:${chartColor}; font-weight:700; font-size:0.92rem; line-height:1.3; text-decoration:underline dotted rgba(255,255,255,0.25); text-underline-offset:3px;">${AppState.escapeHtml(club.name)}</span>
+                        <span class="club-color-hint-icon" style="font-size:0.75rem; opacity:0.6; margin-left:3px;" title="차트 색상 변경">🎨</span>
                         <input type="color" class="club-chart-color-input" data-id="${AppState.escapeHtml(clubId)}" value="${chartColor}" aria-label="${AppState.escapeHtml(club.name)} 차트 색상">
-                        차트 색상
                     </label>
                 </div>
                 <div class="club-amount-cell club-cell-budget">
@@ -8682,6 +8770,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     AppState.setClubOverLimitApproval(clubId, willAllow);
                     renderClubManagement();
                 }, willAllow ? '승인' : '승인 취소');
+            });
+        });
+        clubListContainer.querySelectorAll('.club-name-color-picker-label').forEach(label => {
+            label.addEventListener('click', (e) => {
+                const input = label.querySelector('.club-chart-color-input');
+                if (!input) return;
+                if (e.target === input) return;
+                try {
+                    if (typeof input.showPicker === 'function') {
+                        input.showPicker();
+                    } else {
+                        input.click();
+                    }
+                } catch (err) {
+                    input.click();
+                }
             });
         });
         clubListContainer.querySelectorAll('.club-chart-color-input').forEach(input => {

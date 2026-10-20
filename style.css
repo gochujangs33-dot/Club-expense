@@ -1362,6 +1362,115 @@ html[data-app-theme="light"] .club-amount-cell {
     color: #fca5a5;
 }
 
+/* 정산 결과 카드 내 클럽 예산 프로그레스 바 위젯 */
+.club-budget-progress-card {
+    margin-top: 0.75rem;
+    padding: 0.7rem 0.8rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+html[data-app-theme="light"] .club-budget-progress-card {
+    background: #f8fafc !important;
+    border: 1px solid rgba(72, 91, 128, 0.16) !important;
+    box-shadow: 0 2px 8px rgba(49, 69, 108, 0.04);
+}
+
+.club-progress-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    justify-content: space-between;
+}
+
+.club-progress-name {
+    font-size: 0.95rem;
+    font-weight: 800;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: -0.01em;
+}
+
+.club-progress-bar-wrap {
+    flex: 1;
+    min-width: 100px;
+    position: relative;
+}
+
+.club-progress-track {
+    position: relative;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+html[data-app-theme="light"] .club-progress-track {
+    background: #edf2f7 !important;
+}
+
+.club-progress-bar-prev {
+    height: 100%;
+    transition: width 0.35s ease;
+}
+
+.club-progress-bar-this {
+    height: 100%;
+    transition: width 0.35s ease;
+    opacity: 0.85;
+    background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0, rgba(255,255,255,0.18) 6px, transparent 6px, transparent 12px);
+}
+
+.club-progress-pct {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 2;
+}
+
+.club-progress-total {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: var(--text-primary, #1e293b);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+html[data-app-theme="light"] .club-progress-total {
+    color: #0f172a !important;
+}
+
+.club-progress-subtext {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary, #64748b);
+    text-align: center;
+    margin-top: 0.4rem;
+    line-height: 1.35;
+}
+
+html[data-app-theme="light"] .club-progress-subtext {
+    color: #475569 !important;
+}
+
+.club-progress-subtext strong {
+    font-weight: 700;
+}
+
 .scroll-y::-webkit-scrollbar {
     width: 6px;
 }
@@ -3215,10 +3324,42 @@ html[data-app-theme="light"] .kpi-mini-gauge-track {
 .recent-settlement-amount { color: var(--dashboard-subtext); font-size: 0.75rem; font-weight: 800; white-space: nowrap; }
 .recent-settlement-empty { display: grid; height: 100%; place-items: center; color: var(--dashboard-muted); font-size: 0.78rem; text-align: center; }
 
-.club-chart-color-wrap { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem; color: var(--text-muted); font-size: 0.75rem; font-weight: 500; }
-.club-chart-color-input { width: 34px; height: 30px; padding: 2px; border: 1px solid var(--card-border); border-radius: 7px; background: transparent; cursor: pointer; }
-.club-chart-color-input::-webkit-color-swatch-wrapper { padding: 1px; }
-.club-chart-color-input::-webkit-color-swatch { border: 0; border-radius: 4px; }
+.club-chart-color-wrap { display: none; }
+.club-name-color-picker-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 0.25rem 0.4rem;
+    margin: -0.25rem -0.4rem;
+    transition: background-color 0.15s ease;
+    user-select: none;
+    max-width: 100%;
+}
+.club-name-color-picker-label:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+html[data-app-theme="light"] .club-name-color-picker-label:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+.club-name-color-picker-label:hover .club-color-hint-icon {
+    opacity: 1 !important;
+    transform: scale(1.15);
+}
+.club-color-hint-icon {
+    display: inline-block;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.club-chart-color-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    padding: 0;
+    border: none;
+    position: absolute;
+    pointer-events: none;
+}
 
 #tab-admin[data-admin-theme="light"] { padding: 0.9rem; border: 1px solid var(--dashboard-border); border-radius: 18px; background: var(--dashboard-bg); }
 #tab-admin[data-admin-theme="light"] .card,
