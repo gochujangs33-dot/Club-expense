@@ -840,9 +840,7 @@
                             <button type="button" id="cancel-edit-club-btn" class="btn-secondary hidden" data-i18n="btn.cancel_edit" style="flex:1;">수정 취소</button>
                         </div>
                     </form>
-                    <div style="margin-top:0.75rem; display:flex; justify-content:flex-end;">
-                        <button type="button" id="dedup-clubs-btn" class="btn-secondary" style="font-size:0.78rem; padding:0.3rem 0.7rem; color:#f87171; border-color:rgba(239,68,68,0.4);">🧹 중복 클럽 정리</button>
-                    </div>
+
                     <div id="club-table-wrapper" class="club-table-wrapper">
                         <div class="club-table-content">
                             <div id="club-list-header" class="club-list-header">
@@ -920,6 +918,19 @@
                             <option value="CREATE">입력·추가</option>
                             <option value="UPDATE">수정·업데이트</option>
                             <option value="DELETE">삭제</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="audit-log-type-filter">항목 구분</label>
+                        <select id="audit-log-type-filter">
+                            <option value="">전체 항목</option>
+                            <option value="SETTLEMENT">📊 정산 이력 (수정/확정/삭제)</option>
+                            <option value="BUDGET_ADD">💰 추가 배정</option>
+                            <option value="APPROVAL_85K">🔓 85k 승인</option>
+                            <option value="CLUB">🏢 클럽명 / 예산 금액 수정</option>
+                            <option value="USER">👤 회원 (신규가입/삭제/수정)</option>
+                            <option value="RULES">⚙️ 정산 구간 변경</option>
+                            <option value="DIRECTORY">🗂️ 전사원 명부 변경</option>
                         </select>
                     </div>
                     <div class="input-group audit-log-search-group">

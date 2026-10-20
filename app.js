@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.317';
+const APP_VERSION      = '1.6.318';
 const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -1243,9 +1243,9 @@ const AppState = {
             const updates = { clubTotalBudget: this.clubTotalBudget };
             this.appendAuditUpdate(updates, {
                 action: 'UPDATE',
-                targetType: '전체 클럽 예산',
+                targetType: '금액 수정 (총 예산)',
                 targetLabel: '올해 사용 가능한 총 클럽비용',
-                summary: `전체 클럽 예산을 ${SettlementCalculator.formatCurrency(previousValue)}에서 ${SettlementCalculator.formatCurrency(this.clubTotalBudget)}으로 수정`,
+                summary: `총 클럽 예산 금액 수정: ${SettlementCalculator.formatCurrency(previousValue)} → ${SettlementCalculator.formatCurrency(this.clubTotalBudget)}`,
                 details: { 이전금액: previousValue, 변경금액: this.clubTotalBudget }
             });
             return this.firebaseDb.ref().update(updates)
@@ -1276,21 +1276,31 @@ const AppState = {
         if (this.firebaseDb) {
             const updates = { [`clubRegistry/${clubId}`]: this.clubRegistry[clubId] };
             const changes = [];
-            if (hadExisting && previous.name !== this.clubRegistry[clubId].name) changes.push(`이름 ${previous.name || '-'} → ${this.clubRegistry[clubId].name}`);
-            if (hadExisting && (previous.budget || 0) !== this.clubRegistry[clubId].budget) changes.push(`예산 ${SettlementCalculator.formatCurrency(previous.budget || 0)} → ${SettlementCalculator.formatCurrency(this.clubRegistry[clubId].budget)}`);
-            if (hadExisting && (previous.priorUsed || 0) !== this.clubRegistry[clubId].priorUsed) changes.push(`기존 사용액 ${SettlementCalculator.formatCurrency(previous.priorUsed || 0)} → ${SettlementCalculator.formatCurrency(this.clubRegistry[clubId].priorUsed)}`);
+            const nameChanged = hadExisting && previous.name !== this.clubRegistry[clubId].name;
+            const budgetChanged = hadExisting && (previous.budget || 0) !== this.clubRegistry[clubId].budget;
+            if (nameChanged) changes.push(`이름 '${previous.name || '-'}' → '${this.clubRegistry[clubId].name}'`);
+            if (budgetChanged) changes.push(`배정예산 ${SettlementCalculator.formatCurrency(previous.budget || 0)} → ${SettlementCalculator.formatCurrency(this.clubRegistry[clubId].budget)}`);
+
+            let targetType = '클럽 등록';
+            if (hadExisting) {
+                if (nameChanged && budgetChanged) targetType = '클럽명 및 금액 수정';
+                else if (nameChanged) targetType = '클럽명 변경';
+                else if (budgetChanged) targetType = '금액 수정 (클럽 예산)';
+                else targetType = '클럽 정보 수정';
+            }
+
             this.appendAuditUpdate(updates, {
                 action: hadExisting ? 'UPDATE' : 'CREATE',
-                targetType: '클럽',
+                targetType,
                 targetId: clubId,
                 targetLabel: this.clubRegistry[clubId].name,
                 summary: hadExisting
-                    ? `클럽 '${this.clubRegistry[clubId].name}' 수정${changes.length ? `: ${changes.join(', ')}` : ''}`
-                    : `클럽 '${this.clubRegistry[clubId].name}' 추가`,
+                    ? `클럽 '${this.clubRegistry[clubId].name}' ${targetType}${changes.length ? ` (${changes.join(', ')})` : ''}`
+                    : `신규 클럽 '${this.clubRegistry[clubId].name}' 등록 (배정 예산: ${SettlementCalculator.formatCurrency(this.clubRegistry[clubId].budget)})`,
                 clubId,
                 clubName: this.clubRegistry[clubId].name,
                 details: {
-                    이전이름: previous.name,
+                    이전이름: previous.name || '-',
                     변경이름: this.clubRegistry[clubId].name,
                     이전예산: previous.budget || 0,
                     변경예산: this.clubRegistry[clubId].budget,
@@ -1321,17 +1331,16 @@ const AppState = {
         const updates = { [`clubRegistry/${clubId}`]: this.clubRegistry[clubId] };
         this.appendAuditUpdate(updates, {
             action: 'UPDATE',
-            targetType: '클럽 추가 배정',
+            targetType: '추가 배정',
             targetId: clubId,
             targetLabel: clubName,
-            summary: `클럽 '${clubName}' 추가 배정 · 기존 ${SettlementCalculator.formatCurrency(previousBudget)} + 추가 ${SettlementCalculator.formatCurrency(allocation)} = 총 ${SettlementCalculator.formatCurrency(totalBudget)} · 잔여 ${SettlementCalculator.formatCurrency(remainingBudget)}`,
+            summary: `클럽 '${clubName}' 추가 배정: +${SettlementCalculator.formatCurrency(allocation)} (총 ${SettlementCalculator.formatCurrency(totalBudget)}, 잔여 ${SettlementCalculator.formatCurrency(remainingBudget)})`,
             clubId,
             clubName,
             details: {
                 '기존 배정 금액': previousBudget,
                 '추가 배정 금액': allocation,
                 '총 배정 금액': totalBudget,
-                '올해 기존 사용 금액': priorUsed,
                 '확정 지원금 누적': usedBudget,
                 '추가 배정 후 잔여금': remainingBudget
             }
@@ -1354,13 +1363,16 @@ const AppState = {
             const updates = { [`clubRegistry/${clubId}/allowOverLimitSupport`]: !!allowed };
             this.appendAuditUpdate(updates, {
                 action: 'UPDATE',
-                targetType: '클럽 초과 지원 승인',
+                targetType: '85k 승인',
                 targetId: clubId,
                 targetLabel: clubName,
-                summary: `클럽 '${clubName}'의 85,000원 초과 지원을 ${allowed ? '승인' : '승인 취소'}`,
+                summary: `클럽 '${clubName}' 인당 85,000원 초과 지원 1회 ${allowed ? '승인' : '승인 취소'}`,
                 clubId,
                 clubName,
-                details: { 승인여부: !!allowed }
+                details: {
+                    승인여부: allowed ? '85k 승인' : '85k 미승인',
+                    설명: allowed ? '다음 정산 1건에 한해 인당 85,000원 초과 지원 허용' : '초과 지원 승인 취소'
+                }
             });
             this.firebaseDb.ref().update(updates).catch(err => console.error("승인 설정 저장 실패:", err));
         }
@@ -2100,12 +2112,12 @@ const AppState = {
         const savePromise = this.save();
         this.writeAuditAfterSave(savePromise, {
             action: isEditing ? 'UPDATE' : 'CREATE',
-            targetType: '전사원 명부',
+            targetType: isEditing ? '전사원 명부 변경' : '전사원 명부 등록',
             targetId: eid,
             targetLabel: `${name} (${eid})`,
             summary: isEditing
-                ? `전사원 명부 '${previousName} (${previousId || '-'})'을(를) '${name} (${eid})'으로 수정`
-                : `전사원 명부에 '${name} (${eid})' 추가`,
+                ? `전사원 명부 수정: '${previousName} (${previousId || '-'})' → '${name} (${eid})'`
+                : `전사원 명부 등록: '${name} (${eid})'`,
             details: { 이전이름: previousName, 이전사번: previousId, 변경이름: name, 변경사번: eid }
         });
         this.render();
@@ -2157,9 +2169,9 @@ const AppState = {
         this.save();
         this.saveGlobalRules({
             action: 'UPDATE',
-            targetType: '정산 기준',
+            targetType: '정산 구간 변경',
             targetLabel: '전체 클럽 공통 정산 기준',
-            summary: '정산 구간·비율·상품비·시설비 한도 수정',
+            summary: '정산 구간·비율·상품비·시설비 한도 변경',
             details: {
                 이전가한도: previousRules.limit1,
                 변경가한도: newRules.limit1,
@@ -2705,10 +2717,10 @@ const AppState = {
                             const savePromise = this.save();
                             this.writeAuditAfterSave(savePromise, {
                                 action: 'UPDATE',
-                                targetType: '전사원 명부 참석 횟수',
+                                targetType: '전사원 명부 카운트 변경',
                                 targetId: dirId || '',
                                 targetLabel: `${dirName} (${dirId || '-'})`,
-                                summary: `전사원 명부 '${dirName} (${dirId || '-'})'의 올해 누적 참석 횟수 수정`,
+                                summary: `전사원 명부 '${dirName} (${dirId || '-'})' 누적 참석 횟수 수정: ${previousCount}회 → ${newCount}회`,
                                 details: { 이전횟수: previousCount, 변경횟수: newCount }
                             });
                         }
@@ -3780,10 +3792,10 @@ const AppState = {
                 }
                 this.appendAuditUpdate(firebaseUpdates, {
                     action: 'UPDATE',
-                    targetType: '정산 이력',
+                    targetType: '정산 수정',
                     targetId: id,
-                    targetLabel: `${merged.clubName || '기본 클럽'} ${merged.settlementDate || ''}`.trim(),
-                    summary: `정산 이력 수정: ${oldEntry.clubName || '기본 클럽'} ${oldEntry.settlementDate || ''}`.trim(),
+                    targetLabel: `${merged.clubName || '기본 클럽'} (${merged.settlementDate || ''})`.trim(),
+                    summary: `정산 수정: '${merged.clubName || oldEntry.clubName || '기본 클럽'}' (${merged.settlementDate || oldEntry.settlementDate || ''}) · 총 ${SettlementCalculator.formatCurrency(merged.totalCost)} (지원금: ${SettlementCalculator.formatCurrency(merged.finalSupportAmount)}, 자부담: ${SettlementCalculator.formatCurrency(merged.totalSelfPay)})`.trim(),
                     clubId,
                     clubName: merged.clubName || oldEntry.clubName || '',
                     details: {
@@ -4602,6 +4614,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const month = document.getElementById('audit-log-month-filter')?.value || '';
         const action = document.getElementById('audit-log-action-filter')?.value || '';
+        const typeFilter = document.getElementById('audit-log-type-filter')?.value || '';
         const keyword = (document.getElementById('audit-log-search-input')?.value || '').trim().toLowerCase();
         const visibleEntries = auditLogEntries.filter(entry => !isLoginAuditEntry(entry));
         const filtered = visibleEntries.filter(entry => {
@@ -4614,6 +4627,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (entryMonth !== month) return false;
             }
             if (action && getAuditActionGroup(entry.action) !== action) return false;
+            if (typeFilter) {
+                const t = `${entry.targetType || ''} ${entry.summary || ''}`.toLowerCase();
+                if (typeFilter === 'SETTLEMENT') {
+                    if (!t.includes('정산')) return false;
+                } else if (typeFilter === 'BUDGET_ADD') {
+                    if (!t.includes('추가 배정') && !t.includes('추가배정')) return false;
+                } else if (typeFilter === 'APPROVAL_85K') {
+                    if (!t.includes('85') && !t.includes('초과 지원 승인')) return false;
+                } else if (typeFilter === 'CLUB') {
+                    if ((!t.includes('클럽') && !t.includes('예산')) || t.includes('추가 배정') || t.includes('추가배정') || t.includes('85') || t.includes('초과 지원 승인')) return false;
+                } else if (typeFilter === 'USER') {
+                    if (!t.includes('회원') && !t.includes('가입')) return false;
+                } else if (typeFilter === 'RULES') {
+                    if (!t.includes('정산 구간') && !t.includes('정산 기준') && !t.includes('규칙') && !t.includes('한도')) return false;
+                } else if (typeFilter === 'DIRECTORY') {
+                    if (!t.includes('명부')) return false;
+                }
+            }
             if (keyword) {
                 const haystack = [entry.actorName, entry.actorPin, entry.actorRole, entry.targetType,
                     entry.targetLabel, entry.summary, entry.clubName, ...Object.values(entry.details || {})]
@@ -6038,7 +6069,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.id === 'year-end-ppt-modal') closeYearEndPptModal();
     });
 
-    ['audit-log-month-filter', 'audit-log-action-filter', 'audit-log-search-input'].forEach(id => {
+    ['audit-log-month-filter', 'audit-log-action-filter', 'audit-log-type-filter', 'audit-log-search-input'].forEach(id => {
         const element = document.getElementById(id);
         if (element) element.addEventListener(id === 'audit-log-search-input' ? 'input' : 'change', renderAuditLogList);
     });
@@ -6047,9 +6078,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('audit-log-reset-filter-btn')?.addEventListener('click', () => {
         const monthFilter = document.getElementById('audit-log-month-filter');
         const actionFilter = document.getElementById('audit-log-action-filter');
+        const typeFilter = document.getElementById('audit-log-type-filter');
         const searchInput = document.getElementById('audit-log-search-input');
         if (monthFilter) monthFilter.value = '';
         if (actionFilter) actionFilter.value = '';
+        if (typeFilter) typeFilter.value = '';
         if (searchInput) searchInput.value = '';
         renderAuditLogList();
     });
@@ -7721,6 +7754,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.318', date: '2026.10.21', items: ['클럽 관리 화면에서 "중복 클럽 정리" 버튼 제거', '전체 작업 로그(Audit Log) 대상 명확화 및 전면 개편: 정산 수정, 추가 배정, 85k 승인, 금액 수정(총 예산/클럽 배정예산), 신규 가입, 회원 삭제, 회원 정보 수정, 정산 구간 변경, 전사원 명부 변경(등록/수정/삭제/카운트) 등 핵심 작업 로그 기록 및 모달 내 항목 구분 필터 신설'] },
         { ver: '1.6.317', date: '2026.10.21', items: ['클럽 관리 목록의 "차트 색상" 네모박스와 글씨를 제거하고 클럽명 텍스트 자체에 지정된 고유 색상을 직접 적용', '클럽명 클릭 시 즉시 차트 색상을 변경할 수 있는 인라인 색상 피커(Color Picker) 대화상자 연동'] },
         { ver: '1.6.316', date: '2026.10.21', items: ['사용자 정산 화면 하단에 클럽 총 예산, 사용률(%), 사용 금액 및 잔여 예산을 한눈에 직관적으로 보여주는 가로 프로그레스 바 그래프 신설', '비용 항목 및 자부담 변동 시 기존 사용액과 이번 정산 지원금 누적 소진율을 2단 스택으로 실시간 시각화 반영'] },
         { ver: '1.6.315', date: '2026.10.21', items: ['클럽 관리에서 "올해 기존 사용" 항목 완전 삭제 (클럽 등록 폼 입력칸·힌트 및 리스트 내 인라인 입력 필드 제거)', '클럽 목록 상단에 타이틀 라인 헤더(클럽명, 배정예산, 상품비(한도 50만원), 잔여 예산, 추가 배정, 85k, 관리) 신설', '클럽 목록 각 행의 중복 라벨을 제거하고 금액만 깔끔하게 직관적으로 표시되도록 일체형 그리드 테이블 레이아웃 적용'] },
@@ -8036,10 +8070,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 AppState.appendAuditUpdate(registrationUpdates, {
                     action: 'CREATE',
-                    targetType: '회원',
+                    targetType: '신규 가입',
                     targetId: pin,
                     targetLabel: `${name} (${pin})`,
-                    summary: `신규 회원 '${name} (${pin})' 가입`,
+                    summary: `신규 회원 '${name} (${pin})' 가입 등록`,
                     details: { 이름: name, PIN: pin }
                 }, { pin, name, role: '일반 회원' });
                 firebaseDb.ref().update(registrationUpdates).then(() => {
@@ -8109,7 +8143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             close();
             const auditEvent = {
                 action: 'UPDATE',
-                targetType: '회원',
+                targetType: '회원 정보 수정',
                 targetId: newPin,
                 targetLabel: `${newName} (${newPin})`,
                 summary: `회원 정보 수정: '${currentName} (${oldPin})' → '${newName} (${newPin})'`,
@@ -8163,10 +8197,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 AppState.appendAuditUpdate(updates, {
                     action: 'DELETE',
-                    targetType: '회원',
+                    targetType: '회원 삭제',
                     targetId: pin,
                     targetLabel: `${name} (${pin})`,
-                    summary: `회원 '${name} (${pin})' 및 개인 정산 데이터 삭제`,
+                    summary: `회원 삭제: '${name} (${pin})' 계정 및 정산 데이터 삭제`,
                     details: { 이름: name, PIN: pin }
                 });
                 firebaseDb.ref().update(updates).then(() => {
