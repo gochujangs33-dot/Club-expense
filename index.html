@@ -816,12 +816,7 @@
                                 <label for="club-budget-form-input" data-i18n="admin.club_budget_label">배정 예산 (원)</label>
                                 <input type="text" inputmode="numeric" id="club-budget-form-input" placeholder="예: 5,000,000" required>
                             </div>
-                            <div class="input-group flex-1">
-                                <label for="club-prior-used-form-input">올해 기존 사용 금액 (원)</label>
-                                <input type="text" inputmode="numeric" id="club-prior-used-form-input" placeholder="예: 350,000">
-                            </div>
                         </div>
-                        <small class="input-hint">💡 "올해 기존 사용 금액"은 앱 사용 전에 이미 지출한 올해 금액입니다. 아래 클럽 목록의 "✏️ 올해 기존 사용" 칸에 입력하면 잔여 예산에서 자동 차감됩니다.</small>
                         <div class="form-actions">
                             <button type="submit" id="add-club-btn" class="btn-primary" data-i18n="btn.add_club" style="flex:1;">
                                 ➕ 클럽 추가
@@ -832,8 +827,21 @@
                     <div style="margin-top:0.75rem; display:flex; justify-content:flex-end;">
                         <button type="button" id="dedup-clubs-btn" class="btn-secondary" style="font-size:0.78rem; padding:0.3rem 0.7rem; color:#f87171; border-color:rgba(239,68,68,0.4);">🧹 중복 클럽 정리</button>
                     </div>
-                    <div id="club-list-container" class="scroll-y" style="max-height: 480px; margin-top: 0.5rem; display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; -webkit-overflow-scrolling:touch;">
-                        <!-- Populated dynamically -->
+                    <div id="club-table-wrapper" class="club-table-wrapper">
+                        <div class="club-table-content">
+                            <div id="club-list-header" class="club-list-header">
+                                <div class="club-th club-th-name">클럽명</div>
+                                <div class="club-th club-th-budget">배정예산</div>
+                                <div class="club-th club-th-prize">상품비(한도 50만원)</div>
+                                <div class="club-th club-th-remaining">잔여 예산</div>
+                                <div class="club-th club-th-add">추가 배정</div>
+                                <div class="club-th club-th-overlimit">85k</div>
+                                <div class="club-th club-th-actions">관리</div>
+                            </div>
+                            <div id="club-list-container" class="scroll-y" style="max-height: 480px; display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.314';
-const APP_VERSION_DATE = '2026.10.20';
+const APP_VERSION      = '1.6.315';
+const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
 function updatePerPersonSelfPayIcon(perPersonSelfPay) {
@@ -7636,6 +7636,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.315', date: '2026.10.21', items: ['클럽 관리에서 "올해 기존 사용" 항목 완전 삭제 (클럽 등록 폼 입력칸·힌트 및 리스트 내 인라인 입력 필드 제거)', '클럽 목록 상단에 타이틀 라인 헤더(클럽명, 배정예산, 상품비(한도 50만원), 잔여 예산, 추가 배정, 85k, 관리) 신설', '클럽 목록 각 행의 중복 라벨을 제거하고 금액만 깔끔하게 직관적으로 표시되도록 일체형 그리드 테이블 레이아웃 적용'] },
         { ver: '1.6.314', date: '2026.10.20', items: ['비용 정산 확정/발송 시 관리자 DB(globalHistory)를 실시간 조회하여 동일 클럽·동일 날짜 중복 정산 방지 및 안내 팝업 기능 추가'] },
         { ver: '1.6.313', date: '2026.10.20', items: ['비용 항목 추가/수정 실시간 프리뷰 배너("이번 금액 반영 시") 하단에 예상 총 자부담 비율(%) 실시간 표시 추가'] },
         { ver: '1.6.312', date: '2026.10.20', items: ['정산 결과 카드 내 정산 날짜 라벨 문구를 직관적인 "📅 정산 날짜 (변경 가능)"으로 간소화 및 레이아웃 정리'] },
@@ -8536,10 +8537,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const clubListContainer = document.getElementById('club-list-container');
 
     function renderClubManagement() {
-        // "올해 기존 사용" 칸 입력 중에는 재렌더 스킵 — Firebase 스냅샷 등 외부 재렌더가
-        // 입력값을 지우는 것 방지 (blur 시 change 핸들러가 저장 후 직접 재렌더함)
-        if (document.activeElement && document.activeElement.classList &&
-            document.activeElement.classList.contains('club-prior-used-input')) return;
         const totalBudgetEl = document.getElementById('club-total-budget-input');
         if (totalBudgetEl) {
             totalBudgetEl.value = formatAmount(AppState.clubTotalBudget || 0);
@@ -8562,12 +8559,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const listContainer = document.getElementById('club-list-container');
+        const headerEl = document.getElementById('club-list-header');
         if (!listContainer) return;
         listContainer.innerHTML = '';
         if (clubs.length === 0) {
+            if (headerEl) headerEl.style.display = 'none';
             listContainer.innerHTML = `<div class="empty-state"><span class="empty-icon">🏷️</span><p>${t('empty.no_clubs')}</p></div>`;
             return;
         }
+        if (headerEl) headerEl.style.display = 'grid';
         const clubColorMap = getClubColorMap();
         clubs.sort((a, b) => a[1].name.localeCompare(b[1].name)).forEach(([clubId, club], idx) => {
             const _thisYear = new Date().getFullYear();
@@ -8615,50 +8615,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const budget = club.budget || 0;
             const priorUsed = club.priorUsed || 0;
-            const prizeLimit = AppState.rules.prizeLimit || 500000;
             const remaining = budget - priorUsed - usedBudget;
             const overLimitApproved = !!club.allowOverLimitSupport;
             const chartColor = clubColorMap[club.name] || resolveClubBaseColor(clubId, club);
             const row = document.createElement('div');
-            row.className = 'expense-row';
-            row.style.cssText = 'padding:0.6rem 0.75rem; height:auto; align-items:center; flex-wrap:wrap; flex-shrink:0;';
+            row.className = 'expense-row club-item-row';
             row.innerHTML = `
-                <div class="expense-row-left" style="flex:1.4; min-width:90px;">
+                <div class="expense-row-left club-cell-name">
                     <span class="expense-row-title" style="font-size:0.9rem; white-space:normal; line-height:1.3;"><span style="color:var(--text-muted); margin-right:0.3em; font-weight:400;">${idx + 1}.</span>${AppState.escapeHtml(club.name)}</span>
                     <label class="club-chart-color-wrap" data-tooltip="이 색상은 모든 관리자 차트에서 이 클럽에 동일하게 적용됩니다">
                         <input type="color" class="club-chart-color-input" data-id="${AppState.escapeHtml(clubId)}" value="${chartColor}" aria-label="${AppState.escapeHtml(club.name)} 차트 색상">
                         차트 색상
                     </label>
                 </div>
-                <div style="flex:1.2; min-width:100px; text-align:center;">
-                    <div style="font-size:0.7rem; color:var(--text-secondary);">${t('club.assigned_budget')}</div>
-                    <div style="font-size:0.85rem; font-weight:600;">${SettlementCalculator.formatCurrency(budget)}</div>
+                <div class="club-amount-cell club-cell-budget">
+                    ${SettlementCalculator.formatCurrency(budget)}
                 </div>
-                <div style="flex:1.1; min-width:110px; text-align:center;">
-                    <div style="font-size:0.7rem; color:var(--text-secondary);">✏️ 올해 기존 사용</div>
-                    <input type="text" inputmode="numeric" class="club-prior-used-input" data-id="${AppState.escapeHtml(clubId)}"
-                        value="${priorUsed ? formatAmount(priorUsed) : ''}" placeholder="0"
-                        data-tooltip="앱 사용 전 올해 이미 지출한 금액 — 입력하면 잔여 예산에서 자동 차감됩니다"
-                        style="width:100px; padding:0.25rem 0.4rem; font-size:0.82rem; text-align:center; border-radius:6px;">
+                <div class="club-amount-cell club-cell-prize" style="color:${prizeUsed > 0 ? 'hsl(35,90%,42%)' : 'var(--text-muted)'};">
+                    ${SettlementCalculator.formatCurrency(prizeUsed)}
                 </div>
-                <div style="flex:1.1; min-width:90px; text-align:center;">
-                    <div style="font-size:0.7rem; color:var(--text-secondary);">🎁 상품비 사용</div>
-                    <div style="font-size:0.85rem; font-weight:600; color:${prizeUsed > 0 ? 'hsl(38,92%,60%)' : 'var(--text-muted)'};">${SettlementCalculator.formatCurrency(prizeUsed)}</div>
-                    <div style="font-size:0.68rem; color:var(--text-muted);">한도 ${SettlementCalculator.formatCurrency(prizeLimit)}</div>
+                <div class="club-amount-cell club-cell-remaining" style="color:${remaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)'};">
+                    ${SettlementCalculator.formatCurrency(remaining)}
                 </div>
-                <div style="flex:1.2; min-width:100px; text-align:center;">
-                    <div style="font-size:0.7rem; color:var(--text-secondary);">${t('club.remaining_budget')}</div>
-                    <div style="font-size:0.85rem; font-weight:600; color:${remaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)'};">${SettlementCalculator.formatCurrency(remaining)}</div>
-                </div>
-                <div class="expense-row-right" style="gap:0.4rem; flex:0 0 auto;">
+                <div class="club-cell-btn club-cell-add">
                     <button class="btn-add-club-budget btn-secondary" data-id="${AppState.escapeHtml(clubId)}"
                         data-tooltip="이 클럽의 배정 예산에 금액을 더합니다 (기존 배정 예산 + 입력한 금액)"
-                        style="padding:0.3rem 0.6rem; font-size:0.78rem;">${t('btn.add_budget')}</button>
+                        style="width:100%; padding:0.3rem 0.4rem; font-size:0.78rem; white-space:nowrap;">${t('btn.add_budget')}</button>
+                </div>
+                <div class="club-cell-btn club-cell-overlimit">
                     <button class="btn-toggle-overlimit ${overLimitApproved ? 'is-approved' : ''}" data-id="${AppState.escapeHtml(clubId)}" data-current="${overLimitApproved ? '1' : '0'}"
                         data-tooltip="이사진 승인 시 이 클럽의 다음 정산 1건에 한해 인당 85,000원 초과 지원을 허용합니다 (클럽 잔여 예산은 여전히 초과 불가). 정산이 확정되면 사용 여부와 관계없이 자동으로 미승인 상태로 되돌아갑니다."
-                        style="padding:0.15rem 0.35rem; font-size:0.64rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${overLimitApproved ? '🔓 85K 승인됨' : '🔒 85K 미승인'}</button>
-                    <button class="btn-edit-club btn-secondary" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">${t('btn.edit')}</button>
-                    <button class="btn-delete-club btn-text-danger" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">${t('btn.delete')}</button>
+                        style="width:100%; padding:0.22rem 0.35rem; font-size:0.66rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${overLimitApproved ? '🔓 85K 승인됨' : '🔒 85K 미승인'}</button>
+                </div>
+                <div class="expense-row-right club-cell-actions">
+                    <button class="btn-edit-club btn-secondary" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.5rem; font-size:0.78rem;">${t('btn.edit')}</button>
+                    <button class="btn-delete-club btn-text-danger" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.5rem; font-size:0.78rem;">${t('btn.delete')}</button>
                 </div>
             `;
             clubListContainer.appendChild(row);
@@ -8728,24 +8719,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     AppState.deleteClub(clubId);
                     renderClubManagement();
                 });
-            });
-        });
-        // "올해 기존 사용" 인라인 입력 — Enter 또는 포커스 아웃 시 저장, 잔여 예산 즉시 재계산
-        clubListContainer.querySelectorAll('.club-prior-used-input').forEach(inp => {
-            inp.addEventListener('keydown', e => {
-                if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
-            });
-            inp.addEventListener('change', () => {
-                const clubId = inp.getAttribute('data-id');
-                const club = AppState.clubRegistry[clubId];
-                if (!club) return;
-                const val = Math.max(0, parseAmount(inp.value));
-                if (val === (club.priorUsed || 0)) {
-                    inp.value = val ? formatAmount(val) : '';
-                    return;
-                }
-                AppState.addOrUpdateClub(clubId, club.name, club.budget || 0, val);
-                renderClubManagement();
             });
         });
     }
@@ -8834,11 +8807,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const name = clubNameFormInput.value.trim();
             const budget = parseAmount(clubBudgetFormInput.value);
-            // 올해 기존 사용 금액: 입력값이 있으면 그 값 사용(0 입력 시 초기화), 비워두면 기존 값 유지
-            const priorUsedRaw = clubPriorUsedFormInput ? clubPriorUsedFormInput.value.trim() : '';
-            const priorUsed = priorUsedRaw !== ''
-                ? Math.max(0, parseAmount(priorUsedRaw))
-                : ((editingClubId && AppState.clubRegistry[editingClubId]) ? (AppState.clubRegistry[editingClubId].priorUsed || 0) : 0);
+            const priorUsed = (editingClubId && AppState.clubRegistry[editingClubId]) ? (AppState.clubRegistry[editingClubId].priorUsed || 0) : 0;
             if (!name) return;
 
             // 이름 중복 체크 (신규: 전체 / 수정: 자신 제외)

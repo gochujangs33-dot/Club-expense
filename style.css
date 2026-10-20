@@ -1255,17 +1255,99 @@ input[aria-invalid="true"] {
     transform: none;
 }
 
-#club-list-container .expense-row {
+/* 클럽 관리 테이블 레이아웃 */
+.club-table-wrapper {
+    margin-top: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+}
+
+.club-table-content {
+    min-width: 790px;
+}
+
+.club-list-header {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 80px 90px 105px;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    user-select: none;
+}
+
+html[data-app-theme="light"] .club-list-header {
+    background: #edf2f7;
+    border-color: rgba(72, 91, 128, 0.18);
+    color: #475569;
+}
+
+.club-th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.club-th-name { text-align: left; padding-left: 0.2rem; }
+.club-th-budget { text-align: center; }
+.club-th-prize { text-align: center; }
+.club-th-remaining { text-align: center; }
+.club-th-add { text-align: center; }
+.club-th-overlimit { text-align: center; }
+.club-th-actions { text-align: center; }
+
+#club-list-container .expense-row.club-item-row {
+    display: grid !important;
+    grid-template-columns: minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 80px 90px 105px !important;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
     animation: none;
     overflow: visible;
     min-height: auto;
     flex-shrink: 0;
+    flex-wrap: nowrap !important;
 }
 
-#club-list-container .club-prior-used-input {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: inherit;
+.club-amount-cell {
+    background: rgba(15, 23, 42, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 0.35rem 0.4rem;
+    text-align: center;
+    font-size: 0.88rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.1rem;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+html[data-app-theme="light"] .club-amount-cell {
+    background: #f8fafc !important;
+    border: 1px solid rgba(72, 91, 128, 0.14) !important;
+    color: #1e293b !important;
+}
+
+.club-cell-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.club-cell-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
 }
 
 #club-list-container .btn-toggle-overlimit {
@@ -4026,32 +4108,11 @@ html[data-app-theme="light"] #club-list-container .club-chart-color-wrap {
     color: #64748b !important;
 }
 
-html[data-app-theme="light"] #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) {
+html[data-app-theme="light"] #club-list-container .club-amount-cell {
     background: #f8fafc !important;
     border: 1px solid rgba(72, 91, 128, 0.14) !important;
     color: #1e293b !important;
-}
-
-html[data-app-theme="light"] #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) > div:first-child {
-    color: #64748b !important;
-    font-weight: 600;
-}
-
-html[data-app-theme="light"] #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) > div:nth-child(2) {
-    color: #1e293b !important;
     font-weight: 700;
-}
-
-html[data-app-theme="light"] #club-list-container .club-prior-used-input {
-    background: #ffffff !important;
-    border: 1px solid rgba(72, 91, 128, 0.28) !important;
-    color: #1e293b !important;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-html[data-app-theme="light"] #club-list-container .club-prior-used-input:focus {
-    border-color: #6366f1 !important;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15) !important;
 }
 
 html[data-app-theme="light"] #club-list-container .btn-add-club-budget,
@@ -4338,8 +4399,8 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     .expense-row-meta { flex-wrap: wrap; }
     .history-items li { gap: 0.55rem; flex-wrap: wrap; overflow-wrap: anywhere; }
 
-    /* 클럽 관리의 넓은 1행 요약을 2열 정보 카드로 전환한다. */
-    #club-list-container .expense-row {
+    /* 클럽 관리 외 일반 행만 2열 카드로 전환 (클럽 관리는 상단 헤더와 일치하는 가로 스크롤 테이블 유지) */
+    #club-list-container .expense-row:not(.club-item-row) {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: stretch;
@@ -4348,25 +4409,18 @@ html[data-app-theme="light"] #dedup-clubs-btn {
         flex-shrink: 0;
         min-height: auto;
     }
-    #club-list-container .expense-row-left,
-    #club-list-container .expense-row-right { grid-column: 1 / -1; }
-    #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) {
+    #club-list-container .expense-row:not(.club-item-row) .expense-row-left,
+    #club-list-container .expense-row:not(.club-item-row) .expense-row-right { grid-column: 1 / -1; }
+    #club-list-container .expense-row:not(.club-item-row) > div:not(.expense-row-left):not(.expense-row-right) {
         min-width: 0 !important;
         padding: 0.5rem 0.45rem;
         border-radius: 8px;
         background: rgba(15, 23, 42, 0.42);
     }
-    html[data-app-theme="light"] #club-list-container .expense-row > div:not(.expense-row-left):not(.expense-row-right) {
+    html[data-app-theme="light"] #club-list-container .expense-row:not(.club-item-row) > div:not(.expense-row-left):not(.expense-row-right) {
         background: #f8fafc !important;
         border: 1px solid rgba(72, 91, 128, 0.14) !important;
     }
-    #club-list-container .club-prior-used-input { width: 100% !important; max-width: none; }
-    #club-list-container .expense-row-right {
-        width: 100%;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-    }
-    #club-list-container .expense-row-right button { min-height: 2.25rem; }
 
     /* 모달은 화면 안에서 세로 스크롤하고, 모든 표는 항목명을 가진 카드로 읽는다. */
     .modal {
