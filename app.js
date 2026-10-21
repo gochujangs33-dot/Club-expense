@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.324';
+const APP_VERSION      = '1.6.325';
 const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -7816,6 +7816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.325', date: '2026.10.21', items: ['실 참석 인원 카드 헤더 위젯 UI 간소화: 우수 클럽 순위 및 실참석 카운터 텍스트를 제거하고 3M 팀워크 모임 애니메이션 GIF 단독 뷰로 정돈', '카드 헤더 높이 및 여백에 최적화된 프레임 사이즈(46px x 82px)와 부드러운 스케일업 호버 인터랙션 적용'] },
         { ver: '1.6.324', date: '2026.10.21', items: ['실 참석 인원 카드 헤더에 3M 팀워크 모임 애니메이션 GIF(280x158 최적화 버전) 전면 반영: 3M 로고를 중심으로 동료들이 사방에서 뛰어와 모여드는 고화질 2D 카툰 애니메이션을 헤더 위젯에 연동', '1위·2위·3위 우수 클럽 전환 시 애니메이션 GIF와 함께 클럽명 뱃지 및 실 참석자 수가 부드럽게 갱신되고 클릭 시 명단 모달이 즉시 열리도록 최적화'] },
         { ver: '1.6.323', date: '2026.10.21', items: ['클럽별 예산 소진율 차트 간헐적 미표시 버그 전면 해결: 클럽 레지스트리 비동기 로딩 지연 시 이력 데이터 기반 클럽 자동 폴백 보강, 미등록/속성 누락 클럽 안전 가드 및 가로 막대 차트 플러그인의 함수형 배경색 파싱 예외 원천 차단', '실 참석 인원 카드 헤더의 10인 모임 만화 애니메이션 전면 개편: 게이지 슬롯 채우기 방식에서 캐릭터들이 실제로 통통 걸어와 행사장(축제 텐트)으로 모이는 역동적인 걷기·모임 만화 씬으로 재작업', '비용 항목 추가 시 "이번 금액 반영 시" 배너의 개인부담금 입력란 줄바꿈 배치: "이번 금액 반영 시: 총 자부담 XX원" 아래 줄로 "(개인부담 [ 11,000 ] 원 ↺ 자동값)"이 단정하게 배치되도록 개행 분리'] },
         { ver: '1.6.322', date: '2026.10.21', items: ['비용 항목 추가 시 "이번 금액 반영 시" 배너의 개인부담금 직접 입력 기능 탑재: 원하는 인당 금액(11,000원, 15,000원 등)을 입력하면 전체 인원수 및 기존 개인카드 금액을 자동 역산하여 법인카드와 개인카드 입력란에 딱 떨어지게 자동 분할 배분', '클럽별 참석 인원 차트 전체 너비(100%) 원상 복원 및 카드 제목줄 우측 빈 공간에 "클럽 행사 10인 모임 만화 애니메이션" 신설: 1위·2위·3위 우수 클럽 배너와 함께 캐릭터들이 1명부터 10명까지 신나게 걸어와 모이고 10명이 모이면 축하 후 반복되는 귀여운 만화 스타일 애니메이션 탑재'] },
@@ -10693,9 +10694,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let _cartoonAnimationTimer = null;
-    let _cartoonCurrentClubIndex = 0;
 
-    // ── 클럽 실 참석 우수 클럽 & 3M 팀워크 모임 애니메이션 GIF 위젯 ────────────
+    // ── 클럽 실 참석 카드 헤더: 3M 팀워크 모임 애니메이션 GIF 위젯 ────────────
     function renderClubGatheringCartoon(topClubs) {
         const container = document.getElementById('club-gathering-cartoon');
         if (!container) return;
@@ -10705,53 +10705,23 @@ document.addEventListener('DOMContentLoaded', () => {
             _cartoonAnimationTimer = null;
         }
 
-        if (!topClubs || topClubs.length === 0) {
-            container.innerHTML = '';
-            container.style.display = 'none';
-            return;
-        }
-        container.style.display = 'flex';
+        container.style.display = 'inline-flex';
+        container.title = '3M 팀워크 모임 애니메이션';
+        container.innerHTML = `
+            <img src="assets/3m_teamwork_gathering_mini.gif" alt="3M 팀워크 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
+        `;
 
-        const clubColorMap = getClubColorMap();
-        const rankMedals = ['🥇 1위', '🥈 2위', '🥉 3위'];
-
-        const updateCartoonView = (clubIdx) => {
-            const currentClub = topClubs[clubIdx] || topClubs[0];
-            const [clubName, count, attendees] = currentClub;
-            const rankLabel = rankMedals[clubIdx] || `${clubIdx + 1}위`;
-            const baseColor = clubColorMap[clubName] || stableClubHexColor(clubName);
-
-            container.style.setProperty('--cartoon-club-color', baseColor);
-            container.title = `클릭 시 ${AppState.escapeHtml(clubName)} 실 참석자(${count}명) 명단 확인`;
-            container.innerHTML = `
-                <div class="cartoon-badge" style="background: ${baseColor}22; color: ${baseColor}; border: 1px solid ${baseColor}66;">
-                    <span class="cartoon-medal">${rankLabel}</span>
-                    <strong class="cartoon-club-name">${AppState.escapeHtml(clubName)}</strong>
-                </div>
-                <div class="cartoon-gif-wrap" aria-hidden="true" title="3M 팀워크 모임 애니메이션">
-                    <img src="assets/3m_teamwork_gathering_mini.gif" alt="3M 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
-                </div>
-                <div class="cartoon-status done">
-                    <span class="cartoon-counter">👥 실 참석 <strong>${count}명</strong></span>
-                </div>
-            `;
-
+        if (topClubs && topClubs.length > 0) {
+            const [topClubName, topCount, topAttendees] = topClubs[0];
             container.onclick = () => {
                 const chartYearSelect = document.getElementById('charts-year-select');
                 const yrStr = chartYearSelect && chartYearSelect.value && chartYearSelect.value !== 'ALL'
                     ? `${chartYearSelect.value}년 ` : '';
-                openAttendanceRosterModal(`${clubName} ${yrStr}실 참석자 명단`, `서로 다른 참석자 ${count}명`, attendees);
+                openAttendanceRosterModal(`${topClubName} ${yrStr}실 참석자 명단`, `서로 다른 참석자 ${topCount}명`, topAttendees);
             };
-        };
-
-        // 초기 1회 렌더
-        updateCartoonView(_cartoonCurrentClubIndex);
-
-        // 3.5초마다 1위 -> 2위 -> 3위 클럽 순환 전환
-        _cartoonAnimationTimer = setInterval(() => {
-            _cartoonCurrentClubIndex = (_cartoonCurrentClubIndex + 1) % topClubs.length;
-            updateCartoonView(_cartoonCurrentClubIndex);
-        }, 3500);
+        } else {
+            container.onclick = null;
+        }
     }
 
     function initAttendanceRosterModal() {
