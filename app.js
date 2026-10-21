@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.320';
+const APP_VERSION      = '1.6.321';
 const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -7812,6 +7812,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.321', date: '2026.10.21', items: ['"고유" 참석자 표기를 "실" 참석자로 직관적 통일 (중복을 제외한 실 참석자 수, 실 참석자 명단)', '실 참석 인원 차트 우측에 "실 참석 우수 클럽 TOP 3 그룹 10인 모임 달성 애니메이션" 신설: 1위·2위·3위 클럽별로 1명부터 10명까지 점진적으로 팀원이 모이고 완료 시 축하 후 다시 반복되는 인터랙티브 라이브 애니메이션 위젯 탑재', '클럽별 정산 횟수 및 예산 소진율 차트 막대 클릭 시 해당 클럽 사용 요약 팝업이 뜨지 않던 연도 변수 참조 버그 수정'] },
         { ver: '1.6.320', date: '2026.10.21', items: ['연도별 정산 자료 조회 기능 신설: 클럽별 정산 이력·개인 이력·대시보드 통계/차트에서 2026년, 2027년 등 연도별 과거 정산 내역 및 전체 누적을 손쉽게 선택 조회할 수 있는 연도 선택 드롭다운 추가', '정산 규칙(rules) 연도별 스냅샷 영구 보존 및 격리: 정산 확정 시 당시 적용된 지원 구간 및 비율을 이력에 영구 박제하여, 새해에 규칙이 변경되더라도 과거 연도(2026년 등)의 정산 결과 및 엑셀 재다운로드는 당시 기준 그대로 고정 보존되고 새해 시작 정산 건만 변경된 규칙으로 안전하게 적용되도록 격리'] },
         { ver: '1.6.319', date: '2026.10.21', items: ['정산 화면 하단 클럽 예산 프로그레스 바 그래프를 작성 중 실시간 반영에서 "정산 완료 버튼 클릭 후 DB 확정 시" 반영되도록 개선 (현재 확정 저장된 사용액/잔여액 기준 고정)', '상품비 표시 순서 개편: 위쪽 입력란에 "올해 상품비 잔여 한도", 아래쪽 힌트에 "기존 상품비 누적액"이 명확하게 분리 표시되도록 UI 일체화'] },
         { ver: '1.6.318', date: '2026.10.21', items: ['클럽 관리 화면에서 "중복 클럽 정리" 버튼 제거', '전체 작업 로그(Audit Log) 대상 명확화 및 전면 개편: 정산 수정, 추가 배정, 85k 승인, 금액 수정(총 예산/클럽 배정예산), 신규 가입, 회원 삭제, 회원 정보 수정, 정산 구간 변경, 전사원 명부 변경(등록/수정/삭제/카운트) 등 핵심 작업 로그 기록 및 모달 내 항목 구분 필터 신설'] },
@@ -9857,6 +9858,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 scales: {
                     x: { ticks: { color: '#94a3b8', callback: (v) => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, max: 125 },
                     y: { ticks: { color: '#cbd5e1', font: { size: 12, weight: '500' } }, grid: { display: false } }
+                },
+                onHover: (_event, elements) => { canvas.style.cursor = elements.length ? 'pointer' : 'default'; },
+                onClick: (_event, elements) => {
+                    const selected = elements[0];
+                    if (!selected) return;
+                    const clubName = labels[selected.index];
+                    const clubEntries = (historyList || []).filter(entry =>
+                        (effectiveYear === null || getHistoryEntryYear(entry) === effectiveYear)
+                        && (entry.clubName || '기본 클럽') === clubName
+                    );
+                    openClubUsageSummaryModal(clubName, clubEntries, effectiveYear || '전체');
                 }
             }
         });
@@ -10298,7 +10310,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = getClubUsageSummaryData(clubName, entries);
 
         titleEl.textContent = `${clubName} 사용 요약`;
-        descriptionEl.textContent = `${year}년 정산 ${data.rows.length}건 · 행사별 비용 내역`;
+        const yearText = year === '전체' ? '전체' : `${year}년`;
+        descriptionEl.textContent = `${yearText} 정산 ${data.rows.length}건 · 행사별 비용 내역`;
         totalsEl.innerHTML = '';
         if (data.hasAssignedBudget) {
             appendClubUsageTotalCard(totalsEl, '클럽 총 예산', data.clubBudget, 'budget');
@@ -10411,7 +10424,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const selected = elements[0];
                     if (!selected) return;
                     const clubName = labels[selected.index];
-                    openClubUsageSummaryModal(clubName, entriesByClub[clubName] || [], currentYear);
+                    openClubUsageSummaryModal(clubName, entriesByClub[clubName] || [], effectiveYear || '전체');
                 }
             }
         });
@@ -10576,7 +10589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         callbacks: {
                             title: items => {
                                 const yrStr = effectiveYear ? `${effectiveYear}년 ` : '';
-                                return `${sorted[items[0].dataIndex][0]} · ${yrStr}고유 참석자`;
+                                return `${sorted[items[0].dataIndex][0]} · ${yrStr}실 참석자`;
                             },
                             label: ctx => {
                                 const attendees = sorted[ctx.dataIndex][2];
@@ -10600,10 +10613,165 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!selected) return;
                     const [club, count, attendees] = sorted[selected.index];
                     const yrStr = effectiveYear ? `${effectiveYear}년 ` : '';
-                    openAttendanceRosterModal(`${club} ${yrStr}고유 참석자 명단`, `서로 다른 참석자 ${count}명`, attendees);
+                    openAttendanceRosterModal(`${club} ${yrStr}실 참석자 명단`, `서로 다른 참석자 ${count}명`, attendees);
                 }
             }
         });
+
+        // 우측 TOP 3 그룹 10인 모임 애니메이션 위젯 렌더링
+        renderTopClubsGatheringWidget(sorted.slice(0, 3));
+    }
+
+    let _gatheringAnimationTimer = null;
+    let _gatheringStep = 0;
+
+    // ── 실 참석 우수 클럽 TOP 3 그룹 10인 모임 애니메이션 위젯 ─────────────
+    function renderTopClubsGatheringWidget(topClubs) {
+        const container = document.getElementById('top-clubs-gathering-widget');
+        if (!container) return;
+
+        if (_gatheringAnimationTimer) {
+            clearInterval(_gatheringAnimationTimer);
+            _gatheringAnimationTimer = null;
+        }
+
+        if (!topClubs || topClubs.length === 0) {
+            container.innerHTML = `
+                <div class="gathering-widget-header">
+                    <div class="gathering-header-left">
+                        <span class="gathering-header-badge">🏆 TOP 3 그룹</span>
+                        <h3 class="gathering-header-title">실 참석 우수 클럽 모임</h3>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:center;height:240px;color:var(--text-muted);font-size:0.85rem;">
+                    참석 데이터가 없습니다.
+                </div>
+            `;
+            return;
+        }
+
+        const clubColorMap = getClubColorMap();
+        const rankMedals = ['🥇 1위', '🥈 2위', '🥉 3위'];
+        const avatarChars = ['🏃‍♂️', '🙋‍♀️', '🚶‍♂️', '💃', '🧑‍💼', '🏃‍♀️', '🕺', '🙋‍♂️', '👩‍💻', '🎉'];
+
+        const groupsHtml = topClubs.map(([clubName, count, attendees], idx) => {
+            const rankLabel = rankMedals[idx] || `${idx + 1}위`;
+            const rankClass = `rank-${idx + 1}`;
+            const baseColor = clubColorMap[clubName] || stableClubHexColor(clubName);
+
+            const slotsHtml = avatarChars.map((char, sIdx) => `
+                <div class="gathering-avatar-slot" data-slot="${sIdx}" title="${idx + 1}위 ${clubName} ${sIdx + 1}번째 참석자">
+                    <span class="avatar-char">${char}</span>
+                    <span class="avatar-num">${sIdx + 1}</span>
+                </div>
+            `).join('');
+
+            return `
+                <div class="gathering-group-card" data-group-index="${idx}" style="--club-color: ${baseColor};" title="클릭 시 ${AppState.escapeHtml(clubName)} 실 참석자 명단 확인">
+                    <div class="group-card-header">
+                        <div class="group-rank-badge ${rankClass}">${rankLabel}</div>
+                        <div class="group-club-info">
+                            <span class="group-club-name">${AppState.escapeHtml(clubName)}</span>
+                            <span class="group-attendee-count">실 참석 ${count}명</span>
+                        </div>
+                        <div class="group-count-pill">
+                            <span class="count-pulse-dot"></span>
+                            <span class="group-live-count">0</span> / 10명
+                        </div>
+                    </div>
+                    <div class="group-stage-box">
+                        <div class="group-avatar-track">
+                            ${slotsHtml}
+                        </div>
+                        <div class="gathering-success-banner">
+                            <span>🎉 10명 모임 완료!</span>
+                        </div>
+                    </div>
+                    <div class="group-progress-wrap">
+                        <div class="group-progress-bar">
+                            <div class="group-progress-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="gathering-widget-header">
+                <div class="gathering-header-left">
+                    <span class="gathering-header-badge">🏆 TOP 3 그룹</span>
+                    <h3 class="gathering-header-title">실 참석 우수 클럽 10인 모임</h3>
+                </div>
+                <div class="gathering-header-meta">
+                    <span class="gathering-loop-indicator">⚡ 1명 ➔ 10명 모임 반복</span>
+                </div>
+            </div>
+            <div class="gathering-groups-list">
+                ${groupsHtml}
+            </div>
+        `;
+
+        // 클릭 시 해당 클럽 실 참석자 명단 팝업 연동
+        container.querySelectorAll('.gathering-group-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const idx = Number(card.dataset.groupIndex);
+                if (topClubs[idx]) {
+                    const [clubName, count, attendees] = topClubs[idx];
+                    const chartYearSelect = document.getElementById('charts-year-select');
+                    const yrStr = chartYearSelect && chartYearSelect.value && chartYearSelect.value !== 'ALL'
+                        ? `${chartYearSelect.value}년 ` : '';
+                    openAttendanceRosterModal(`${clubName} ${yrStr}실 참석자 명단`, `서로 다른 참석자 ${count}명`, attendees);
+                }
+            });
+        });
+
+        // 애니메이션 타이머 (1명 -> 2명 -> ... -> 10명 -> 축하 -> 리셋 반복)
+        _gatheringStep = 0;
+        const totalSteps = 10;
+        let isHoldingCelebration = false;
+
+        const updateAnimationState = (step) => {
+            const cards = container.querySelectorAll('.gathering-group-card');
+            cards.forEach(card => {
+                const countEl = card.querySelector('.group-live-count');
+                const fillEl = card.querySelector('.group-progress-fill');
+                const slots = card.querySelectorAll('.gathering-avatar-slot');
+
+                if (countEl) countEl.textContent = step;
+                if (fillEl) fillEl.style.width = `${step * 10}%`;
+
+                slots.forEach((slot, sIdx) => {
+                    if (sIdx < step) {
+                        slot.classList.add('active');
+                    } else {
+                        slot.classList.remove('active');
+                    }
+                });
+
+                if (step >= totalSteps) {
+                    card.classList.add('is-complete');
+                } else {
+                    card.classList.remove('is-complete');
+                }
+            });
+        };
+
+        _gatheringAnimationTimer = setInterval(() => {
+            if (isHoldingCelebration) return;
+
+            if (_gatheringStep < totalSteps) {
+                _gatheringStep++;
+                updateAnimationState(_gatheringStep);
+                if (_gatheringStep === totalSteps) {
+                    isHoldingCelebration = true;
+                    setTimeout(() => {
+                        _gatheringStep = 0;
+                        updateAnimationState(0);
+                        isHoldingCelebration = false;
+                    }, 1800);
+                }
+            }
+        }, 420);
     }
 
     function initAttendanceRosterModal() {
