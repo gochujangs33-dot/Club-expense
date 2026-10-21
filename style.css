@@ -4873,184 +4873,68 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     text-overflow: ellipsis;
 }
 
-.cartoon-scene {
+.cartoon-gif-wrap {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    background: rgba(15, 23, 42, 0.45);
-    padding: 0.2rem 0.65rem;
-    border-radius: 9999px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    min-height: 32px;
-}
-
-[data-app-theme="light"] .cartoon-scene {
-    background: #edf2f7;
-    border-color: #cbd5e1;
-}
-
-/* 1. 왼쪽: 걸어오는 길 (로드 트랙) */
-.cartoon-road {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.cartoon-road-start {
-    font-size: 0.85rem;
-    line-height: 1;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
-}
-
-.cartoon-road-track {
-    width: 32px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    position: relative;
+    justify-content: center;
+    height: 34px;
+    width: 60px;
+    border-radius: 6px;
     overflow: hidden;
-}
-
-.cartoon-walker-empty {
-    width: 100%;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
-}
-
-[data-app-theme="light"] .cartoon-walker-empty {
-    background: rgba(0, 0, 0, 0.12);
-}
-
-.cartoon-walker-box {
-    display: inline-flex;
-    align-items: center;
-    animation: cartoonWalkIn 0.45s ease-out forwards;
-}
-
-.cartoon-walker-char {
-    display: inline-block;
-    font-size: 15px;
-    line-height: 1;
-    animation: cartoonWalkBob 0.22s ease-in-out infinite alternate;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-}
-
-@keyframes cartoonWalkIn {
-    0% {
-        transform: translateX(-24px);
-        opacity: 0.3;
-    }
-    100% {
-        transform: translateX(10px);
-        opacity: 1;
-    }
-}
-
-@keyframes cartoonWalkBob {
-    0% { transform: translateY(1.5px) rotate(-6deg); }
-    100% { transform: translateY(-3.5px) rotate(6deg); }
-}
-
-/* 2. 오른쪽: 축제 텐트 및 모인 사람들 (캠프 허브) */
-.cartoon-camp {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding-left: 0.2rem;
-    border-left: 1.5px dashed rgba(255, 255, 255, 0.18);
-}
-
-[data-app-theme="light"] .cartoon-camp {
-    border-left-color: rgba(0, 0, 0, 0.15);
-}
-
-.cartoon-tent-prop {
-    font-size: 1.05rem;
-    line-height: 1;
+    background: #fdfbf7;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     flex-shrink: 0;
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
-    transition: transform 0.2s ease;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease;
 }
 
-.cartoon-camp.party-mode .cartoon-tent-prop {
-    animation: tentPartyJump 0.4s ease-in-out infinite alternate;
+[data-app-theme="light"] .cartoon-gif-wrap {
+    border-color: #cbd5e1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
-@keyframes tentPartyJump {
-    0% { transform: scale(1) translateY(0); }
-    100% { transform: scale(1.2) translateY(-3px) rotate(4deg); }
+.club-gathering-cartoon:hover .cartoon-gif-wrap {
+    transform: scale(1.08);
+    border-color: var(--cartoon-club-color, #ef4444);
 }
 
-.cartoon-gathered-group {
-    display: flex;
-    align-items: center;
-    min-width: 22px;
-}
-
-.cartoon-camper {
-    display: inline-block;
-    font-size: 13.5px;
-    line-height: 1;
-    margin-left: -5px;
-    animation: camperJoin 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, camperGroove 0.7s ease-in-out infinite alternate;
-    animation-delay: 0s, calc(var(--camper-idx, 0) * 0.09s);
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.35));
-}
-
-.cartoon-camper:first-child {
-    margin-left: 0;
-}
-
-@keyframes camperJoin {
-    0% { transform: scale(0.4) translateY(-6px); opacity: 0; }
-    100% { transform: scale(1) translateY(0); opacity: 1; }
-}
-
-@keyframes camperGroove {
-    0% { transform: translateY(0) rotate(-3deg); }
-    100% { transform: translateY(-2px) rotate(3deg); }
-}
-
-.cartoon-camper.cheering {
-    animation: camperCheer 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
-    animation-delay: calc(var(--camper-idx, 0) * 0.05s);
-}
-
-@keyframes camperCheer {
-    0% { transform: translateY(0) scale(1) rotate(-6deg); }
-    100% { transform: translateY(-5px) scale(1.22) rotate(6deg); }
+.cartoon-teamwork-gif {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .cartoon-status {
-    font-size: 0.74rem;
-    font-weight: 800;
+    font-size: 0.76rem;
+    font-weight: 700;
     color: var(--text-muted, #94a3b8);
-    padding: 0.18rem 0.55rem;
+    padding: 0.2rem 0.55rem;
     border-radius: 9999px;
     background: rgba(255, 255, 255, 0.06);
     flex-shrink: 0;
     transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.cartoon-status strong {
+    color: var(--cartoon-club-color, #f87171);
+    font-weight: 800;
 }
 
 .cartoon-status.done {
-    background: rgba(34, 197, 94, 0.2);
-    color: #4ade80;
-    border: 1px solid rgba(34, 197, 94, 0.4);
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.35);
-    animation: popHop 0.4s ease;
-}
-
-[data-app-theme="light"] .cartoon-status {
-    background: #f1f5f9;
-    color: #475569;
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
 }
 
 [data-app-theme="light"] .cartoon-status.done {
-    background: #dcfce7;
-    color: #16a34a;
-    border-color: #86efac;
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
 }
 
 @media (max-width: 680px) {

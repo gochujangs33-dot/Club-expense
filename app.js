@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.323';
+const APP_VERSION      = '1.6.324';
 const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -7816,6 +7816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.324', date: '2026.10.21', items: ['실 참석 인원 카드 헤더에 3M 팀워크 모임 애니메이션 GIF(280x158 최적화 버전) 전면 반영: 3M 로고를 중심으로 동료들이 사방에서 뛰어와 모여드는 고화질 2D 카툰 애니메이션을 헤더 위젯에 연동', '1위·2위·3위 우수 클럽 전환 시 애니메이션 GIF와 함께 클럽명 뱃지 및 실 참석자 수가 부드럽게 갱신되고 클릭 시 명단 모달이 즉시 열리도록 최적화'] },
         { ver: '1.6.323', date: '2026.10.21', items: ['클럽별 예산 소진율 차트 간헐적 미표시 버그 전면 해결: 클럽 레지스트리 비동기 로딩 지연 시 이력 데이터 기반 클럽 자동 폴백 보강, 미등록/속성 누락 클럽 안전 가드 및 가로 막대 차트 플러그인의 함수형 배경색 파싱 예외 원천 차단', '실 참석 인원 카드 헤더의 10인 모임 만화 애니메이션 전면 개편: 게이지 슬롯 채우기 방식에서 캐릭터들이 실제로 통통 걸어와 행사장(축제 텐트)으로 모이는 역동적인 걷기·모임 만화 씬으로 재작업', '비용 항목 추가 시 "이번 금액 반영 시" 배너의 개인부담금 입력란 줄바꿈 배치: "이번 금액 반영 시: 총 자부담 XX원" 아래 줄로 "(개인부담 [ 11,000 ] 원 ↺ 자동값)"이 단정하게 배치되도록 개행 분리'] },
         { ver: '1.6.322', date: '2026.10.21', items: ['비용 항목 추가 시 "이번 금액 반영 시" 배너의 개인부담금 직접 입력 기능 탑재: 원하는 인당 금액(11,000원, 15,000원 등)을 입력하면 전체 인원수 및 기존 개인카드 금액을 자동 역산하여 법인카드와 개인카드 입력란에 딱 떨어지게 자동 분할 배분', '클럽별 참석 인원 차트 전체 너비(100%) 원상 복원 및 카드 제목줄 우측 빈 공간에 "클럽 행사 10인 모임 만화 애니메이션" 신설: 1위·2위·3위 우수 클럽 배너와 함께 캐릭터들이 1명부터 10명까지 신나게 걸어와 모이고 10명이 모이면 축하 후 반복되는 귀여운 만화 스타일 애니메이션 탑재'] },
         { ver: '1.6.321', date: '2026.10.21', items: ['"고유" 참석자 표기를 "실" 참석자로 직관적 통일 (중복을 제외한 실 참석자 수, 실 참석자 명단)', '실 참석 인원 차트 우측에 "실 참석 우수 클럽 TOP 3 그룹 10인 모임 달성 애니메이션" 신설: 1위·2위·3위 클럽별로 1명부터 10명까지 점진적으로 팀원이 모이고 완료 시 축하 후 다시 반복되는 인터랙티브 라이브 애니메이션 위젯 탑재', '클럽별 정산 횟수 및 예산 소진율 차트 막대 클릭 시 해당 클럽 사용 요약 팝업이 뜨지 않던 연도 변수 참조 버그 수정'] },
@@ -10693,9 +10694,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let _cartoonAnimationTimer = null;
     let _cartoonCurrentClubIndex = 0;
-    let _cartoonStep = 0;
 
-    // ── 클럽 행사 10인 모임 만화 애니메이션 (제목줄 우측 빈 공간) ────────────
+    // ── 클럽 실 참석 우수 클럽 & 3M 팀워크 모임 애니메이션 GIF 위젯 ────────────
     function renderClubGatheringCartoon(topClubs) {
         const container = document.getElementById('club-gathering-cartoon');
         if (!container) return;
@@ -10714,45 +10714,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const clubColorMap = getClubColorMap();
         const rankMedals = ['🥇 1위', '🥈 2위', '🥉 3위'];
-        const cartoonAvatars = [
-            { icon: '🏃‍♂️', name: '달려오는 팀원' },
-            { icon: '🚶‍♀️', name: '가방 멘 팀원' },
-            { icon: '💃', name: '신난 팀원' },
-            { icon: '🕺', name: '춤추는 팀원' },
-            { icon: '🧑‍💼', name: '임직원' },
-            { icon: '🏃‍♀️', name: '뛰어오는 팀원' },
-            { icon: '🚴‍♂️', name: '자전거 팀원' },
-            { icon: '🙋‍♂️', name: '손흔드는 팀원' },
-            { icon: '👩‍💻', name: '응원하는 팀원' },
-            { icon: '🎉', name: '풍선 든 팀원' }
-        ];
 
-        let isHoldingCelebration = false;
-        _cartoonStep = 0;
-
-        const updateCartoonView = (step, clubIdx) => {
+        const updateCartoonView = (clubIdx) => {
             const currentClub = topClubs[clubIdx] || topClubs[0];
             const [clubName, count, attendees] = currentClub;
             const rankLabel = rankMedals[clubIdx] || `${clubIdx + 1}위`;
             const baseColor = clubColorMap[clubName] || stableClubHexColor(clubName);
-            const isDone = step >= 10;
-
-            // 이미 도착해서 행사장에 모여있는 사람들 (0 ~ step-1명 또는 완료 시 10명 전원)
-            const gatheredCount = isDone ? 10 : Math.max(0, step - 1);
-            const gatheredList = cartoonAvatars.slice(0, gatheredCount);
-            const gatheredHtml = gatheredList.map((item, idx) => `
-                <span class="cartoon-camper ${isDone ? 'cheering' : ''}" style="--camper-idx:${idx};" title="${item.name}">
-                    ${item.icon}
-                </span>
-            `).join('');
-
-            // 지금 길을 따라 통통 걸어오고 있는 새 합류자 (완료 전이고 step > 0일 때)
-            const incomingWalker = (!isDone && step > 0 && step <= 10) ? cartoonAvatars[step - 1] : null;
-            const walkerHtml = incomingWalker ? `
-                <div class="cartoon-walker-box" title="${incomingWalker.name} 걸어오는 중">
-                    <span class="cartoon-walker-char">${incomingWalker.icon}</span>
-                </div>
-            ` : '<div class="cartoon-walker-empty"></div>';
 
             container.style.setProperty('--cartoon-club-color', baseColor);
             container.title = `클릭 시 ${AppState.escapeHtml(clubName)} 실 참석자(${count}명) 명단 확인`;
@@ -10761,22 +10728,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="cartoon-medal">${rankLabel}</span>
                     <strong class="cartoon-club-name">${AppState.escapeHtml(clubName)}</strong>
                 </div>
-                <div class="cartoon-scene" aria-hidden="true">
-                    <div class="cartoon-road">
-                        <span class="cartoon-road-start" title="모임 출발선">🏁</span>
-                        <div class="cartoon-road-track">
-                            ${walkerHtml}
-                        </div>
-                    </div>
-                    <div class="cartoon-camp ${isDone ? 'party-mode' : ''}">
-                        <span class="cartoon-tent-prop" title="클럽 행사 모임 장소">${isDone ? '🎪✨' : '🎪'}</span>
-                        <div class="cartoon-gathered-group">
-                            ${gatheredHtml}
-                        </div>
-                    </div>
+                <div class="cartoon-gif-wrap" aria-hidden="true" title="3M 팀워크 모임 애니메이션">
+                    <img src="assets/3m_teamwork_gathering_mini.gif" alt="3M 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
                 </div>
-                <div class="cartoon-status ${isDone ? 'done' : ''}">
-                    <span class="cartoon-counter">${isDone ? '🎉 10명 모임 완성!' : `👥 ${step}/10명 모이는 중`}</span>
+                <div class="cartoon-status done">
+                    <span class="cartoon-counter">👥 실 참석 <strong>${count}명</strong></span>
                 </div>
             `;
 
@@ -10789,26 +10745,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         // 초기 1회 렌더
-        updateCartoonView(_cartoonStep, _cartoonCurrentClubIndex);
+        updateCartoonView(_cartoonCurrentClubIndex);
 
+        // 3.5초마다 1위 -> 2위 -> 3위 클럽 순환 전환
         _cartoonAnimationTimer = setInterval(() => {
-            if (isHoldingCelebration) return;
-
-            if (_cartoonStep < 10) {
-                _cartoonStep++;
-                updateCartoonView(_cartoonStep, _cartoonCurrentClubIndex);
-
-                if (_cartoonStep === 10) {
-                    isHoldingCelebration = true;
-                    setTimeout(() => {
-                        _cartoonStep = 0;
-                        _cartoonCurrentClubIndex = (_cartoonCurrentClubIndex + 1) % topClubs.length;
-                        updateCartoonView(0, _cartoonCurrentClubIndex);
-                        isHoldingCelebration = false;
-                    }, 2200);
-                }
-            }
-        }, 480);
+            _cartoonCurrentClubIndex = (_cartoonCurrentClubIndex + 1) % topClubs.length;
+            updateCartoonView(_cartoonCurrentClubIndex);
+        }, 3500);
     }
 
     function initAttendanceRosterModal() {
