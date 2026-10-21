@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.328';
+const APP_VERSION      = '1.6.329';
 const APP_VERSION_DATE = '2026.10.22';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -10692,14 +10692,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 제목줄 우측 빈 공간: 클럽 행사 10인 모임 만화 애니메이션 렌더링
-        renderClubGatheringCartoon(sorted.slice(0, 3));
+        // 제목줄 중앙: 3M 팀워크 모임 애니메이션 GIF 위젯 (순수 관람용)
+        renderClubGatheringCartoon();
     }
 
     let _cartoonAnimationTimer = null;
 
-    // ── 클럽 실 참석 카드 헤더: 3M 팀워크 모임 애니메이션 GIF 위젯 ────────────
-    function renderClubGatheringCartoon(topClubs) {
+    // ── 클럽 실 참석 카드 헤더: 3M 팀워크 모임 애니메이션 GIF 위젯 (순수 관람용) ──
+    function renderClubGatheringCartoon() {
         const container = document.getElementById('club-gathering-cartoon');
         if (!container) return;
 
@@ -10709,22 +10709,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         container.style.display = 'inline-flex';
-        container.title = '3M 팀워크 모임 애니메이션';
+        container.removeAttribute('title');
+        container.onclick = null;
         container.innerHTML = `
-            <img src="assets/3m_teamwork_gathering_large.gif" alt="3M 팀워크 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
+            <img src="assets/3m_teamwork_gathering_center.gif" alt="3M 팀워크 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
         `;
-
-        if (topClubs && topClubs.length > 0) {
-            const [topClubName, topCount, topAttendees] = topClubs[0];
-            container.onclick = () => {
-                const chartYearSelect = document.getElementById('charts-year-select');
-                const yrStr = chartYearSelect && chartYearSelect.value && chartYearSelect.value !== 'ALL'
-                    ? `${chartYearSelect.value}년 ` : '';
-                openAttendanceRosterModal(`${topClubName} ${yrStr}실 참석자 명단`, `서로 다른 참석자 ${topCount}명`, topAttendees);
-            };
-        } else {
-            container.onclick = null;
-        }
     }
 
     function initAttendanceRosterModal() {
