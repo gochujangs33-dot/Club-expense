@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.321';
+const APP_VERSION      = '1.6.322';
 const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -7812,6 +7812,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.322', date: '2026.10.21', items: ['비용 항목 추가 시 "이번 금액 반영 시" 배너의 개인부담금 직접 입력 기능 탑재: 원하는 인당 금액(11,000원, 15,000원 등)을 입력하면 전체 인원수 및 기존 개인카드 금액을 자동 역산하여 법인카드와 개인카드 입력란에 딱 떨어지게 자동 분할 배분', '클럽별 참석 인원 차트 전체 너비(100%) 원상 복원 및 카드 제목줄 우측 빈 공간에 "클럽 행사 10인 모임 만화 애니메이션" 신설: 1위·2위·3위 우수 클럽 배너와 함께 캐릭터들이 1명부터 10명까지 신나게 걸어와 모이고 10명이 모이면 축하 후 반복되는 귀여운 만화 스타일 애니메이션 탑재'] },
         { ver: '1.6.321', date: '2026.10.21', items: ['"고유" 참석자 표기를 "실" 참석자로 직관적 통일 (중복을 제외한 실 참석자 수, 실 참석자 명단)', '실 참석 인원 차트 우측에 "실 참석 우수 클럽 TOP 3 그룹 10인 모임 달성 애니메이션" 신설: 1위·2위·3위 클럽별로 1명부터 10명까지 점진적으로 팀원이 모이고 완료 시 축하 후 다시 반복되는 인터랙티브 라이브 애니메이션 위젯 탑재', '클럽별 정산 횟수 및 예산 소진율 차트 막대 클릭 시 해당 클럽 사용 요약 팝업이 뜨지 않던 연도 변수 참조 버그 수정'] },
         { ver: '1.6.320', date: '2026.10.21', items: ['연도별 정산 자료 조회 기능 신설: 클럽별 정산 이력·개인 이력·대시보드 통계/차트에서 2026년, 2027년 등 연도별 과거 정산 내역 및 전체 누적을 손쉽게 선택 조회할 수 있는 연도 선택 드롭다운 추가', '정산 규칙(rules) 연도별 스냅샷 영구 보존 및 격리: 정산 확정 시 당시 적용된 지원 구간 및 비율을 이력에 영구 박제하여, 새해에 규칙이 변경되더라도 과거 연도(2026년 등)의 정산 결과 및 엑셀 재다운로드는 당시 기준 그대로 고정 보존되고 새해 시작 정산 건만 변경된 규칙으로 안전하게 적용되도록 격리'] },
         { ver: '1.6.319', date: '2026.10.21', items: ['정산 화면 하단 클럽 예산 프로그레스 바 그래프를 작성 중 실시간 반영에서 "정산 완료 버튼 클릭 후 DB 확정 시" 반영되도록 개선 (현재 확정 저장된 사용액/잔여액 기준 고정)', '상품비 표시 순서 개편: 위쪽 입력란에 "올해 상품비 잔여 한도", 아래쪽 힌트에 "기존 상품비 누적액"이 명확하게 분리 표시되도록 UI 일체화'] },
@@ -10618,160 +10619,113 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 우측 TOP 3 그룹 10인 모임 애니메이션 위젯 렌더링
-        renderTopClubsGatheringWidget(sorted.slice(0, 3));
+        // 제목줄 우측 빈 공간: 클럽 행사 10인 모임 만화 애니메이션 렌더링
+        renderClubGatheringCartoon(sorted.slice(0, 3));
     }
 
-    let _gatheringAnimationTimer = null;
-    let _gatheringStep = 0;
+    let _cartoonAnimationTimer = null;
+    let _cartoonCurrentClubIndex = 0;
+    let _cartoonStep = 0;
 
-    // ── 실 참석 우수 클럽 TOP 3 그룹 10인 모임 애니메이션 위젯 ─────────────
-    function renderTopClubsGatheringWidget(topClubs) {
-        const container = document.getElementById('top-clubs-gathering-widget');
+    // ── 클럽 행사 10인 모임 만화 애니메이션 (제목줄 우측 빈 공간) ────────────
+    function renderClubGatheringCartoon(topClubs) {
+        const container = document.getElementById('club-gathering-cartoon');
         if (!container) return;
 
-        if (_gatheringAnimationTimer) {
-            clearInterval(_gatheringAnimationTimer);
-            _gatheringAnimationTimer = null;
+        if (_cartoonAnimationTimer) {
+            clearInterval(_cartoonAnimationTimer);
+            _cartoonAnimationTimer = null;
         }
 
         if (!topClubs || topClubs.length === 0) {
-            container.innerHTML = `
-                <div class="gathering-widget-header">
-                    <div class="gathering-header-left">
-                        <span class="gathering-header-badge">🏆 TOP 3 그룹</span>
-                        <h3 class="gathering-header-title">실 참석 우수 클럽 모임</h3>
-                    </div>
-                </div>
-                <div style="display:flex;align-items:center;justify-content:center;height:240px;color:var(--text-muted);font-size:0.85rem;">
-                    참석 데이터가 없습니다.
-                </div>
-            `;
+            container.innerHTML = '';
+            container.style.display = 'none';
             return;
         }
+        container.style.display = 'flex';
 
         const clubColorMap = getClubColorMap();
         const rankMedals = ['🥇 1위', '🥈 2위', '🥉 3위'];
-        const avatarChars = ['🏃‍♂️', '🙋‍♀️', '🚶‍♂️', '💃', '🧑‍💼', '🏃‍♀️', '🕺', '🙋‍♂️', '👩‍💻', '🎉'];
+        const cartoonAvatars = [
+            { icon: '🏃‍♂️', name: '달려오는 팀원' },
+            { icon: '🚶‍♀️', name: '가방 멘 팀원' },
+            { icon: '💃', name: '신난 팀원' },
+            { icon: '🕺', name: '춤추는 팀원' },
+            { icon: '🧑‍💼', name: '임직원' },
+            { icon: '🏃‍♀️', name: '뛰어오는 팀원' },
+            { icon: '🚴‍♂️', name: '자전거 팀원' },
+            { icon: '🙋‍♂️', name: '손흔드는 팀원' },
+            { icon: '👩‍💻', name: '응원하는 팀원' },
+            { icon: '🎉', name: '풍선 든 팀원' }
+        ];
 
-        const groupsHtml = topClubs.map(([clubName, count, attendees], idx) => {
-            const rankLabel = rankMedals[idx] || `${idx + 1}위`;
-            const rankClass = `rank-${idx + 1}`;
+        let isHoldingCelebration = false;
+        _cartoonStep = 0;
+
+        const updateCartoonView = (step, clubIdx) => {
+            const currentClub = topClubs[clubIdx] || topClubs[0];
+            const [clubName, count, attendees] = currentClub;
+            const rankLabel = rankMedals[clubIdx] || `${clubIdx + 1}위`;
             const baseColor = clubColorMap[clubName] || stableClubHexColor(clubName);
+            const isDone = step >= 10;
 
-            const slotsHtml = avatarChars.map((char, sIdx) => `
-                <div class="gathering-avatar-slot" data-slot="${sIdx}" title="${idx + 1}위 ${clubName} ${sIdx + 1}번째 참석자">
-                    <span class="avatar-char">${char}</span>
-                    <span class="avatar-num">${sIdx + 1}</span>
+            const avatarsHtml = cartoonAvatars.map((item, idx) => {
+                const isActive = idx < step;
+                return `
+                    <span class="cartoon-char ${isActive ? 'is-active' : ''} ${isDone ? 'is-celebrating' : ''}" style="--char-idx: ${idx};" title="${idx + 1}번째 모임 팀원: ${item.name}">
+                        ${item.icon}
+                    </span>
+                `;
+            }).join('');
+
+            container.style.setProperty('--cartoon-club-color', baseColor);
+            container.title = `클릭 시 ${AppState.escapeHtml(clubName)} 실 참석자(${count}명) 명단 확인`;
+            container.innerHTML = `
+                <div class="cartoon-badge" style="background: ${baseColor}22; color: ${baseColor}; border: 1px solid ${baseColor}66;">
+                    <span class="cartoon-medal">${rankLabel}</span>
+                    <strong class="cartoon-club-name">${AppState.escapeHtml(clubName)}</strong>
                 </div>
-            `).join('');
-
-            return `
-                <div class="gathering-group-card" data-group-index="${idx}" style="--club-color: ${baseColor};" title="클릭 시 ${AppState.escapeHtml(clubName)} 실 참석자 명단 확인">
-                    <div class="group-card-header">
-                        <div class="group-rank-badge ${rankClass}">${rankLabel}</div>
-                        <div class="group-club-info">
-                            <span class="group-club-name">${AppState.escapeHtml(clubName)}</span>
-                            <span class="group-attendee-count">실 참석 ${count}명</span>
-                        </div>
-                        <div class="group-count-pill">
-                            <span class="count-pulse-dot"></span>
-                            <span class="group-live-count">0</span> / 10명
-                        </div>
+                <div class="cartoon-stage" aria-hidden="true">
+                    <span class="cartoon-prop tent">🎪</span>
+                    <div class="cartoon-track">
+                        ${avatarsHtml}
                     </div>
-                    <div class="group-stage-box">
-                        <div class="group-avatar-track">
-                            ${slotsHtml}
-                        </div>
-                        <div class="gathering-success-banner">
-                            <span>🎉 10명 모임 완료!</span>
-                        </div>
-                    </div>
-                    <div class="group-progress-wrap">
-                        <div class="group-progress-bar">
-                            <div class="group-progress-fill" style="width: 0%;"></div>
-                        </div>
-                    </div>
+                    <span class="cartoon-prop flag">🚩</span>
+                </div>
+                <div class="cartoon-status ${isDone ? 'done' : ''}">
+                    <span class="cartoon-counter">${isDone ? '🎉 10명 완성!' : `👥 ${step}/10명`}</span>
                 </div>
             `;
-        }).join('');
 
-        container.innerHTML = `
-            <div class="gathering-widget-header">
-                <div class="gathering-header-left">
-                    <span class="gathering-header-badge">🏆 TOP 3 그룹</span>
-                    <h3 class="gathering-header-title">실 참석 우수 클럽 10인 모임</h3>
-                </div>
-                <div class="gathering-header-meta">
-                    <span class="gathering-loop-indicator">⚡ 1명 ➔ 10명 모임 반복</span>
-                </div>
-            </div>
-            <div class="gathering-groups-list">
-                ${groupsHtml}
-            </div>
-        `;
-
-        // 클릭 시 해당 클럽 실 참석자 명단 팝업 연동
-        container.querySelectorAll('.gathering-group-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const idx = Number(card.dataset.groupIndex);
-                if (topClubs[idx]) {
-                    const [clubName, count, attendees] = topClubs[idx];
-                    const chartYearSelect = document.getElementById('charts-year-select');
-                    const yrStr = chartYearSelect && chartYearSelect.value && chartYearSelect.value !== 'ALL'
-                        ? `${chartYearSelect.value}년 ` : '';
-                    openAttendanceRosterModal(`${clubName} ${yrStr}실 참석자 명단`, `서로 다른 참석자 ${count}명`, attendees);
-                }
-            });
-        });
-
-        // 애니메이션 타이머 (1명 -> 2명 -> ... -> 10명 -> 축하 -> 리셋 반복)
-        _gatheringStep = 0;
-        const totalSteps = 10;
-        let isHoldingCelebration = false;
-
-        const updateAnimationState = (step) => {
-            const cards = container.querySelectorAll('.gathering-group-card');
-            cards.forEach(card => {
-                const countEl = card.querySelector('.group-live-count');
-                const fillEl = card.querySelector('.group-progress-fill');
-                const slots = card.querySelectorAll('.gathering-avatar-slot');
-
-                if (countEl) countEl.textContent = step;
-                if (fillEl) fillEl.style.width = `${step * 10}%`;
-
-                slots.forEach((slot, sIdx) => {
-                    if (sIdx < step) {
-                        slot.classList.add('active');
-                    } else {
-                        slot.classList.remove('active');
-                    }
-                });
-
-                if (step >= totalSteps) {
-                    card.classList.add('is-complete');
-                } else {
-                    card.classList.remove('is-complete');
-                }
-            });
+            container.onclick = () => {
+                const chartYearSelect = document.getElementById('charts-year-select');
+                const yrStr = chartYearSelect && chartYearSelect.value && chartYearSelect.value !== 'ALL'
+                    ? `${chartYearSelect.value}년 ` : '';
+                openAttendanceRosterModal(`${clubName} ${yrStr}실 참석자 명단`, `서로 다른 참석자 ${count}명`, attendees);
+            };
         };
 
-        _gatheringAnimationTimer = setInterval(() => {
+        // 초기 1회 렌더
+        updateCartoonView(_cartoonStep, _cartoonCurrentClubIndex);
+
+        _cartoonAnimationTimer = setInterval(() => {
             if (isHoldingCelebration) return;
 
-            if (_gatheringStep < totalSteps) {
-                _gatheringStep++;
-                updateAnimationState(_gatheringStep);
-                if (_gatheringStep === totalSteps) {
+            if (_cartoonStep < 10) {
+                _cartoonStep++;
+                updateCartoonView(_cartoonStep, _cartoonCurrentClubIndex);
+
+                if (_cartoonStep === 10) {
                     isHoldingCelebration = true;
                     setTimeout(() => {
-                        _gatheringStep = 0;
-                        updateAnimationState(0);
+                        _cartoonStep = 0;
+                        _cartoonCurrentClubIndex = (_cartoonCurrentClubIndex + 1) % topClubs.length;
+                        updateCartoonView(0, _cartoonCurrentClubIndex);
                         isHoldingCelebration = false;
                     }, 1800);
                 }
             }
-        }, 420);
+        }, 400);
     }
 
     function initAttendanceRosterModal() {
@@ -11326,6 +11280,44 @@ function updateCardTypeUI() {
     updatePendingSelfPayPreview();
 }
 
+let _manualPendingPerPerson = null;
+let _isProgrammaticCardSync = false;
+
+// 수동 입력된 인당 개인부담금을 바탕으로 이번 항목의 법인카드/개인카드 결제액을 역산하여 자동 배분
+function applyManualPerPersonToCards(totalAmount, manualPerPerson, existingSelfPay, memberCount) {
+    if (totalAmount <= 0 || memberCount <= 0) return;
+    const corpCheck = document.getElementById('expense-corp-check');
+    const personalCheck = document.getElementById('expense-personal-check');
+    const corpAmountInput = document.getElementById('expense-corporate-amount-input');
+    const personalAmountInput = document.getElementById('expense-personal-amount-input');
+    if (!corpCheck || !personalCheck || !corpAmountInput || !personalAmountInput) return;
+
+    const targetTotalSelfPay = manualPerPerson * memberCount;
+    // 이번 항목에서 개인카드로 부담해야 할 금액 = 목표 총 자부담 - 기존 항목들의 개인카드 합계
+    let requiredItemPersonal = Math.max(0, targetTotalSelfPay - existingSelfPay);
+    // 이번 항목 총액 내로 제한 (초과 시 전액 개인카드)
+    requiredItemPersonal = Math.min(totalAmount, requiredItemPersonal);
+    const requiredItemCorp = Math.max(0, totalAmount - requiredItemPersonal);
+
+    _isProgrammaticCardSync = true;
+    if (requiredItemPersonal > 0 && requiredItemCorp > 0) {
+        corpCheck.checked = true;
+        personalCheck.checked = true;
+    } else if (requiredItemPersonal >= totalAmount) {
+        corpCheck.checked = false;
+        personalCheck.checked = true;
+    } else {
+        corpCheck.checked = true;
+        personalCheck.checked = false;
+    }
+
+    corpAmountInput.value = formatAmount(requiredItemCorp);
+    personalAmountInput.value = formatAmount(requiredItemPersonal);
+
+    updateCardTypeUI();
+    _isProgrammaticCardSync = false;
+}
+
 // 비용 항목 추가/수정 폼 입력 시 이번 금액이 반영되었을 때의 예상 총 자부담 및 1인당 개인부담 실시간 프리뷰
 function updatePendingSelfPayPreview() {
     const previewEl = document.getElementById('pending-self-pay-preview');
@@ -11337,6 +11329,7 @@ function updatePendingSelfPayPreview() {
     if (totalAmount <= 0) {
         previewEl.innerHTML = '';
         previewEl.classList.add('hidden');
+        _manualPendingPerPerson = null;
         return;
     }
 
@@ -11372,19 +11365,113 @@ function updatePendingSelfPayPreview() {
     const projectedRatioText = `${projectedRatio.toFixed(1)}%`;
 
     const memberCount = AppState.memberCount || (AppState.attendees ? AppState.attendees.length : 0);
-    const projectedPerPerson = memberCount > 0 ? Math.round(projectedTotalSelfPay / memberCount) : 0;
+    const autoPerPerson = memberCount > 0 ? Math.round(projectedTotalSelfPay / memberCount) : 0;
+    const isManual = _manualPendingPerPerson !== null;
+    const currentPerPerson = isManual ? _manualPendingPerPerson : autoPerPerson;
 
-    if (projectedTotalSelfPay === 0) {
-        previewEl.className = 'pending-self-pay-preview zero-self-pay';
-        previewEl.innerHTML = `<span class="preview-icon">😊</span><div class="preview-content"><div><strong>이번 금액 반영 시:</strong> 총 자부담 <strong>0원</strong> (개인부담 <strong>0원</strong> · 전액 지원)</div><div class="preview-sub"><span>예상 자부담 비율:</span> <strong>0.0%</strong></div></div>`;
-    } else {
-        previewEl.className = 'pending-self-pay-preview';
-        const perPersonText = memberCount > 0
-            ? `개인부담 <strong>${formatAmount(projectedPerPerson)}원</strong>`
-            : `참석자 미등록`;
-        previewEl.innerHTML = `<span class="preview-icon">💡</span><div class="preview-content"><div><strong>이번 금액 반영 시:</strong> 총 자부담 <strong>${formatAmount(projectedTotalSelfPay)}원</strong> (${perPersonText})</div><div class="preview-sub"><span>예상 자부담 비율:</span> <strong>${projectedRatioText}</strong></div></div>`;
+    // 만약 이미 DOM 요소들이 렌더링되어 있고 사용자가 인라인 입력창에 포커스를 두고 있다면,
+    // input 엘리먼트를 새로 만들지 않고 값과 텍스트만 업데이트하여 포커스/타이핑을 유지한다.
+    let perPersonInput = document.getElementById('pending-per-person-input');
+    const isInputFocused = perPersonInput && document.activeElement === perPersonInput;
+
+    if (perPersonInput && isInputFocused) {
+        const totalSpan = previewEl.querySelector('.pending-total-val');
+        if (totalSpan) totalSpan.textContent = `${formatAmount(projectedTotalSelfPay)}원`;
+        const ratioSpan = previewEl.querySelector('.pending-ratio-val');
+        if (ratioSpan) ratioSpan.textContent = projectedRatioText;
+        const tagSpan = previewEl.querySelector('.manual-tag');
+        if (isManual && !tagSpan) {
+            const sub = previewEl.querySelector('.preview-sub');
+            if (sub) {
+                const newTag = document.createElement('span');
+                newTag.className = 'manual-tag';
+                newTag.textContent = '✍️ 개인부담금 직접 입력 반영됨';
+                sub.appendChild(newTag);
+            }
+        }
+        let resetBtn = document.getElementById('pending-per-person-reset-btn');
+        if (isManual && !resetBtn) {
+            const wrap = previewEl.querySelector('.pending-input-wrapper');
+            if (wrap) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = 'pending-per-person-reset-btn';
+                btn.className = 'pending-reset-btn';
+                btn.title = '정책 자동계산값으로 복원';
+                btn.textContent = '↺ 자동값';
+                wrap.appendChild(btn);
+                bindResetBtn(btn, totalAmount);
+            }
+        }
+        return;
     }
+
+    previewEl.className = projectedTotalSelfPay === 0 ? 'pending-self-pay-preview zero-self-pay' : 'pending-self-pay-preview';
+
+    const inputHtml = memberCount > 0
+        ? `<span class="pending-input-wrapper">
+             <input type="text" inputmode="numeric" id="pending-per-person-input" class="pending-per-person-input" value="${formatAmount(currentPerPerson)}" placeholder="${formatAmount(autoPerPerson)}" title="11,000원, 15,000원 등 원하는 개인부담금 단위로 직접 입력 시 카드 결제액이 자동 분할됩니다" />원
+             ${isManual ? '<button type="button" id="pending-per-person-reset-btn" class="pending-reset-btn" title="정책 자동계산값으로 복원">↺ 자동값</button>' : ''}
+           </span>`
+        : `<strong>참석자 미등록</strong>`;
+
+    previewEl.innerHTML = `
+        <span class="preview-icon">${projectedTotalSelfPay === 0 ? '😊' : '💡'}</span>
+        <div class="preview-content">
+            <div class="preview-main-row">
+                <strong>이번 금액 반영 시:</strong> 총 자부담 <strong class="pending-total-val">${formatAmount(projectedTotalSelfPay)}원</strong>
+                (개인부담 ${inputHtml})
+            </div>
+            <div class="preview-sub">
+                <span>예상 자부담 비율:</span> <strong class="pending-ratio-val">${projectedRatioText}</strong>
+                ${isManual ? '<span class="manual-tag">✍️ 개인부담금 직접 입력 반영됨</span>' : ''}
+            </div>
+        </div>
+    `;
     previewEl.classList.remove('hidden');
+
+    perPersonInput = document.getElementById('pending-per-person-input');
+    if (perPersonInput) {
+        setupCurrencyInput(perPersonInput);
+        perPersonInput.addEventListener('input', () => {
+            const rawVal = perPersonInput.value.replace(/[^0-9]/g, '');
+            if (rawVal === '') {
+                _manualPendingPerPerson = 0;
+            } else {
+                _manualPendingPerPerson = parseInt(rawVal, 10) || 0;
+            }
+            applyManualPerPersonToCards(totalAmount, _manualPendingPerPerson, existingSelfPay, memberCount);
+        });
+    }
+
+    const resetBtn = document.getElementById('pending-per-person-reset-btn');
+    if (resetBtn) {
+        bindResetBtn(resetBtn, totalAmount);
+    }
+}
+
+function bindResetBtn(btn, totalAmount) {
+    if (!btn || btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        _manualPendingPerPerson = null;
+        const categorySelect = document.getElementById('expense-category-select');
+        const cat = categorySelect ? categorySelect.value : 'EVENT';
+        const defaultCorp = _calcCorpForItem(totalAmount, cat);
+        const defaultPersonal = Math.max(0, totalAmount - defaultCorp);
+        const corpAmountInput = document.getElementById('expense-corporate-amount-input');
+        const personalAmountInput = document.getElementById('expense-personal-amount-input');
+        const corpCheck = document.getElementById('expense-corp-check');
+        const personalCheck = document.getElementById('expense-personal-check');
+        if (corpAmountInput) corpAmountInput.value = formatAmount(defaultCorp);
+        if (personalAmountInput) personalAmountInput.value = formatAmount(defaultPersonal);
+        if (corpCheck) corpCheck.checked = defaultCorp > 0;
+        if (personalCheck) personalCheck.checked = defaultPersonal > 0;
+        updateCardTypeUI();
+        updatePendingSelfPayPreview();
+    });
 }
 
 // 행사비 인당 지원액이 정책 계산값(85,000원 이내 구간)을 초과할 때 이사진 승인 여부
