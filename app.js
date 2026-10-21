@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.322';
+const APP_VERSION      = '1.6.323';
 const APP_VERSION_DATE = '2026.10.21';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -4426,6 +4426,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window._onClubRegistryUpdate = () => {
         renderClubOptions();
         if (typeof renderClubManagement === 'function') renderClubManagement();
+        const chartsTab = document.getElementById('tab-charts');
+        if (chartsTab && !chartsTab.classList.contains('hidden') && typeof renderAllCharts === 'function') {
+            renderAllCharts(lastHistoryList || []);
+        }
     };
 
     if (clubNameInput) {
@@ -7812,6 +7816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.323', date: '2026.10.21', items: ['클럽별 예산 소진율 차트 간헐적 미표시 버그 전면 해결: 클럽 레지스트리 비동기 로딩 지연 시 이력 데이터 기반 클럽 자동 폴백 보강, 미등록/속성 누락 클럽 안전 가드 및 가로 막대 차트 플러그인의 함수형 배경색 파싱 예외 원천 차단', '실 참석 인원 카드 헤더의 10인 모임 만화 애니메이션 전면 개편: 게이지 슬롯 채우기 방식에서 캐릭터들이 실제로 통통 걸어와 행사장(축제 텐트)으로 모이는 역동적인 걷기·모임 만화 씬으로 재작업', '비용 항목 추가 시 "이번 금액 반영 시" 배너의 개인부담금 입력란 줄바꿈 배치: "이번 금액 반영 시: 총 자부담 XX원" 아래 줄로 "(개인부담 [ 11,000 ] 원 ↺ 자동값)"이 단정하게 배치되도록 개행 분리'] },
         { ver: '1.6.322', date: '2026.10.21', items: ['비용 항목 추가 시 "이번 금액 반영 시" 배너의 개인부담금 직접 입력 기능 탑재: 원하는 인당 금액(11,000원, 15,000원 등)을 입력하면 전체 인원수 및 기존 개인카드 금액을 자동 역산하여 법인카드와 개인카드 입력란에 딱 떨어지게 자동 분할 배분', '클럽별 참석 인원 차트 전체 너비(100%) 원상 복원 및 카드 제목줄 우측 빈 공간에 "클럽 행사 10인 모임 만화 애니메이션" 신설: 1위·2위·3위 우수 클럽 배너와 함께 캐릭터들이 1명부터 10명까지 신나게 걸어와 모이고 10명이 모이면 축하 후 반복되는 귀여운 만화 스타일 애니메이션 탑재'] },
         { ver: '1.6.321', date: '2026.10.21', items: ['"고유" 참석자 표기를 "실" 참석자로 직관적 통일 (중복을 제외한 실 참석자 수, 실 참석자 명단)', '실 참석 인원 차트 우측에 "실 참석 우수 클럽 TOP 3 그룹 10인 모임 달성 애니메이션" 신설: 1위·2위·3위 클럽별로 1명부터 10명까지 점진적으로 팀원이 모이고 완료 시 축하 후 다시 반복되는 인터랙티브 라이브 애니메이션 위젯 탑재', '클럽별 정산 횟수 및 예산 소진율 차트 막대 클릭 시 해당 클럽 사용 요약 팝업이 뜨지 않던 연도 변수 참조 버그 수정'] },
         { ver: '1.6.320', date: '2026.10.21', items: ['연도별 정산 자료 조회 기능 신설: 클럽별 정산 이력·개인 이력·대시보드 통계/차트에서 2026년, 2027년 등 연도별 과거 정산 내역 및 전체 누적을 손쉽게 선택 조회할 수 있는 연도 선택 드롭다운 추가', '정산 규칙(rules) 연도별 스냅샷 영구 보존 및 격리: 정산 확정 시 당시 적용된 지원 구간 및 비율을 이력에 영구 박제하여, 새해에 규칙이 변경되더라도 과거 연도(2026년 등)의 정산 결과 및 엑셀 재다운로드는 당시 기준 그대로 고정 보존되고 새해 시작 정산 건만 변경된 규칙으로 안전하게 적용되도록 격리'] },
@@ -9392,7 +9397,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 조각 채움색의 밝기에 따라 흰 글씨/잉크 글씨 중 대비가 되는 쪽을 선택
     function pickTextColorForBg(bgColor) {
-        const m = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/.exec(bgColor || '');
+        if (!bgColor || typeof bgColor !== 'string') return '#ffffff';
+        const trimmed = bgColor.trim();
+        if (trimmed.startsWith('#')) {
+            let hex = trimmed.slice(1);
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            if (hex.length >= 6) {
+                const r = parseInt(hex.slice(0, 2), 16) || 0;
+                const g = parseInt(hex.slice(2, 4), 16) || 0;
+                const b = parseInt(hex.slice(4, 6), 16) || 0;
+                const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                return lum > 165 ? '#0f172a' : '#ffffff';
+            }
+        }
+        const m = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/.exec(trimmed);
         if (!m) return '#ffffff';
         const [r, g, b] = [m[1], m[2], m[3]].map(Number);
         const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
@@ -9424,7 +9442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (bigEnough) {
                         const r = (arc.innerRadius + arc.outerRadius) / 2;
                         ctx.textAlign = 'center';
-                        ctx.fillStyle = pickTextColorForBg(bgColors[i]);
+                        ctx.fillStyle = pickTextColorForBg(Array.isArray(bgColors) ? bgColors[i] : bgColors);
                         ctx.fillText(text, arc.x + Math.cos(angle) * r, arc.y + Math.sin(angle) * r);
                     } else {
                         const x1 = arc.x + Math.cos(angle) * arc.outerRadius;
@@ -9453,7 +9471,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const textW = ctx.measureText(text).width;
                     if (area && bar.x + 8 + textW > area.right) {
                         const dsBg = chart.data.datasets[0].backgroundColor;
-                        const bg = Array.isArray(dsBg) ? dsBg[i] : dsBg;
+                        let bg = '#6366f1';
+                        if (Array.isArray(dsBg)) {
+                            bg = dsBg[i];
+                        } else if (typeof dsBg === 'function') {
+                            const labelName = chart.data.labels ? chart.data.labels[i] : null;
+                            bg = labelName ? (getClubColorMap()[labelName] || stableClubHexColor(labelName)) : (bar.options?.backgroundColor || '#6366f1');
+                        } else if (typeof dsBg === 'string') {
+                            bg = dsBg;
+                        } else if (bar.options && typeof bar.options.backgroundColor === 'string') {
+                            bg = bar.options.backgroundColor;
+                        }
                         ctx.textAlign = 'right';
                         // 막대 내부 표시 시 배경색과 고대비 텍스트(#ffffff 또는 pickTextColorForBg) 및 텍스트 그림자로 가독성 확보
                         ctx.fillStyle = pickTextColorForBg(bg);
@@ -9590,16 +9618,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 막대 방향에 맞춰 클럽 고유색을 유지하는 은은한 3단 그라데이션을 만든다.
     function clubBarGradient(context, baseHex, horizontal = false) {
-        const chart = context.chart;
+        const chart = context && context.chart;
+        if (!chart || !chart.ctx) return hexToRgba(baseHex, 0.9);
         const area = chart.chartArea;
         if (!area) return hexToRgba(baseHex, 0.9);
-        const gradient = horizontal
-            ? chart.ctx.createLinearGradient(area.left, 0, area.right, 0)
-            : chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
-        gradient.addColorStop(0, hexToRgba(baseHex, 0.82));
-        gradient.addColorStop(0.58, hexToRgba(mixHexColor(baseHex, '#ffffff', 0.12), 0.94));
-        gradient.addColorStop(1, hexToRgba(mixHexColor(baseHex, '#ffffff', 0.34), 1));
-        return gradient;
+
+        // area 좌표가 유효한 유한 숫자인지 철저히 검증 (초기 레이아웃 프레임에서 non-finite로 인한 차트 크래시 원천 차단)
+        const x1 = Number(area.left);
+        const y1 = Number(horizontal ? 0 : area.bottom);
+        const x2 = Number(horizontal ? area.right : 0);
+        const y2 = Number(horizontal ? 0 : area.top);
+
+        if (!Number.isFinite(x1) || !Number.isFinite(y1) || !Number.isFinite(x2) || !Number.isFinite(y2) || (horizontal && x1 === x2) || (!horizontal && y1 === y2)) {
+            return hexToRgba(baseHex, 0.9);
+        }
+
+        try {
+            const gradient = chart.ctx.createLinearGradient(x1, y1, x2, y2);
+            gradient.addColorStop(0, hexToRgba(baseHex, 0.82));
+            gradient.addColorStop(0.58, hexToRgba(mixHexColor(baseHex, '#ffffff', 0.12), 0.94));
+            gradient.addColorStop(1, hexToRgba(mixHexColor(baseHex, '#ffffff', 0.34), 1));
+            return gradient;
+        } catch (_err) {
+            return hexToRgba(baseHex, 0.9);
+        }
     }
 
     // 클럽 레지스트리에 없는 과거 이력도 이름 해시로 일관된 색을 사용한다.
@@ -9788,7 +9830,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 : (chartYearSelect && chartYearSelect.value === 'ALL' ? null : new Date().getFullYear())
         );
         const isCurrentYear = effectiveYear === null || effectiveYear === new Date().getFullYear();
-        const allClubs = Object.values(AppState.clubRegistry || {}).sort((a, b) => a.name.localeCompare(b.name));
+
+        // 클럽 목록: AppState.clubRegistry를 우선하되, historyList에만 있는 클럽도 누락 없이 합집합 구성
+        // (클럽 레지스트리 비동기 로딩 지연 시 차트가 빈 화면으로 남는 현상 원천 방지)
+        const clubMapByName = new Map();
+        Object.values(AppState.clubRegistry || {}).forEach(c => {
+            if (c && c.name) {
+                clubMapByName.set(c.name, {
+                    name: c.name,
+                    budget: Math.max(0, Number(c.budget) || 0),
+                    priorUsed: Math.max(0, Number(c.priorUsed) || 0)
+                });
+            }
+        });
+        (historyList || []).forEach(entry => {
+            const cName = entry && entry.clubName ? entry.clubName.trim() : '기본 클럽';
+            if (cName && !clubMapByName.has(cName)) {
+                clubMapByName.set(cName, {
+                    name: cName,
+                    budget: AppState.rules?.defaultClubBudget || 4000000,
+                    priorUsed: 0
+                });
+            }
+        });
+
+        const allClubs = Array.from(clubMapByName.values())
+            .filter(c => c && c.name)
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const clubs = allClubs.filter(c => !selectedOverallClubs || selectedOverallClubs.has(c.name));
 
         // 소진율 높은 순 정렬
@@ -9801,7 +9869,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .reduce((sum, entry) => sum + (entry.finalSupportAmount || 0), 0);
             const prior = isCurrentYear ? (club.priorUsed || 0) : 0;
             const usedTotal = prior + spent;
-            const budget = club.budget || 0;
+            const budget = club.budget > 0 ? club.budget : (AppState.rules?.defaultClubBudget || 4000000);
             const ratio = budget > 0 ? (usedTotal / budget) * 100 : 0;
             return { name: club.name, ratio: Math.round(ratio * 10) / 10, usedTotal, budget };
         }).sort((a, b) => b.ratio - a.ratio);
@@ -9838,8 +9906,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     tooltip: {
                         callbacks: {
                             label: (ctx) => {
-                                const d = clubData[ctx.dataIndex];
-                                const remaining = d.budget - d.usedTotal;
+                                const d = clubData[ctx.dataIndex] || { budget: 0, usedTotal: 0 };
+                                const remaining = Math.max(0, d.budget - d.usedTotal);
                                 return [
                                     `소진율: ${ctx.parsed.x}%`,
                                     `예산: ${SettlementCalculator.formatCurrency(d.budget)}`,
@@ -10669,14 +10737,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const baseColor = clubColorMap[clubName] || stableClubHexColor(clubName);
             const isDone = step >= 10;
 
-            const avatarsHtml = cartoonAvatars.map((item, idx) => {
-                const isActive = idx < step;
-                return `
-                    <span class="cartoon-char ${isActive ? 'is-active' : ''} ${isDone ? 'is-celebrating' : ''}" style="--char-idx: ${idx};" title="${idx + 1}번째 모임 팀원: ${item.name}">
-                        ${item.icon}
-                    </span>
-                `;
-            }).join('');
+            // 이미 도착해서 행사장에 모여있는 사람들 (0 ~ step-1명 또는 완료 시 10명 전원)
+            const gatheredCount = isDone ? 10 : Math.max(0, step - 1);
+            const gatheredList = cartoonAvatars.slice(0, gatheredCount);
+            const gatheredHtml = gatheredList.map((item, idx) => `
+                <span class="cartoon-camper ${isDone ? 'cheering' : ''}" style="--camper-idx:${idx};" title="${item.name}">
+                    ${item.icon}
+                </span>
+            `).join('');
+
+            // 지금 길을 따라 통통 걸어오고 있는 새 합류자 (완료 전이고 step > 0일 때)
+            const incomingWalker = (!isDone && step > 0 && step <= 10) ? cartoonAvatars[step - 1] : null;
+            const walkerHtml = incomingWalker ? `
+                <div class="cartoon-walker-box" title="${incomingWalker.name} 걸어오는 중">
+                    <span class="cartoon-walker-char">${incomingWalker.icon}</span>
+                </div>
+            ` : '<div class="cartoon-walker-empty"></div>';
 
             container.style.setProperty('--cartoon-club-color', baseColor);
             container.title = `클릭 시 ${AppState.escapeHtml(clubName)} 실 참석자(${count}명) 명단 확인`;
@@ -10685,15 +10761,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="cartoon-medal">${rankLabel}</span>
                     <strong class="cartoon-club-name">${AppState.escapeHtml(clubName)}</strong>
                 </div>
-                <div class="cartoon-stage" aria-hidden="true">
-                    <span class="cartoon-prop tent">🎪</span>
-                    <div class="cartoon-track">
-                        ${avatarsHtml}
+                <div class="cartoon-scene" aria-hidden="true">
+                    <div class="cartoon-road">
+                        <span class="cartoon-road-start" title="모임 출발선">🏁</span>
+                        <div class="cartoon-road-track">
+                            ${walkerHtml}
+                        </div>
                     </div>
-                    <span class="cartoon-prop flag">🚩</span>
+                    <div class="cartoon-camp ${isDone ? 'party-mode' : ''}">
+                        <span class="cartoon-tent-prop" title="클럽 행사 모임 장소">${isDone ? '🎪✨' : '🎪'}</span>
+                        <div class="cartoon-gathered-group">
+                            ${gatheredHtml}
+                        </div>
+                    </div>
                 </div>
                 <div class="cartoon-status ${isDone ? 'done' : ''}">
-                    <span class="cartoon-counter">${isDone ? '🎉 10명 완성!' : `👥 ${step}/10명`}</span>
+                    <span class="cartoon-counter">${isDone ? '🎉 10명 모임 완성!' : `👥 ${step}/10명 모이는 중`}</span>
                 </div>
             `;
 
@@ -10722,10 +10805,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         _cartoonCurrentClubIndex = (_cartoonCurrentClubIndex + 1) % topClubs.length;
                         updateCartoonView(0, _cartoonCurrentClubIndex);
                         isHoldingCelebration = false;
-                    }, 1800);
+                    }, 2200);
                 }
             }
-        }, 400);
+        }, 480);
     }
 
     function initAttendanceRosterModal() {
@@ -11420,7 +11503,11 @@ function updatePendingSelfPayPreview() {
         <div class="preview-content">
             <div class="preview-main-row">
                 <strong>이번 금액 반영 시:</strong> 총 자부담 <strong class="pending-total-val">${formatAmount(projectedTotalSelfPay)}원</strong>
-                (개인부담 ${inputHtml})
+            </div>
+            <div class="preview-personal-row">
+                <span class="preview-personal-prefix">(개인부담</span>
+                ${inputHtml}
+                <span class="preview-personal-suffix">)</span>
             </div>
             <div class="preview-sub">
                 <span>예상 자부담 비율:</span> <strong class="pending-ratio-val">${projectedRatioText}</strong>
