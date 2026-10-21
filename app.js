@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.326';
+const APP_VERSION      = '1.6.327';
 const APP_VERSION_DATE = '2026.10.22';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -7816,6 +7816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.327', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 팀워크 애니메이션 클로즈업 줌인 반영: 3M 로고 피켓과 주인공 그룹을 중심으로 위아래·좌우 여백을 바짝 크롭하여 위젯 창 내에 캐릭터가 꽉 차도록 확대(Zoom In) 적용', '위젯 창 크기를 데스크톱 135px x 60px(모바일 96px x 44px)로 최적화하여 3M 캐릭터와 로고 시인성 극대화'] },
         { ver: '1.6.326', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 애니메이션 GIF 위아래 여백 크롭 및 와이드 확대: 불필요한 상·하단 빈 배경을 걷어내어 캐릭터를 1.5배 이상 크게 부각하고, 헤더 위젯 크기를 145px x 52px(모바일 106px x 38px) 파노라마 뷰로 대폭 확장'] },
         { ver: '1.6.325', date: '2026.10.21', items: ['실 참석 인원 카드 헤더 위젯 UI 간소화: 우수 클럽 순위 및 실참석 카운터 텍스트를 제거하고 3M 팀워크 모임 애니메이션 GIF 단독 뷰로 정돈', '카드 헤더 높이 및 여백에 최적화된 프레임 사이즈(46px x 82px)와 부드러운 스케일업 호버 인터랙션 적용'] },
         { ver: '1.6.324', date: '2026.10.21', items: ['실 참석 인원 카드 헤더에 3M 팀워크 모임 애니메이션 GIF(280x158 최적화 버전) 전면 반영: 3M 로고를 중심으로 동료들이 사방에서 뛰어와 모여드는 고화질 2D 카툰 애니메이션을 헤더 위젯에 연동', '1위·2위·3위 우수 클럽 전환 시 애니메이션 GIF와 함께 클럽명 뱃지 및 실 참석자 수가 부드럽게 갱신되고 클릭 시 명단 모달이 즉시 열리도록 최적화'] },
@@ -10709,7 +10710,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.style.display = 'inline-flex';
         container.title = '3M 팀워크 모임 애니메이션';
         container.innerHTML = `
-            <img src="assets/3m_teamwork_gathering_wide.gif" alt="3M 팀워크 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
+            <img src="assets/3m_teamwork_gathering_zoom.gif" alt="3M 팀워크 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
         `;
 
         if (topClubs && topClubs.length > 0) {
