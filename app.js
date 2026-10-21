@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.325';
-const APP_VERSION_DATE = '2026.10.21';
+const APP_VERSION      = '1.6.326';
+const APP_VERSION_DATE = '2026.10.22';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
 function updatePerPersonSelfPayIcon(perPersonSelfPay) {
@@ -7816,6 +7816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.326', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 애니메이션 GIF 위아래 여백 크롭 및 와이드 확대: 불필요한 상·하단 빈 배경을 걷어내어 캐릭터를 1.5배 이상 크게 부각하고, 헤더 위젯 크기를 145px x 52px(모바일 106px x 38px) 파노라마 뷰로 대폭 확장'] },
         { ver: '1.6.325', date: '2026.10.21', items: ['실 참석 인원 카드 헤더 위젯 UI 간소화: 우수 클럽 순위 및 실참석 카운터 텍스트를 제거하고 3M 팀워크 모임 애니메이션 GIF 단독 뷰로 정돈', '카드 헤더 높이 및 여백에 최적화된 프레임 사이즈(46px x 82px)와 부드러운 스케일업 호버 인터랙션 적용'] },
         { ver: '1.6.324', date: '2026.10.21', items: ['실 참석 인원 카드 헤더에 3M 팀워크 모임 애니메이션 GIF(280x158 최적화 버전) 전면 반영: 3M 로고를 중심으로 동료들이 사방에서 뛰어와 모여드는 고화질 2D 카툰 애니메이션을 헤더 위젯에 연동', '1위·2위·3위 우수 클럽 전환 시 애니메이션 GIF와 함께 클럽명 뱃지 및 실 참석자 수가 부드럽게 갱신되고 클릭 시 명단 모달이 즉시 열리도록 최적화'] },
         { ver: '1.6.323', date: '2026.10.21', items: ['클럽별 예산 소진율 차트 간헐적 미표시 버그 전면 해결: 클럽 레지스트리 비동기 로딩 지연 시 이력 데이터 기반 클럽 자동 폴백 보강, 미등록/속성 누락 클럽 안전 가드 및 가로 막대 차트 플러그인의 함수형 배경색 파싱 예외 원천 차단', '실 참석 인원 카드 헤더의 10인 모임 만화 애니메이션 전면 개편: 게이지 슬롯 채우기 방식에서 캐릭터들이 실제로 통통 걸어와 행사장(축제 텐트)으로 모이는 역동적인 걷기·모임 만화 씬으로 재작업', '비용 항목 추가 시 "이번 금액 반영 시" 배너의 개인부담금 입력란 줄바꿈 배치: "이번 금액 반영 시: 총 자부담 XX원" 아래 줄로 "(개인부담 [ 11,000 ] 원 ↺ 자동값)"이 단정하게 배치되도록 개행 분리'] },
@@ -10708,7 +10709,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.style.display = 'inline-flex';
         container.title = '3M 팀워크 모임 애니메이션';
         container.innerHTML = `
-            <img src="assets/3m_teamwork_gathering_mini.gif" alt="3M 팀워크 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
+            <img src="assets/3m_teamwork_gathering_wide.gif" alt="3M 팀워크 모임 애니메이션" class="cartoon-teamwork-gif" loading="eager" />
         `;
 
         if (topClubs && topClubs.length > 0) {
