@@ -577,12 +577,8 @@
                         <h2 data-i18n="tab.history_title">정산 이력</h2>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-                        <div style="display:inline-flex; align-items:center; gap:0.3rem;">
-                            <label for="user-history-year-select" style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">📅 연도</label>
-                            <select id="user-history-year-select" style="padding:0.25rem 0.5rem; font-size:0.8rem; font-weight:600; border-radius:6px; background:var(--input-bg, rgba(255,255,255,0.08)); color:var(--text-primary); border:1px solid var(--border-color, rgba(255,255,255,0.18)); cursor:pointer;">
-                                <option value="ALL">전체 연도</option>
-                            </select>
-                        </div>
+                        <!-- 상단 글로벌 조회 연도와 연동되는 숨김 상태 -->
+                        <input type="hidden" id="user-history-year-select" value="2026">
                         <span style="font-size:0.75rem; color:var(--text-muted); text-align:right; line-height:1.4; word-break:keep-all;">💡 행사 날짜: 수정 · 참석 인원: 명단 확인<br>엑셀: 해당 행사 행에서 다시 받기</span>
                     </div>
                 </div>
@@ -602,12 +598,8 @@
                         <p class="club-history-guide" style="margin:0;">행사 날짜를 누르면 수정할 수 있으며, 참석 인원을 누르면 명단 확인·복사가 가능합니다.</p>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                        <div style="display:inline-flex; align-items:center; gap:0.35rem;">
-                            <label for="admin-history-year-select" style="font-size:0.82rem; font-weight:600; color:var(--text-secondary);">📅 조회 연도</label>
-                            <select id="admin-history-year-select" style="padding:0.35rem 0.65rem; font-size:0.82rem; font-weight:600; border-radius:8px; background:var(--input-bg, rgba(255,255,255,0.08)); color:var(--text-primary); border:1px solid var(--border-color, rgba(255,255,255,0.18)); cursor:pointer;">
-                                <option value="">연도 로딩 중...</option>
-                            </select>
-                        </div>
+                        <!-- 상단 글로벌 조회 연도와 연동되는 숨김 상태 -->
+                        <input type="hidden" id="admin-history-year-select" value="2026">
                         <button type="button" id="history-export-ppt-btn" class="btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12); color:#fbbf24; border-radius:8px; cursor:pointer;">📊 연간 결산 PPT</button>
                     </div>
                 </div>

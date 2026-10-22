@@ -1,8 +1,12 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.331';
+const APP_VERSION      = '1.6.332';
 const APP_VERSION_DATE = '2026.10.22';
+
+// 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
+let _selectedQueryYear = String(new Date().getFullYear());
+window._selectedQueryYear = _selectedQueryYear;
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
 function updatePerPersonSelfPayIcon(perPersonSelfPay) {
@@ -2786,27 +2790,13 @@ const AppState = {
                 historyContainer.innerHTML = `<div class="empty-state"><span class="empty-icon">📋</span><p>${t('empty.history')}</p></div>`;
             } else if (typeof window.createInlineClubUsageSummary === 'function') {
                 // 사용자는 선택한 클럽의 공유 이력을 바로 확인하고, 로그인한 회원은 작성자와 관계없이 수정할 수 있다.
+                // 상단 전역 조회 연도(_selectedQueryYear) 기준 자동 필터링
                 const userYearSelect = document.getElementById('user-history-year-select');
-                let selectedUserYear = userYearSelect ? userYearSelect.value : 'ALL';
+                const selectedUserYear = (typeof _selectedQueryYear !== 'undefined' && _selectedQueryYear)
+                    ? _selectedQueryYear
+                    : (userYearSelect ? userYearSelect.value : String(new Date().getFullYear()));
                 if (userYearSelect) {
-                    const availableUserYears = Array.from(new Set(
-                        historyList.map(e => getHistoryEntryYear(e)).filter(y => y && !isNaN(y))
-                    )).sort((a, b) => b - a);
-                    const prevVal = userYearSelect.value;
-                    userYearSelect.innerHTML = `<option value="ALL">전체 연도</option>` +
-                        availableUserYears.map(y => `<option value="${y}">${y}년</option>`).join('');
-                    if (prevVal && (availableUserYears.includes(Number(prevVal)) || prevVal === 'ALL')) {
-                        userYearSelect.value = prevVal;
-                    } else {
-                        userYearSelect.value = 'ALL';
-                    }
-                    selectedUserYear = userYearSelect.value;
-                    if (!userYearSelect._hasEventListener) {
-                        userYearSelect.addEventListener('change', () => {
-                            AppState.render();
-                        });
-                        userYearSelect._hasEventListener = true;
-                    }
+                    userYearSelect.value = selectedUserYear;
                 }
 
                 const entriesByClub = new Map();
@@ -7816,6 +7806,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.332', date: '2026.10.22', items: ['정산 이력(사용자) 및 클럽별 정산이력(관리자) 탭 헤더의 중복 조회 연도 드롭다운 제거 및 상단 [ 2026 ▾ ] 전역 연도 선택기로 일원화', '상단 조회 연도 변경 시 대시보드 차트뿐만 아니라 관리자 클럽별 정산이력 및 사용자 정산이력까지 해당 연도로 즉시 동기화'] },
         { ver: '1.6.331', date: '2026.10.22', items: ['클럽 운영 대시보드 헤더의 중복 테마 설정(Dark/Light) 삭제 및 상단 글로벌 헤더 테마 컨트롤로 일원화', '조회 연도 선택 위치를 3M 클럽 비용 정산 상단으로 이동하고 [ 2026 ▾ ] 버튼 형태 UI 적용', '조회 연도 버튼 클릭 시 현재 DB에 등록된 연도 목록 및 건수가 표시되는 팝업창 모달 연동, 연도 클릭 시 해당 연도 정산 데이터 실시간 조회'] },
         { ver: '1.6.328', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 애니메이션 위젯 크기 대형화(185px x 88px) 및 대형 단체 모임 씬 전면 반영: 헤더의 상·하 여백을 시원하게 채우는 와이드 프레임과 함께 사방에서 수십 명의 동료들이 모여 3M을 환호하는 전체 씬을 꽉 차게 렌더링'] },
         { ver: '1.6.327', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 팀워크 애니메이션 클로즈업 줌인 반영: 3M 로고 피켓과 주인공 그룹을 중심으로 위아래·좌우 여백을 바짝 크롭하여 위젯 창 내에 캐릭터가 꽉 차도록 확대(Zoom In) 적용', '위젯 창 크기를 데스크톱 135px x 60px(모바일 96px x 44px)로 최적화하여 3M 캐릭터와 로고 시인성 극대화'] },
@@ -10733,12 +10724,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initAttendanceRosterModal();
 
     // ── 전역 조회 연도 상태 관리 & 팝업 모달 (v1.6.331) ──────────────────────
-    let _selectedQueryYear = String(new Date().getFullYear());
     let _availableQueryYears = [new Date().getFullYear()];
     let _cachedChartHistoryList = [];
 
     function updateGlobalYearPickerUI(year) {
         _selectedQueryYear = String(year);
+        window._selectedQueryYear = _selectedQueryYear;
         const labelEl = document.getElementById('global-year-picker-label');
         if (labelEl) {
             labelEl.textContent = year === 'ALL' ? '전체' : year;
@@ -10746,6 +10737,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const hiddenSelect = document.getElementById('charts-year-select');
         if (hiddenSelect) {
             hiddenSelect.value = year;
+        }
+        const adminHiddenSelect = document.getElementById('admin-history-year-select');
+        if (adminHiddenSelect) {
+            adminHiddenSelect.value = year;
+        }
+        const userHiddenSelect = document.getElementById('user-history-year-select');
+        if (userHiddenSelect) {
+            userHiddenSelect.value = year;
         }
     }
 
@@ -10804,6 +10803,12 @@ document.addEventListener('DOMContentLoaded', () => {
             : (window.AppState && window.AppState.globalHistory ? window.AppState.globalHistory : []);
         if (typeof renderAllCharts === 'function') {
             renderAllCharts(listToRender);
+        }
+        if (typeof renderAdminHistory === 'function') {
+            renderAdminHistory(listToRender);
+        }
+        if (window.AppState && typeof window.AppState.render === 'function') {
+            window.AppState.render();
         }
         if (typeof showToast === 'function') {
             showToast(`${year === 'ALL' ? '전체 연도' : year + '년'} 정산 자료로 조회합니다.`);
@@ -10988,39 +10993,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const userSelect = document.getElementById('admin-user-select');
         const selectedUser = userSelect ? userSelect.value : '';
 
-        // 관리자 클럽별 정산 이력 "조회 연도" 드롭다운 갱신 (v1.6.320)
+        // 관리자 클럽별 정산 이력 "조회 연도" — 상단 전역 연도(_selectedQueryYear) 기준 연동
         const adminYearSelect = document.getElementById('admin-history-year-select');
-        const availableYears = Array.from(new Set(
-            historyList.map(e => getHistoryEntryYear(e)).filter(y => y && !isNaN(y))
-        )).sort((a, b) => b - a);
         const thisYear = new Date().getFullYear();
-        if (!availableYears.includes(thisYear)) {
-            availableYears.unshift(thisYear);
-            availableYears.sort((a, b) => b - a);
-        }
-
-        let selectedYear = adminYearSelect ? adminYearSelect.value : '';
+        let selectedYear = (typeof _selectedQueryYear !== 'undefined' && _selectedQueryYear)
+            ? _selectedQueryYear
+            : (adminYearSelect ? adminYearSelect.value : String(thisYear)) || String(thisYear);
         if (adminYearSelect) {
-            const prevVal = adminYearSelect.value;
-            adminYearSelect.innerHTML = availableYears.map(y =>
-                `<option value="${y}">${y}년 정산 자료</option>`
-            ).join('') + `<option value="ALL">전체 연도 정산 자료 (누적)</option>`;
-
-            if (prevVal && (availableYears.includes(Number(prevVal)) || prevVal === 'ALL')) {
-                adminYearSelect.value = prevVal;
-            } else if (availableYears.includes(thisYear)) {
-                adminYearSelect.value = String(thisYear);
-            } else {
-                adminYearSelect.value = String(availableYears[0]);
-            }
-            selectedYear = adminYearSelect.value;
-
-            if (!adminYearSelect._hasEventListener) {
-                adminYearSelect.addEventListener('change', () => {
-                    renderAdminHistory(lastHistoryList);
-                });
-                adminYearSelect._hasEventListener = true;
-            }
+            adminYearSelect.value = selectedYear;
         }
 
         container.innerHTML = '';
