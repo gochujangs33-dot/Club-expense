@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.333';
+const APP_VERSION      = '1.6.334';
 const APP_VERSION_DATE = '2026.10.22';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6129,6 +6129,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (element) element.addEventListener(id === 'audit-log-search-input' ? 'input' : 'change', renderAuditLogList);
     });
     document.getElementById('audit-log-refresh-btn')?.addEventListener('click', () => loadAuditLogs({ reset: true }));
+    document.getElementById('audit-log-clear-btn')?.addEventListener('click', async () => {
+        if (AppState.currentPin !== '000000' || !firebaseDb) return;
+        if (!confirm('저장된 전체 작업 로그를 모두 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다.)')) return;
+        try {
+            await firebaseDb.ref('auditLogs').remove();
+            auditLogEntries = [];
+            auditLogOldestKey = null;
+            auditLogHasMore = false;
+            renderAuditLogList();
+            const statusEl = document.getElementById('audit-log-load-status');
+            if (statusEl) statusEl.textContent = '모든 작업 로그가 삭제되었습니다.';
+            alert('작업 로그가 모두 삭제되었습니다.');
+        } catch (e) {
+            console.error('로그 삭제 실패:', e);
+            alert('로그 삭제 실패: ' + (e.message || ''));
+        }
+    });
     document.getElementById('audit-log-load-more-btn')?.addEventListener('click', () => loadAuditLogs());
     document.getElementById('audit-log-reset-filter-btn')?.addEventListener('click', () => {
         const monthFilter = document.getElementById('audit-log-month-filter');
@@ -7809,6 +7826,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.334', date: '2026.10.22', items: ['이전 전체 작업 로그 DB 초기화 완료 및 전체 작업 로그 모달에 관리자 전용 [ 🗑️ 로그 비우기 ] 기능 탑재', '앞으로 수정·입력·삭제되는 모든 작업 데이터가 최신순으로 정확히 누적 기록되도록 보장'] },
         { ver: '1.6.333', date: '2026.10.22', items: ['감사 로그(작업 기록) 조회 시 Firebase DataSnapshot 순회 중단 버그 수정 (화살표 함수의 push 반환값으로 인한 조기 break 방지)', '클럽 예산 수정 등 최신 작업 이력이 관리자 감사 로그 모달에 정상적으로 누적·표시되도록 개선'] },
         { ver: '1.6.332', date: '2026.10.22', items: ['정산 이력(사용자) 및 클럽별 정산이력(관리자) 탭 헤더의 중복 조회 연도 드롭다운 제거 및 상단 [ 2026 ▾ ] 전역 연도 선택기로 일원화', '상단 조회 연도 변경 시 대시보드 차트뿐만 아니라 관리자 클럽별 정산이력 및 사용자 정산이력까지 해당 연도로 즉시 동기화'] },
         { ver: '1.6.331', date: '2026.10.22', items: ['클럽 운영 대시보드 헤더의 중복 테마 설정(Dark/Light) 삭제 및 상단 글로벌 헤더 테마 컨트롤로 일원화', '조회 연도 선택 위치를 3M 클럽 비용 정산 상단으로 이동하고 [ 2026 ▾ ] 버튼 형태 UI 적용', '조회 연도 버튼 클릭 시 현재 DB에 등록된 연도 목록 및 건수가 표시되는 팝업창 모달 연동, 연도 클릭 시 해당 연도 정산 데이터 실시간 조회'] },
