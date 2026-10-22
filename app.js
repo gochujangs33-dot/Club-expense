@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.330';
+const APP_VERSION      = '1.6.331';
 const APP_VERSION_DATE = '2026.10.22';
 
 // 인당 자부담 비용에 따라 강조 박스의 아이콘/색상을 전환 (100원 이상이면 🔥, 0이면 😊)
@@ -7816,6 +7816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.331', date: '2026.10.22', items: ['클럽 운영 대시보드 헤더의 중복 테마 설정(Dark/Light) 삭제 및 상단 글로벌 헤더 테마 컨트롤로 일원화', '조회 연도 선택 위치를 3M 클럽 비용 정산 상단으로 이동하고 [ 2026 ▾ ] 버튼 형태 UI 적용', '조회 연도 버튼 클릭 시 현재 DB에 등록된 연도 목록 및 건수가 표시되는 팝업창 모달 연동, 연도 클릭 시 해당 연도 정산 데이터 실시간 조회'] },
         { ver: '1.6.328', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 애니메이션 위젯 크기 대형화(185px x 88px) 및 대형 단체 모임 씬 전면 반영: 헤더의 상·하 여백을 시원하게 채우는 와이드 프레임과 함께 사방에서 수십 명의 동료들이 모여 3M을 환호하는 전체 씬을 꽉 차게 렌더링'] },
         { ver: '1.6.327', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 팀워크 애니메이션 클로즈업 줌인 반영: 3M 로고 피켓과 주인공 그룹을 중심으로 위아래·좌우 여백을 바짝 크롭하여 위젯 창 내에 캐릭터가 꽉 차도록 확대(Zoom In) 적용', '위젯 창 크기를 데스크톱 135px x 60px(모바일 96px x 44px)로 최적화하여 3M 캐릭터와 로고 시인성 극대화'] },
         { ver: '1.6.326', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 애니메이션 GIF 위아래 여백 크롭 및 와이드 확대: 불필요한 상·하단 빈 배경을 걷어내어 캐릭터를 1.5배 이상 크게 부각하고, 헤더 위젯 크기를 145px x 52px(모바일 106px x 38px) 파노라마 뷰로 대폭 확장'] },
@@ -10731,6 +10732,139 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initAttendanceRosterModal();
 
+    // ── 전역 조회 연도 상태 관리 & 팝업 모달 (v1.6.331) ──────────────────────
+    let _selectedQueryYear = String(new Date().getFullYear());
+    let _availableQueryYears = [new Date().getFullYear()];
+    let _cachedChartHistoryList = [];
+
+    function updateGlobalYearPickerUI(year) {
+        _selectedQueryYear = String(year);
+        const labelEl = document.getElementById('global-year-picker-label');
+        if (labelEl) {
+            labelEl.textContent = year === 'ALL' ? '전체' : year;
+        }
+        const hiddenSelect = document.getElementById('charts-year-select');
+        if (hiddenSelect) {
+            hiddenSelect.value = year;
+        }
+    }
+
+    function renderYearPickerModalList(historyList) {
+        const listEl = document.getElementById('year-picker-list');
+        if (!listEl) return;
+
+        const effectiveList = (historyList && historyList.length ? historyList : (_cachedChartHistoryList && _cachedChartHistoryList.length ? _cachedChartHistoryList : (window.AppState && window.AppState.globalHistory ? window.AppState.globalHistory : []))) || [];
+        const cleanList = effectiveList.filter(e => e && !cachedDeletedIds[String(e.id)]);
+
+        // DB에 등록된 실제 연도 추출
+        const yearsSet = new Set(
+            cleanList.map(e => getHistoryEntryYear(e)).filter(y => y && !isNaN(y))
+        );
+        const thisYear = new Date().getFullYear();
+        yearsSet.add(thisYear);
+
+        _availableQueryYears = Array.from(yearsSet).sort((a, b) => b - a);
+
+        let html = '';
+        _availableQueryYears.forEach(y => {
+            const count = cleanList.filter(e => getHistoryEntryYear(e) === y).length;
+            const isSelected = _selectedQueryYear === String(y);
+            html += `
+                <button type="button" class="year-picker-item-btn ${isSelected ? 'selected' : ''}" data-year="${y}">
+                    <span>${y}년 정산 자료</span>
+                    <span class="year-picker-item-badge">${count}건 ${isSelected ? '✓' : ''}</span>
+                </button>
+            `;
+        });
+
+        const totalCount = cleanList.length;
+        const isAllSelected = _selectedQueryYear === 'ALL';
+        html += `
+            <button type="button" class="year-picker-item-btn ${isAllSelected ? 'selected' : ''}" data-year="ALL">
+                <span>전체 연도 정산 자료 (누적)</span>
+                <span class="year-picker-item-badge">총 ${totalCount}건 ${isAllSelected ? '✓' : ''}</span>
+            </button>
+        `;
+
+        listEl.innerHTML = html;
+
+        listEl.querySelectorAll('.year-picker-item-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const chosen = btn.dataset.year;
+                selectQueryYear(chosen);
+            });
+        });
+    }
+
+    function selectQueryYear(year) {
+        updateGlobalYearPickerUI(year);
+        closeYearPickerModal();
+        const listToRender = (_cachedChartHistoryList && _cachedChartHistoryList.length)
+            ? _cachedChartHistoryList
+            : (window.AppState && window.AppState.globalHistory ? window.AppState.globalHistory : []);
+        if (typeof renderAllCharts === 'function') {
+            renderAllCharts(listToRender);
+        }
+        if (typeof showToast === 'function') {
+            showToast(`${year === 'ALL' ? '전체 연도' : year + '년'} 정산 자료로 조회합니다.`);
+        }
+    }
+
+    function openYearPickerModal() {
+        const modal = document.getElementById('year-picker-modal');
+        if (!modal) return;
+        const listForModal = (_cachedChartHistoryList && _cachedChartHistoryList.length)
+            ? _cachedChartHistoryList
+            : (window.AppState && window.AppState.globalHistory ? window.AppState.globalHistory : []);
+        renderYearPickerModalList(listForModal);
+        modal.style.display = 'flex';
+    }
+
+    function closeYearPickerModal() {
+        const modal = document.getElementById('year-picker-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function initYearPickerModal() {
+        const btn = document.getElementById('global-year-picker-btn');
+        if (btn && !btn._hasClickListener) {
+            btn.addEventListener('click', openYearPickerModal);
+            btn._hasClickListener = true;
+        }
+
+        const closeBtn = document.getElementById('close-year-picker-modal-btn');
+        if (closeBtn && !closeBtn._hasClickListener) {
+            closeBtn.addEventListener('click', closeYearPickerModal);
+            closeBtn._hasClickListener = true;
+        }
+
+        const cancelBtn = document.getElementById('cancel-year-picker-modal-btn');
+        if (cancelBtn && !cancelBtn._hasClickListener) {
+            cancelBtn.addEventListener('click', closeYearPickerModal);
+            cancelBtn._hasClickListener = true;
+        }
+
+        const modal = document.getElementById('year-picker-modal');
+        if (modal && !modal._hasClickListener) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeYearPickerModal();
+            });
+            modal._hasClickListener = true;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal && modal.style.display !== 'none') {
+                closeYearPickerModal();
+            }
+        });
+    }
+    initYearPickerModal();
+
+    // HTML 인라인 onclick 이벤트용 전역 바인딩
+    window.openYearPickerModal = openYearPickerModal;
+    window.closeYearPickerModal = closeYearPickerModal;
+    window.selectQueryYear = selectQueryYear;
+
     function renderRecentSettlements(historyList) {
         const container = document.getElementById('recent-settlement-list');
         if (!container) return;
@@ -10790,46 +10924,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const historyList = (rawHistoryList || [])
+        if (rawHistoryList && Array.isArray(rawHistoryList)) {
+            _cachedChartHistoryList = rawHistoryList;
+        }
+
+        const historyList = (_cachedChartHistoryList || [])
             .filter(e => e && !cachedDeletedIds[String(e.id)]);
 
-        // 차트 탭 "조회 연도" 드롭다운 갱신 (v1.6.320)
-        const chartYearSelect = document.getElementById('charts-year-select');
-        const availableYears = Array.from(new Set(
-            historyList.map(e => getHistoryEntryYear(e)).filter(y => y && !isNaN(y))
-        )).sort((a, b) => b - a);
         const thisYear = new Date().getFullYear();
-        if (!availableYears.includes(thisYear)) {
-            availableYears.unshift(thisYear);
-            availableYears.sort((a, b) => b - a);
+        if (!_selectedQueryYear) {
+            _selectedQueryYear = String(thisYear);
         }
+        updateGlobalYearPickerUI(_selectedQueryYear);
 
-        let selectedYear = chartYearSelect ? chartYearSelect.value : '';
-        if (chartYearSelect) {
-            const prevVal = chartYearSelect.value;
-            chartYearSelect.innerHTML = availableYears.map(y =>
-                `<option value="${y}">${y}년 정산 자료</option>`
-            ).join('') + `<option value="ALL">전체 연도 정산 자료 (누적)</option>`;
-
-            if (prevVal && (availableYears.includes(Number(prevVal)) || prevVal === 'ALL')) {
-                chartYearSelect.value = prevVal;
-            } else if (availableYears.includes(thisYear)) {
-                chartYearSelect.value = String(thisYear);
-            } else {
-                chartYearSelect.value = String(availableYears[0]);
-            }
-            selectedYear = chartYearSelect.value;
-
-            if (!chartYearSelect._hasEventListener) {
-                chartYearSelect.addEventListener('change', () => {
-                    renderAllCharts(lastHistoryList);
-                });
-                chartYearSelect._hasEventListener = true;
-            }
-        }
-
-        const isAllYears = selectedYear === 'ALL';
-        const targetYear = isAllYears ? null : (Number(selectedYear) || thisYear);
+        const isAllYears = _selectedQueryYear === 'ALL';
+        const targetYear = isAllYears ? null : (Number(_selectedQueryYear) || thisYear);
 
         // 연도별 필터링된 이력 목록
         const yearFilteredList = historyList.filter(e => {
