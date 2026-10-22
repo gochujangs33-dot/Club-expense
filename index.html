@@ -120,9 +120,9 @@
             <button id="attendees-tab-btn" class="tab-btn" data-tab="tab-attendees">👥 현재 참석자 (<span id="attendee-badge-count">0</span>명)</button>
             <button id="directory-tab-btn" class="tab-btn" data-tab="tab-directory">🗂️ 전사원 명부 (<span id="directory-badge-count">0</span>명)</button>
             <button id="history-tab-btn" class="tab-btn" data-tab="tab-history" data-i18n="tab.history">📋 정산 이력</button>
-            <button id="club-history-tab-btn" class="tab-btn hidden" data-tab="tab-club-history" data-i18n="tab.club_history" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.15)); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24;">📋 클럽별 정산이력</button>
-            <button id="charts-tab-btn" class="tab-btn hidden" data-tab="tab-charts" data-i18n="tab.charts" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.15)); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24;">📈 차트</button>
-            <button id="admin-tab-btn" class="tab-btn hidden" data-tab="tab-admin" data-i18n="tab.admin" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.15)); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24;">👑 대시보드 관리</button>
+            <button id="club-history-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-club-history" data-i18n="tab.club_history">📋 클럽별 정산이력</button>
+            <button id="charts-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-charts" data-i18n="tab.charts">📈 차트</button>
+            <button id="admin-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-admin" data-i18n="tab.admin">👑 대시보드 관리</button>
         </nav>
         <!-- Tab Content 1: Settlement Calculator -->
         <div id="tab-settlement" class="tab-pane active">
@@ -711,7 +711,6 @@
                                 <div><h2>클럽별 참석 인원</h2><div class="chart-subtitle">중복을 제외한 실 참석자 수</div></div>
                             </div>
                             <div id="club-gathering-cartoon" class="club-gathering-cartoon" aria-label="3M 팀워크 모임 애니메이션"></div>
-                            <div class="chart-header-spacer" aria-hidden="true"></div>
                         </div>
                         <div class="card-body">
                             <div class="chart-canvas-wrap tall"><canvas id="club-unique-attendees-chart"></canvas></div>
