@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.332';
+const APP_VERSION      = '1.6.333';
 const APP_VERSION_DATE = '2026.10.22';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -4767,7 +4767,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (auditLogOldestKey) query = query.endAt(auditLogOldestKey);
             const snapshot = await query.limitToLast(pageLimit).once('value');
             const page = [];
-            snapshot.forEach(child => page.push({ key: child.key, ...(child.val() || {}) }));
+            snapshot.forEach(child => {
+                page.push({ key: child.key, ...(child.val() || {}) });
+            });
             if (auditLogOldestKey && page.length && page[page.length - 1]?.key === auditLogOldestKey) {
                 page.pop();
             } else if (auditLogOldestKey) {
@@ -4793,6 +4795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const modal = document.getElementById('audit-log-modal');
         if (!modal) return;
         modal.classList.remove('hidden');
+        auditLogLoading = false;
         loadAuditLogs({ reset: true });
     }
 
@@ -7806,6 +7809,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.333', date: '2026.10.22', items: ['감사 로그(작업 기록) 조회 시 Firebase DataSnapshot 순회 중단 버그 수정 (화살표 함수의 push 반환값으로 인한 조기 break 방지)', '클럽 예산 수정 등 최신 작업 이력이 관리자 감사 로그 모달에 정상적으로 누적·표시되도록 개선'] },
         { ver: '1.6.332', date: '2026.10.22', items: ['정산 이력(사용자) 및 클럽별 정산이력(관리자) 탭 헤더의 중복 조회 연도 드롭다운 제거 및 상단 [ 2026 ▾ ] 전역 연도 선택기로 일원화', '상단 조회 연도 변경 시 대시보드 차트뿐만 아니라 관리자 클럽별 정산이력 및 사용자 정산이력까지 해당 연도로 즉시 동기화'] },
         { ver: '1.6.331', date: '2026.10.22', items: ['클럽 운영 대시보드 헤더의 중복 테마 설정(Dark/Light) 삭제 및 상단 글로벌 헤더 테마 컨트롤로 일원화', '조회 연도 선택 위치를 3M 클럽 비용 정산 상단으로 이동하고 [ 2026 ▾ ] 버튼 형태 UI 적용', '조회 연도 버튼 클릭 시 현재 DB에 등록된 연도 목록 및 건수가 표시되는 팝업창 모달 연동, 연도 클릭 시 해당 연도 정산 데이터 실시간 조회'] },
         { ver: '1.6.328', date: '2026.10.22', items: ['실 참석 인원 카드 헤더의 3M 애니메이션 위젯 크기 대형화(185px x 88px) 및 대형 단체 모임 씬 전면 반영: 헤더의 상·하 여백을 시원하게 채우는 와이드 프레임과 함께 사방에서 수십 명의 동료들이 모여 3M을 환호하는 전체 씬을 꽉 차게 렌더링'] },
