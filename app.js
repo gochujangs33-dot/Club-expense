@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.334';
-const APP_VERSION_DATE = '2026.10.22';
+const APP_VERSION      = '1.6.335';
+const APP_VERSION_DATE = '2026.11.06';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
 let _selectedQueryYear = String(new Date().getFullYear());
@@ -6197,6 +6197,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderAllCharts(lastHistoryList || []);
                 });
             }
+            // v1.6.335: 와이드 데스크톱(≥1600px)에서는 차트/클럽별 정산이력 영역을 화면 상단에 맞춰
+            // 차트 전체(또는 클럽 카드 4개 1줄)가 한 화면에 바로 보이도록 스크롤한다.
+            if ((tabId === 'tab-charts' || tabId === 'tab-club-history')
+                && typeof window.matchMedia === 'function'
+                && window.matchMedia('(min-width: 1600px) and (min-height: 820px)').matches) {
+                requestAnimationFrame(() => {
+                    const target = tabId === 'tab-charts'
+                        ? document.querySelector('#tab-charts .charts-dashboard-shell')
+                        : document.querySelector('#tab-club-history > .card');
+                    if (!target) return;
+                    const top = target.getBoundingClientRect().top + window.scrollY - 12;
+                    window.scrollTo({ top: Math.max(0, top), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+                });
+            }
         });
     });
 
@@ -7826,6 +7840,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.335', date: '2026.11.06', items: ['와이드 화면(1920x1080/1280) 대응: 차트 탭 선택 시 모든 차트(월별 지출, 소진율, 카테고리 비중, 정산 횟수, 실참석 인원, 자부담 추이, 최근 알림)가 스크롤 없이 한눈에 파노라마 전개', '클럽별 예산 소진율 모션 원형 링 게이지 개편: 클럽 고유 색상 링 + 위험도 % 텍스트 + 진입 애니메이션', '클럽별 정산이력 4분할 그리드 뷰: 1920 해상도에서 4개 클럽씩 나란히 표시되고 스크롤 시 추가 클럽 확인', '카테고리 도넛 차트 중앙 총 비용 표시 및 KPI 카드 카운트업 모션 적용'] },
         { ver: '1.6.334', date: '2026.10.22', items: ['이전 전체 작업 로그 DB 초기화 완료 및 전체 작업 로그 모달에 관리자 전용 [ 🗑️ 로그 비우기 ] 기능 탑재', '앞으로 수정·입력·삭제되는 모든 작업 데이터가 최신순으로 정확히 누적 기록되도록 보장'] },
         { ver: '1.6.333', date: '2026.10.22', items: ['감사 로그(작업 기록) 조회 시 Firebase DataSnapshot 순회 중단 버그 수정 (화살표 함수의 push 반환값으로 인한 조기 break 방지)', '클럽 예산 수정 등 최신 작업 이력이 관리자 감사 로그 모달에 정상적으로 누적·표시되도록 개선'] },
         { ver: '1.6.332', date: '2026.10.22', items: ['정산 이력(사용자) 및 클럽별 정산이력(관리자) 탭 헤더의 중복 조회 연도 드롭다운 제거 및 상단 [ 2026 ▾ ] 전역 연도 선택기로 일원화', '상단 조회 연도 변경 시 대시보드 차트뿐만 아니라 관리자 클럽별 정산이력 및 사용자 정산이력까지 해당 연도로 즉시 동기화'] },
@@ -9202,6 +9217,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const usedBudget = priorUsed + filtered.reduce((sum, e) => sum + (e.finalSupportAmount || 0), 0);
         const remaining = totalBudget - usedBudget;
 
+        // 진행 중인 KPI 카운트업이 있으면 중단하고 아래 확정값을 즉시 표시 (값 덮어쓰기 방지)
+        [totalBudgetEl, usedBudgetEl, remainingBudgetEl, countEl].forEach(cancelCountUp);
+        totalBudgetEl.dataset.countValue = String(totalBudget);
+        usedBudgetEl.dataset.countValue = String(usedBudget);
+        remainingBudgetEl.dataset.countValue = String(remaining);
+        if (countEl) countEl.dataset.countValue = String(filtered.length);
         totalBudgetEl.textContent = SettlementCalculator.formatCurrency(totalBudget);
         usedBudgetEl.textContent = SettlementCalculator.formatCurrency(usedBudget);
         remainingBudgetEl.textContent = SettlementCalculator.formatCurrency(remaining);
@@ -9837,6 +9858,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let clubUsageChartInstance = null;
 
+    // ── 모션 카운트업 (표시 전용) ─────────────────────────────────────────
+    // 숫자를 0 → 목표값으로 부드럽게 올린 뒤, 마지막 프레임에서 반드시 formatter(target)
+    // 원본 문자열로 확정한다. 진행 중 같은 요소에 값이 다시 기록되면(token 변경) 즉시 중단한다.
+    function animateCountUp(el, target, formatter, duration = 900) {
+        if (!el || !Number.isFinite(target)) return;
+        const token = (el._countUpToken = (el._countUpToken || 0) + 1);
+        const finalText = formatter(target);
+        if (prefersReducedChartMotion() || target === 0) { el.textContent = finalText; return; }
+        const start = performance.now();
+        const step = (now) => {
+            if (el._countUpToken !== token) return;
+            const p = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - p, 3);
+            if (p >= 1) { el.textContent = finalText; return; }
+            el.textContent = formatter(Math.round(target * eased));
+            requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+
+    function cancelCountUp(el) {
+        if (el) el._countUpToken = (el._countUpToken || 0) + 1;
+    }
+
+    // ── 클럽별 예산 소진율 원형 게이지 (v1.6.335) ─────────────────────────
+    // 링 색 = 클럽 고유색(getClubColorMap), % 숫자색 = getUsageRiskColor (안전/주의/초과).
+    function renderClubUsageRings(host, clubData, clubColorMap, animateEntrance, onSelect) {
+        host.innerHTML = '';
+        if (!clubData.length) {
+            host.innerHTML = '<div class="usage-ring-empty">표시할 클럽이 없습니다.</div>';
+            return;
+        }
+        const R = 42;
+        const C = 2 * Math.PI * R;
+        const animate = animateEntrance && !prefersReducedChartMotion();
+        clubData.forEach((d, idx) => {
+            const color = clubColorMap[d.name] || stableClubHexColor(d.name);
+            const riskColor = getUsageRiskColor(d.ratio);
+            const fill = Math.min(100, Math.max(0, d.ratio));
+            const targetOffset = C * (1 - fill / 100);
+            const remaining = d.budget - d.usedTotal;
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'usage-ring-item' + (d.ratio >= 100 ? ' is-over' : d.ratio >= 80 ? ' is-warn' : '');
+            item.style.setProperty('--ring-color', color);
+            item.style.setProperty('--ring-risk', riskColor);
+            item.style.setProperty('--ring-delay', `${Math.min(idx * 60, 540)}ms`);
+            item.title = `${d.name}\n소진율: ${d.ratio}%\n예산: ${SettlementCalculator.formatCurrency(d.budget)}\n사용: ${SettlementCalculator.formatCurrency(d.usedTotal)}\n잔여: ${SettlementCalculator.formatCurrency(Math.max(0, remaining))}`;
+            item.setAttribute('aria-label', `${d.name} 예산 소진율 ${d.ratio}%`);
+            item.innerHTML = `
+                <span class="usage-ring-svg-wrap">
+                    <svg viewBox="0 0 100 100" aria-hidden="true">
+                        <circle class="usage-ring-track" cx="50" cy="50" r="${R}"></circle>
+                        <circle class="usage-ring-bar" cx="50" cy="50" r="${R}"
+                            stroke-dasharray="${C.toFixed(2)}"
+                            stroke-dashoffset="${(animate ? C : targetOffset).toFixed(2)}"></circle>
+                    </svg>
+                    <span class="usage-ring-pct"></span>
+                </span>
+                <span class="usage-ring-name"></span>
+                <span class="usage-ring-sub"></span>`;
+            item.querySelector('.usage-ring-name').textContent = d.name;
+            item.querySelector('.usage-ring-sub').textContent = `잔여 ${SettlementCalculator.formatCurrency(Math.max(0, remaining))}`;
+            const pctEl = item.querySelector('.usage-ring-pct');
+            const formatPct = (v) => `${Math.round(v * 10) / 10}%`;
+            item.addEventListener('click', () => onSelect && onSelect(d.name));
+            host.appendChild(item);
+            if (animate) {
+                item.classList.add('is-animating');
+                const bar = item.querySelector('.usage-ring-bar');
+                pctEl.textContent = '0%';
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    bar.style.strokeDashoffset = targetOffset.toFixed(2);
+                }));
+                // 소수점 1자리 % 카운트업 — 최종 프레임은 d.ratio 원본값으로 확정
+                const token = (pctEl._countUpToken = (pctEl._countUpToken || 0) + 1);
+                const start = performance.now() + Math.min(idx * 60, 540);
+                const duration = 1100;
+                const step = (now) => {
+                    if (pctEl._countUpToken !== token) return;
+                    const p = Math.max(0, Math.min(1, (now - start) / duration));
+                    if (p >= 1) { pctEl.textContent = `${d.ratio}%`; return; }
+                    pctEl.textContent = formatPct(d.ratio * (1 - Math.pow(1 - p, 3)));
+                    requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+            } else {
+                pctEl.textContent = `${d.ratio}%`;
+            }
+        });
+    }
+
     // ── 클럽별 예산 소진율 (가로 막대, 공통 필터 사용) ────────────────────
     function renderClubUsageChart(historyList, animateEntrance = false, targetYear) {
         const canvas = document.getElementById('club-usage-chart');
@@ -9896,7 +10009,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const clubColorMap = getClubColorMap();
         const labels = clubData.map(d => d.name);
         const usageRatio = clubData.map(d => d.ratio);
-        if (clubUsageChartInstance) clubUsageChartInstance.destroy();
+        if (clubUsageChartInstance) { clubUsageChartInstance.destroy(); clubUsageChartInstance = null; }
+
+        // v1.6.335: 가로 막대 → 모션 원형 게이지(링) 그리드로 교체.
+        // 위 clubData 계산(사용액·예산·소진율)은 그대로 두고 표시 방식만 바꾼다.
+        const ringHost = document.getElementById('club-usage-rings');
+        if (ringHost) {
+            canvas.style.display = 'none';
+            renderClubUsageRings(ringHost, clubData, clubColorMap, animateEntrance, (clubName) => {
+                const clubEntries = (historyList || []).filter(entry =>
+                    (effectiveYear === null || getHistoryEntryYear(entry) === effectiveYear)
+                    && (entry.clubName || '기본 클럽') === clubName
+                );
+                openClubUsageSummaryModal(clubName, clubEntries, effectiveYear || '전체');
+            });
+            return;
+        }
         if (labels.length === 0) return;
 
         clubUsageChartInstance = new Chart(canvas.getContext('2d'), {
@@ -9987,8 +10115,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (eventCost + facilityCost + prizeCost === 0) return;
 
         const total = eventCost + facilityCost + prizeCost;
+        // v1.6.335: 도넛 중앙에 총 비용 표시 (표시 전용 인라인 플러그인)
+        const doughnutCenterTotalPlugin = {
+            id: 'doughnutCenterTotal',
+            afterDatasetsDraw(chart) {
+                const meta = chart.getDatasetMeta(0);
+                const arc = meta && meta.data && meta.data[0];
+                if (!arc) return;
+                const { x, y, innerRadius } = arc.getProps(['x', 'y', 'innerRadius'], true);
+                if (!Number.isFinite(x) || !Number.isFinite(y) || !(innerRadius > 24)) return;
+                const colors = getChartThemeColors();
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const amountSize = Math.max(11, Math.min(18, innerRadius * 0.26));
+                ctx.fillStyle = colors.secondary;
+                ctx.font = `600 ${Math.max(10, amountSize * 0.62)}px Pretendard, 'Noto Sans KR', sans-serif`;
+                ctx.fillText('총 비용', x, y - amountSize * 0.72);
+                ctx.fillStyle = colors.primary;
+                ctx.font = `800 ${amountSize}px Pretendard, 'Noto Sans KR', sans-serif`;
+                ctx.fillText(SettlementCalculator.formatCurrency(total), x, y + amountSize * 0.42);
+                ctx.restore();
+            }
+        };
         categoryPieChartInstance = new Chart(canvas.getContext('2d'), {
             type: 'doughnut',
+            plugins: [doughnutCenterTotalPlugin],
             data: {
                 labels: ['행사비', '시설·장비', '상품비'],
                 datasets: [{
@@ -10976,6 +11129,19 @@ document.addEventListener('DOMContentLoaded', () => {
         ensureChartPluginsRegistered();
         const animateEntrance = allowEntranceAnimation ? consumeChartEntranceAnimation() : false;
         updateChartsBudgetStats(historyList, targetYear);
+        if (animateEntrance) {
+            // KPI 숫자 카운트업 (표시 전용 — 마지막 프레임은 updateChartsBudgetStats가 쓴 원본값으로 확정)
+            ['charts-total-budget', 'charts-used-budget', 'charts-remaining-budget'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.dataset.countValue !== undefined) {
+                    animateCountUp(el, Number(el.dataset.countValue), v => SettlementCalculator.formatCurrency(v));
+                }
+            });
+            const countKpiEl = document.getElementById('charts-total-count');
+            if (countKpiEl && countKpiEl.dataset.countValue !== undefined) {
+                animateCountUp(countKpiEl, Number(countKpiEl.dataset.countValue), v => `${v}건`, 700);
+            }
+        }
         renderOverallMonthlyChart(yearFilteredList, animateEntrance);
         renderClubUsageChart(historyList, animateEntrance, targetYear);
         renderCategoryPieChart(yearFilteredList, animateEntrance);

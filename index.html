@@ -675,17 +675,17 @@
                         <div class="card-body"><div class="chart-canvas-wrap chart-canvas-primary"><canvas id="overall-monthly-chart"></canvas></div></div>
                     </article>
 
-                    <article class="card chart-card-glow">
-                        <div class="card-header"><span class="card-icon">🎯</span><div><h2>클럽별 예산 소진율</h2><div class="chart-subtitle">클럽 고유 색상으로 연간 사용 비율 비교</div></div></div>
-                        <div class="card-body"><div class="chart-canvas-wrap"><canvas id="club-usage-chart"></canvas></div></div>
+                    <article class="card chart-card-glow chart-usage-card">
+                        <div class="card-header"><span class="card-icon">🎯</span><div><h2>클럽별 예산 소진율</h2><div class="chart-subtitle">링 = 클럽 고유색 · % 색 = 안전/주의/초과 · 누르면 사용 요약</div></div></div>
+                        <div class="card-body"><div class="chart-canvas-wrap usage-ring-wrap"><canvas id="club-usage-chart" style="display:none"></canvas><div id="club-usage-rings" class="usage-ring-grid" aria-label="클럽별 예산 소진율"></div></div></div>
                     </article>
 
-                    <article class="card chart-card-glow">
+                    <article class="card chart-card-glow chart-category-card">
                         <div class="card-header"><span class="card-icon">🥧</span><div><h2>카테고리별 비용 비중</h2><div class="chart-subtitle">행사비 · 시설비 · 상품비 비율</div></div></div>
                         <div class="card-body"><div class="chart-canvas-wrap"><canvas id="category-pie-chart"></canvas></div></div>
                     </article>
 
-                    <article class="card chart-card-glow chart-span-wide">
+                    <article class="card chart-card-glow chart-span-wide chart-activity-card">
                         <div class="card-header"><span class="card-icon">🏃</span><div><h2>클럽별 정산 횟수</h2><div class="chart-subtitle">올해 활동량 · 막대를 누르면 사용 요약을 확인합니다</div></div></div>
                         <div class="card-body"><div class="chart-canvas-wrap"><canvas id="club-activity-chart"></canvas></div></div>
                     </article>
@@ -695,7 +695,7 @@
                         <div class="card-body"><div id="recent-settlement-list" class="recent-settlement-list" aria-live="polite"></div></div>
                     </aside>
 
-                    <article class="card chart-card-glow chart-span-full">
+                    <article class="card chart-card-glow chart-span-full chart-attendees-card">
                         <div class="card-header chart-header-with-cartoon">
                             <div class="chart-header-title-wrap">
                                 <span class="card-icon">👥</span>
@@ -708,7 +708,7 @@
                         </div>
                     </article>
 
-                    <article class="card chart-card-glow chart-span-full">
+                    <article class="card chart-card-glow chart-span-full chart-selfpay-card">
                         <div class="card-header"><span class="card-icon">📐</span><div><h2>자부담 / 회사지원금 추이</h2><div class="chart-subtitle">월별 회사 지원금과 참석자 자부담 변화</div></div></div>
                         <div class="card-body">
                             <div class="trend-total-summary" aria-label="회사 지원금과 자부담 비용 누적 요약">
