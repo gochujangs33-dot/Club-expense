@@ -731,27 +731,6 @@
                     <button type="button" id="admin-audit-log-btn" class="btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(56,189,248,0.35); background:rgba(14,165,233,0.12); color:#7dd3fc; border-radius:8px; cursor:pointer;">📜 로그 기록</button>
                 </div>
             </div>
-            <section class="admin-start-guide" aria-labelledby="admin-start-guide-title">
-                <div class="admin-start-guide-heading">
-                    <div>
-                        <span class="admin-start-guide-eyebrow">처음 관리자라면</span>
-                        <h2 id="admin-start-guide-title">무엇부터 할까요?</h2>
-                        <p>필요한 항목을 눌러 바로 열고 설정할 수 있습니다.</p>
-                    </div>
-                    <span class="admin-start-guide-icon" aria-hidden="true">🧭</span>
-                </div>
-                <div class="admin-start-actions">
-                    <button type="button" class="admin-start-action" data-admin-action="club" data-admin-target="club-management-card" aria-controls="club-management-card" aria-expanded="false">
-                        <span class="admin-start-step">1</span><span><strong>클럽·예산 설정</strong><small id="admin-start-club-status">클럽을 먼저 등록해 주세요</small></span><span class="admin-start-toggle-label">열기</span>
-                    </button>
-                    <button type="button" class="admin-start-action" data-admin-action="rules" data-admin-target="rules-management-card" aria-controls="rules-management-card" aria-expanded="false">
-                        <span class="admin-start-step">2</span><span><strong>정산 기준 확인</strong><small>모든 클럽에 공통 적용됩니다</small></span><span class="admin-start-toggle-label">열기</span>
-                    </button>
-                    <button type="button" class="admin-start-action" data-admin-action="charts">
-                        <span class="admin-start-step">3</span><span><strong>정산 현황 확인</strong><small>이력과 차트에서 운영 현황을 봅니다</small></span><span class="admin-start-arrow">→</span>
-                    </button>
-                </div>
-            </section>
             <div class="admin-stats-grid">
                 <div class="stat-card">
                     <span class="stat-label" data-i18n="stat.total_users">👥 총 등록 가입자</span>
@@ -771,139 +750,167 @@
                 </div>
             </div>
 
-            <div class="card" id="rules-management-card">
-                <div class="card-header">
-                    <span class="card-icon">⚙️</span>
-                    <h2 data-i18n="admin.rules_title">정산 구간 및 비율 설정 (전체 클럽 공통 적용)</h2>
-                    <button type="button" class="card-collapse-btn" data-card="rules-management-card">▾</button>
-                </div>
-                <div class="card-body">
-                    <div class="settings-grid">
-                        <div class="input-group">
-                            <label for="admin-setting-limit1" data-i18n="admin.rule_limit1">가. 지원 한도 (원 이하 자부담 0%)</label>
-                            <input type="text" inputmode="numeric" id="admin-setting-limit1" value="30000">
-                        </div>
-                        <div class="settings-row">
-                            <div class="input-group">
-                                <label for="admin-setting-limit2" data-i18n="admin.rule_limit2">나. 구간 한도 (원)</label>
-                                <input type="text" inputmode="numeric" id="admin-setting-limit2" value="60000">
+            <div class="admin-dashboard-layout">
+                <div class="admin-col-left">
+                    <section class="admin-start-guide" aria-labelledby="admin-start-guide-title">
+                        <div class="admin-start-guide-heading">
+                            <div>
+                                <span class="admin-start-guide-eyebrow">처음 관리자라면</span>
+                                <h2 id="admin-start-guide-title">무엇부터 할까요?</h2>
+                                <p>필요한 항목을 눌러 바로 열고 설정할 수 있습니다.</p>
                             </div>
-                            <div class="input-group">
-                                <label for="admin-setting-rate2" data-i18n="admin.rule_rate2">나. 자부담 비율 (%)</label>
-                                <input type="number" id="admin-setting-rate2" min="0" max="100" step="1" value="20">
-                            </div>
+                            <span class="admin-start-guide-icon" aria-hidden="true">🧭</span>
                         </div>
-                        <div class="settings-row">
-                            <div class="input-group">
-                                <label for="admin-setting-limit3" data-i18n="admin.rule_limit3">다. 구간 한도 (원)</label>
-                                <input type="text" inputmode="numeric" id="admin-setting-limit3" value="120000">
-                            </div>
-                            <div class="input-group">
-                                <label for="admin-setting-rate3" data-i18n="admin.rule_rate3">다. 자부담 비율 (%)</label>
-                                <input type="number" id="admin-setting-rate3" min="0" max="100" step="1" value="40">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label for="admin-setting-deduction4" data-i18n="admin.rule_deduct4">라. 초과 시 자부담 공제액 (원)</label>
-                            <input type="text" inputmode="numeric" id="admin-setting-deduction4" value="85000">
-                        </div>
-                        <div class="input-group" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid rgba(255,255,255,0.08);">
-                            <label for="admin-setting-prize-limit">🎁 상품비 연간 최대 사용 금액 (원)</label>
-                            <input type="text" inputmode="numeric" id="admin-setting-prize-limit" value="500000">
-                        </div>
-                        <div class="input-group" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid rgba(255,255,255,0.08);">
-                            <label for="admin-setting-facility-limit">🏢 시설·장비 이용료 이사진 승인 시 법인카드 최대 한도 (원)</label>
-                            <input type="text" inputmode="numeric" id="admin-setting-facility-limit" value="85000">
-                        </div>
-                    </div>
-                    <div class="settings-actions">
-                        <button id="admin-save-rules-btn" class="btn-primary-sm" data-i18n="admin.save_rules">정산 비율 저장 (일괄 적용)</button>
-                        <button id="admin-reset-rules-btn" class="btn-text" data-i18n="admin.reset_rules">기본값 복원</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" id="club-management-card">
-                <div class="card-header">
-                    <span class="card-icon">🏷️</span>
-                    <h2 data-i18n="admin.club_mgmt_title">클럽 관리</h2>
-                    <button type="button" class="card-collapse-btn" data-card="club-management-card">▾</button>
-                </div>
-                <div class="card-body">
-                    <div class="input-row" style="align-items:flex-end;">
-                        <div class="input-group flex-2">
-                            <label for="club-total-budget-input" data-i18n="admin.total_club_budget_label">올해 사용 가능한 총 클럽비용 (원)</label>
-                            <div style="display:flex; gap:0.4rem;">
-                                <input type="text" inputmode="numeric" id="club-total-budget-input" placeholder="예: 50,000,000" style="flex:1; min-width:0;">
-                                <button type="button" id="save-club-total-budget-btn" class="btn-primary-sm" data-i18n="btn.save">저장</button>
-                            </div>
-                            <small id="club-total-budget-status" class="input-hint" data-i18n="state.saved_check" style="display:none; color: var(--color-secondary);">✔️ 저장되었습니다.</small>
-                        </div>
-                        <div class="input-group flex-1" style="margin:0;">
-                            <span id="club-budget-summary-label" style="font-size:0.82rem; color:var(--text-secondary);" data-i18n="label.allocated_unallocated">배정 합계 / 미배정</span>
-                            <strong id="club-budget-summary" style="display:block; font-size:0.95rem; color:var(--color-secondary);">0원 / 0원</strong>
-                        </div>
-                    </div>
-                    <div class="divider"></div>
-                    <form id="club-form">
-                        <div class="input-row">
-                            <div class="input-group flex-2">
-                                <label for="club-name-form-input" data-i18n="admin.club_name_label">클럽명</label>
-                                <input type="text" id="club-name-form-input" data-i18n-ph="ph.club_name" placeholder="예: 동탄 All balls" required autocomplete="off">
-                            </div>
-                            <div class="input-group flex-1">
-                                <label for="club-budget-form-input" data-i18n="admin.club_budget_label">배정 예산 (원)</label>
-                                <input type="text" inputmode="numeric" id="club-budget-form-input" placeholder="예: 5,000,000" required>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" id="add-club-btn" class="btn-primary" data-i18n="btn.add_club" style="flex:1;">
-                                ➕ 클럽 추가
+                        <div class="admin-start-actions">
+                            <button type="button" class="admin-start-action" data-admin-action="club" data-admin-target="club-management-card" aria-controls="club-management-card" aria-expanded="false">
+                                <span class="admin-start-step">1</span><span><strong>클럽·예산 설정</strong><small id="admin-start-club-status">클럽을 먼저 등록해 주세요</small></span><span class="admin-start-toggle-label">열기</span>
                             </button>
-                            <button type="button" id="cancel-edit-club-btn" class="btn-secondary hidden" data-i18n="btn.cancel_edit" style="flex:1;">수정 취소</button>
+                            <button type="button" class="admin-start-action" data-admin-action="rules" data-admin-target="rules-management-card" aria-controls="rules-management-card" aria-expanded="false">
+                                <span class="admin-start-step">2</span><span><strong>정산 기준 확인</strong><small>모든 클럽에 공통 적용됩니다</small></span><span class="admin-start-toggle-label">열기</span>
+                            </button>
+                            <button type="button" class="admin-start-action" data-admin-action="charts">
+                                <span class="admin-start-step">3</span><span><strong>정산 현황 확인</strong><small>이력과 차트에서 운영 현황을 봅니다</small></span><span class="admin-start-arrow">→</span>
+                            </button>
                         </div>
-                    </form>
+                    </section>
 
-                    <div id="club-table-wrapper" class="club-table-wrapper">
-                        <div class="club-table-content">
-                            <div id="club-list-header" class="club-list-header">
-                                <div class="club-th club-th-name">클럽명</div>
-                                <div class="club-th club-th-budget">배정예산</div>
-                                <div class="club-th club-th-prize">상품비(한도 50만원)</div>
-                                <div class="club-th club-th-remaining">잔여 예산</div>
-                                <div class="club-th club-th-add">추가 배정</div>
-                                <div class="club-th club-th-overlimit">85k</div>
-                                <div class="club-th club-th-actions">관리</div>
+                    <div class="card" id="rules-management-card">
+                        <div class="card-header">
+                            <span class="card-icon">⚙️</span>
+                            <h2 data-i18n="admin.rules_title">정산 구간 및 비율 설정 (전체 클럽 공통 적용)</h2>
+                            <button type="button" class="card-collapse-btn" data-card="rules-management-card">▾</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="settings-grid">
+                                <div class="input-group">
+                                    <label for="admin-setting-limit1" data-i18n="admin.rule_limit1">가. 지원 한도 (원 이하 자부담 0%)</label>
+                                    <input type="text" inputmode="numeric" id="admin-setting-limit1" value="30000">
+                                </div>
+                                <div class="settings-row">
+                                    <div class="input-group">
+                                        <label for="admin-setting-limit2" data-i18n="admin.rule_limit2">나. 구간 한도 (원)</label>
+                                        <input type="text" inputmode="numeric" id="admin-setting-limit2" value="60000">
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="admin-setting-rate2" data-i18n="admin.rule_rate2">나. 자부담 비율 (%)</label>
+                                        <input type="number" id="admin-setting-rate2" min="0" max="100" step="1" value="20">
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="input-group">
+                                        <label for="admin-setting-limit3" data-i18n="admin.rule_limit3">다. 구간 한도 (원)</label>
+                                        <input type="text" inputmode="numeric" id="admin-setting-limit3" value="120000">
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="admin-setting-rate3" data-i18n="admin.rule_rate3">다. 자부담 비율 (%)</label>
+                                        <input type="number" id="admin-setting-rate3" min="0" max="100" step="1" value="40">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="admin-setting-deduction4" data-i18n="admin.rule_deduct4">라. 초과 시 자부담 공제액 (원)</label>
+                                    <input type="text" inputmode="numeric" id="admin-setting-deduction4" value="85000">
+                                </div>
+                                <div class="input-group" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid rgba(255,255,255,0.08);">
+                                    <label for="admin-setting-prize-limit">🎁 상품비 연간 최대 사용 금액 (원)</label>
+                                    <input type="text" inputmode="numeric" id="admin-setting-prize-limit" value="500000">
+                                </div>
+                                <div class="input-group" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid rgba(255,255,255,0.08);">
+                                    <label for="admin-setting-facility-limit">🏢 시설·장비 이용료 이사진 승인 시 법인카드 최대 한도 (원)</label>
+                                    <input type="text" inputmode="numeric" id="admin-setting-facility-limit" value="85000">
+                                </div>
                             </div>
-                            <div id="club-list-container" class="scroll-y" style="max-height: 480px; display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; -webkit-overflow-scrolling:touch;">
-                                <!-- Populated dynamically -->
+                            <div class="settings-actions">
+                                <button id="admin-save-rules-btn" class="btn-primary-sm" data-i18n="admin.save_rules">정산 비율 저장 (일괄 적용)</button>
+                                <button id="admin-reset-rules-btn" class="btn-text" data-i18n="admin.reset_rules">기본값 복원</button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="card" id="users-management-card">
-                <div class="card-header">
-                    <span class="card-icon">👥</span>
-                    <h2 data-i18n="admin.user_mgmt_title">가입 회원 관리 (이름 / PIN 수정)</h2>
-                    <button type="button" class="card-collapse-btn" data-card="users-management-card">▾</button>
-                </div>
-                <div class="card-body scroll-y" style="max-height: 400px; padding: 0;">
-                    <table class="admin-table admin-users-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="th.name">이름</th>
-                                <th data-i18n="th.pin">6자리 PIN</th>
-                                <th data-i18n="th.join_date">가입일</th>
-                                <th>최근 접속</th>
-                                <th data-i18n="th.manage">관리</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-users-list">
-                            <!-- Populated dynamically -->
-                        </tbody>
-                    </table>
+                <div class="admin-col-right">
+                    <div class="card" id="club-management-card">
+                        <div class="card-header">
+                            <span class="card-icon">🏷️</span>
+                            <h2 data-i18n="admin.club_mgmt_title">클럽 관리</h2>
+                            <button type="button" class="card-collapse-btn" data-card="club-management-card">▾</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="input-row" style="align-items:flex-end;">
+                                <div class="input-group flex-2">
+                                    <label for="club-total-budget-input" data-i18n="admin.total_club_budget_label">올해 사용 가능한 총 클럽비용 (원)</label>
+                                    <div style="display:flex; gap:0.4rem;">
+                                        <input type="text" inputmode="numeric" id="club-total-budget-input" placeholder="예: 50,000,000" style="flex:1; min-width:0;">
+                                        <button type="button" id="save-club-total-budget-btn" class="btn-primary-sm" data-i18n="btn.save">저장</button>
+                                    </div>
+                                    <small id="club-total-budget-status" class="input-hint" data-i18n="state.saved_check" style="display:none; color: var(--color-secondary);">✔️ 저장되었습니다.</small>
+                                </div>
+                                <div class="input-group flex-1" style="margin:0;">
+                                    <span id="club-budget-summary-label" style="font-size:0.82rem; color:var(--text-secondary);" data-i18n="label.allocated_unallocated">배정 합계 / 미배정</span>
+                                    <strong id="club-budget-summary" style="display:block; font-size:0.95rem; color:var(--color-secondary);">0원 / 0원</strong>
+                                </div>
+                            </div>
+                            <div class="divider"></div>
+                            <form id="club-form">
+                                <div class="input-row">
+                                    <div class="input-group flex-2">
+                                        <label for="club-name-form-input" data-i18n="admin.club_name_label">클럽명</label>
+                                        <input type="text" id="club-name-form-input" data-i18n-ph="ph.club_name" placeholder="예: 동탄 All balls" required autocomplete="off">
+                                    </div>
+                                    <div class="input-group flex-1">
+                                        <label for="club-budget-form-input" data-i18n="admin.club_budget_label">배정 예산 (원)</label>
+                                        <input type="text" inputmode="numeric" id="club-budget-form-input" placeholder="예: 5,000,000" required>
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" id="add-club-btn" class="btn-primary" data-i18n="btn.add_club" style="flex:1;">
+                                        ➕ 클럽 추가
+                                    </button>
+                                    <button type="button" id="cancel-edit-club-btn" class="btn-secondary hidden" data-i18n="btn.cancel_edit" style="flex:1;">수정 취소</button>
+                                </div>
+                            </form>
+
+                            <div id="club-table-wrapper" class="club-table-wrapper">
+                                <div class="club-table-content">
+                                    <div id="club-list-header" class="club-list-header">
+                                        <div class="club-th club-th-name">클럽명</div>
+                                        <div class="club-th club-th-budget">배정예산</div>
+                                        <div class="club-th club-th-prize">상품비(한도 50만원)</div>
+                                        <div class="club-th club-th-remaining">잔여 예산</div>
+                                        <div class="club-th club-th-add">추가 배정</div>
+                                        <div class="club-th club-th-overlimit">85k</div>
+                                        <div class="club-th club-th-actions">관리</div>
+                                    </div>
+                                    <div id="club-list-container" class="scroll-y" style="max-height: 480px; display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+                                        <!-- Populated dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" id="users-management-card">
+                        <div class="card-header">
+                            <span class="card-icon">👥</span>
+                            <h2 data-i18n="admin.user_mgmt_title">가입 회원 관리 (이름 / PIN 수정)</h2>
+                            <button type="button" class="card-collapse-btn" data-card="users-management-card">▾</button>
+                        </div>
+                        <div class="card-body scroll-y" style="max-height: 400px; padding: 0;">
+                            <table class="admin-table admin-users-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="th.name">이름</th>
+                                        <th data-i18n="th.pin">6자리 PIN</th>
+                                        <th data-i18n="th.join_date">가입일</th>
+                                        <th>최근 접속</th>
+                                        <th data-i18n="th.manage">관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-users-list">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
