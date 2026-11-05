@@ -5199,7 +5199,8 @@ html[data-app-theme="light"] #dedup-clubs-btn {
    ══════════════════════════════════════════════════════════════════════ */
 @media (min-width: 1600px) {
     .app-container:has(#tab-charts:not(.hidden)),
-    .app-container:has(#tab-club-history:not(.hidden)) {
+    .app-container:has(#tab-club-history:not(.hidden)),
+    .app-container:has(#tab-admin:not(.hidden)) {
         max-width: min(1840px, calc(100vw - 3rem));
     }
 
@@ -5263,11 +5264,11 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     #tab-charts .trend-total-card span { font-size: 0.7rem; }
     #tab-charts .trend-total-card strong { margin: 0; font-size: 0.92rem; }
 
-    /* ── 클럽별 정산이력: 4열 클럽 카드 ── */
+    /* ── 클럽별 정산이력: 4분할(2열 x 2행 = 좌상/우상/좌하/우하 4개 클럽) ── */
     #admin-history-container {
         display: grid !important;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.9rem !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.15rem !important;
         align-items: start;
     }
     #admin-history-container > .empty-state { grid-column: 1 / -1; }
@@ -5275,93 +5276,205 @@ html[data-app-theme="light"] #dedup-clubs-btn {
         display: flex;
         flex-direction: column;
         min-width: 0;
-        max-height: max(460px, calc(100vh - 11rem));
-        padding: 0.8rem;
+        padding: 1rem 1.15rem;
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.22);
     }
-    #admin-history-container .admin-inline-club-usage-header { margin-bottom: 0.6rem; padding-bottom: 0.55rem; }
-    #admin-history-container .admin-history-club-heading strong { font-size: 0.95rem; }
-    #admin-history-container .inline-club-usage-summary { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-    #admin-history-container .inline-club-usage-summary .club-usage-summary-totals {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.4rem;
-        margin-bottom: 0.6rem;
+    html[data-app-theme="light"] #admin-history-container .admin-inline-club-usage-card {
+        background: rgba(255, 255, 255, 0.92);
+        border-color: rgba(148, 163, 184, 0.35);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
     }
-    #admin-history-container .club-usage-total-card { padding: 0.4rem 0.55rem; }
-    #admin-history-container .club-usage-total-card:last-child { grid-column: 1 / -1; }
-    #admin-history-container .club-usage-total-card span { font-size: 0.66rem; }
-    #admin-history-container .club-usage-total-card strong { margin-top: 0.1rem; font-size: 0.84rem; }
-
-    #admin-history-container .inline-club-usage-table-wrap {
-        flex: 1 1 auto;
-        min-height: 0;
-        max-height: none;
-        overflow-x: hidden;
-        overflow-y: auto;
-        border: 0;
-        border-radius: 0;
-        scrollbar-width: thin;
+    #admin-history-container .admin-inline-club-usage-header {
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.65rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
-    #admin-history-container .club-usage-summary-table,
-    #admin-history-container .club-usage-summary-table tbody { display: block; width: 100%; min-width: 0; }
-    #admin-history-container .club-usage-summary-table thead { display: none; }
-    #admin-history-container .club-usage-summary-table tbody tr {
-        display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: 0.35rem 0.5rem;
-        margin: 0 0 0.45rem;
-        padding: 0.5rem 0.65rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 10px;
-        background: rgba(15, 23, 42, 0.5);
+    html[data-app-theme="light"] #admin-history-container .admin-inline-club-usage-header {
+        border-bottom-color: rgba(0, 0, 0, 0.08);
     }
-    #admin-history-container .club-usage-summary-table tbody td {
+    #admin-history-container .admin-history-club-heading strong { font-size: 1.05rem; }
+    #admin-history-container .inline-club-usage-summary {
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    /* 상단 요약 지표 카드: 2열 너비(약 900px)에 맞춰 7개 카드가 넉넉하게 1줄 배치 */
+    #admin-history-container .inline-club-usage-summary .club-usage-summary-totals {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.45rem;
+        margin-bottom: 0.75rem;
+    }
+    #admin-history-container .club-usage-total-card {
+        padding: 0.5rem 0.6rem;
         min-width: 0;
-        padding: 0;
-        border: 0;
-        font-size: 0.78rem;
-        text-align: left;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        text-align: center;
     }
-    #admin-history-container .club-usage-summary-table tbody td::before {
-        content: attr(data-label);
+    #admin-history-container .club-usage-total-card span { font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #admin-history-container .club-usage-total-card strong { margin-top: 0.15rem; font-size: 0.86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 정산 목록 테이블: 2열 너비에 맞춰 정상적인 가로 표로 전체 컬럼(10개) 완벽 표시 */
+    #admin-history-container .inline-club-usage-table-wrap {
+        max-height: 270px;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        scrollbar-width: thin;
+    }
+    html[data-app-theme="light"] #admin-history-container .inline-club-usage-table-wrap {
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+    #admin-history-container .club-usage-summary-table {
+        display: table;
+        width: 100%;
+        min-width: 780px;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+    }
+    #admin-history-container .club-usage-summary-table thead {
+        display: table-header-group;
+    }
+    #admin-history-container .club-usage-summary-table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding: 0.55rem 0.6rem;
+        background: #0f172a;
         color: var(--text-secondary);
-        font-size: 0.6rem;
+        font-size: 0.74rem;
         font-weight: 700;
-        line-height: 1.3;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        text-align: right;
+        white-space: nowrap;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-    /* 1행: 날짜(3) · 인원(1) · 총 비용(2) / 2행: 행사비·시설비·상품비 / 3행: 지원금·자부담·엑셀·삭제 */
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(1) { order: 1; grid-column: span 3; }
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(2) { order: 2; grid-column: span 1; align-items: center; }
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(8) { order: 3; grid-column: span 2; align-items: flex-end; font-weight: 800; }
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(3),
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(4),
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(5) { order: 4; grid-column: span 2; }
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(6),
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(7) { order: 5; grid-column: span 2; }
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(9),
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(10) { order: 6; grid-column: span 1; flex-direction: row; align-items: center; justify-content: flex-end; }
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(1)::before,
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(2)::before,
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(9)::before,
-    #admin-history-container .club-usage-summary-table tbody td:nth-child(10)::before { display: none; }
-    #admin-history-container .club-usage-summary-table tbody td.club-usage-summary-empty {
-        grid-column: 1 / -1;
-        align-items: center;
-        padding: 0.6rem 0 !important;
+    html[data-app-theme="light"] #admin-history-container .club-usage-summary-table th {
+        background: #f1f5f9;
+        border-bottom-color: rgba(0, 0, 0, 0.1);
     }
-    #admin-history-container .club-usage-summary-table tbody td.club-usage-summary-empty::before { display: none; }
-    #admin-history-container .club-usage-excel-button,
-    #admin-history-container .club-usage-delete-button { padding: 0.15rem 0.4rem; font-size: 0.7rem; }
+    #admin-history-container .club-usage-summary-table th:first-child { text-align: left; }
+    #admin-history-container .club-usage-summary-table th:nth-child(2) { text-align: center; }
+    #admin-history-container .club-usage-summary-table tbody {
+        display: table-row-group;
+    }
+    #admin-history-container .club-usage-summary-table tbody tr {
+        display: table-row;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        transition: background 0.15s ease;
+    }
     html[data-app-theme="light"] #admin-history-container .club-usage-summary-table tbody tr {
-        background: rgba(255, 255, 255, 0.85);
-        border-color: rgba(100, 116, 139, 0.22);
+        border-bottom-color: rgba(0, 0, 0, 0.06);
+    }
+    #admin-history-container .club-usage-summary-table tbody tr:hover {
+        background: rgba(139, 92, 246, 0.12);
+    }
+    #admin-history-container .club-usage-summary-table tbody td {
+        display: table-cell;
+        padding: 0.5rem 0.6rem;
+        text-align: right;
+        white-space: nowrap;
+        vertical-align: middle;
+        font-size: 0.79rem;
+    }
+    #admin-history-container .club-usage-summary-table tbody td:first-child { text-align: left; }
+    #admin-history-container .club-usage-summary-table tbody td:nth-child(2) { text-align: center; }
+    #admin-history-container .club-usage-summary-table tbody td::before { display: none; }
+    #admin-history-container .club-usage-date-button { font-size: 0.8rem; font-weight: 600; }
+    #admin-history-container .club-usage-creator-badge { font-size: 0.7rem; }
+    #admin-history-container .club-usage-attendee-button { padding: 0.15rem 0.45rem; font-size: 0.75rem; }
+    #admin-history-container .club-usage-excel-button,
+    #admin-history-container .club-usage-delete-button { padding: 0.18rem 0.45rem; font-size: 0.72rem; }
+
+    /* ── 대시보드 관리(tab-admin): 좌우 2분할 와이드 그리드 ── */
+    #tab-admin {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.25fr);
+        gap: 1rem;
+        align-items: start;
+    }
+    #tab-admin > .admin-mode-header-wrap {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        margin-bottom: 0;
+    }
+    #tab-admin > .admin-stats-grid {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        gap: 0.65rem;
+        margin-bottom: 0.25rem;
+    }
+    #tab-admin > .admin-stats-grid .stat-card {
+        padding: 0.65rem 0.95rem;
+    }
+    #tab-admin > .admin-stats-grid .stat-val {
+        margin-top: 0.35rem;
+        font-size: 1.3rem;
+    }
+
+    /* 좌측 열: 처음 관리자라면 가이드 + 정산 구간 및 비율 설정 */
+    #tab-admin > .admin-start-guide {
+        grid-column: 1;
+        grid-row: 3;
+        margin-bottom: 0.85rem;
+        padding: 0.75rem 1rem;
+    }
+    #tab-admin > .admin-start-guide .admin-start-guide-heading h2 { font-size: 1rem; }
+    #tab-admin > .admin-start-guide .admin-start-actions { gap: 0.4rem; margin-top: 0.5rem; }
+    #tab-admin > .admin-start-guide .admin-start-action { padding: 0.4rem 0.65rem; font-size: 0.78rem; }
+
+    #tab-admin > #rules-management-card {
+        grid-column: 1;
+        grid-row: 4;
+        margin-bottom: 0;
+        padding: 0.85rem 1.1rem;
+    }
+    #tab-admin > #rules-management-card .card-header { margin-bottom: 0.65rem; padding-bottom: 0.55rem; }
+    #tab-admin > #rules-management-card .settings-grid { gap: 0.55rem; }
+    #tab-admin > #rules-management-card .input-group { gap: 0.25rem; }
+    #tab-admin > #rules-management-card .input-group label { font-size: 0.74rem; }
+    #tab-admin > #rules-management-card input { padding: 0.38rem 0.6rem; font-size: 0.82rem; }
+    #tab-admin > #rules-management-card .settings-actions { margin-top: 0.6rem; gap: 0.5rem; }
+
+    /* 우측 열: 클럽 관리 + 가입 회원 관리 */
+    #tab-admin > #club-management-card {
+        grid-column: 2;
+        grid-row: 3;
+        margin-bottom: 0.85rem;
+        padding: 0.85rem 1.1rem;
+    }
+    #tab-admin > #club-management-card .card-header { margin-bottom: 0.65rem; padding-bottom: 0.55rem; }
+    #tab-admin > #club-management-card .input-row { gap: 0.65rem; margin-bottom: 0.5rem; }
+    #tab-admin > #club-management-card .input-group { gap: 0.25rem; margin-bottom: 0; }
+    #tab-admin > #club-management-card .input-group label { font-size: 0.74rem; }
+    #tab-admin > #club-management-card input { padding: 0.38rem 0.6rem; font-size: 0.82rem; }
+    #tab-admin > #club-management-card .divider { margin: 0.5rem 0; }
+    #tab-admin > #club-management-card .form-actions { margin-top: 0.45rem; }
+    #tab-admin > #club-management-card .form-actions button { padding: 0.45rem 0.8rem; font-size: 0.82rem; }
+    #tab-admin #club-list-container {
+        max-height: 220px !important;
+        scrollbar-width: thin;
+    }
+    #tab-admin .club-item-row { padding: 0.35rem 0.5rem; font-size: 0.78rem; }
+
+    #tab-admin > #users-management-card {
+        grid-column: 2;
+        grid-row: 4;
+        margin-bottom: 0;
+        padding: 0.85rem 1.1rem;
+    }
+    #tab-admin > #users-management-card .card-header { margin-bottom: 0.65rem; padding-bottom: 0.55rem; }
+    #tab-admin #users-management-card .card-body.scroll-y {
+        max-height: 210px !important;
+        scrollbar-width: thin;
+    }
+    #tab-admin .admin-users-table th,
+    #tab-admin .admin-users-table td {
+        padding: 0.4rem 0.55rem;
+        font-size: 0.76rem;
     }
 }
 
