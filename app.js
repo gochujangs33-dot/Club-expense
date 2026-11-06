@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.337';
+const APP_VERSION      = '1.6.339';
 const APP_VERSION_DATE = '2026.11.06';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6201,7 +6201,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 차트 전체(또는 클럽 카드 4개 1줄)가 한 화면에 바로 보이도록 스크롤한다.
             if ((tabId === 'tab-charts' || tabId === 'tab-club-history')
                 && typeof window.matchMedia === 'function'
-                && window.matchMedia('(min-width: 1600px) and (min-height: 820px)').matches) {
+                && window.matchMedia('(min-width: 1200px) and (min-height: 820px)').matches) {
                 requestAnimationFrame(() => {
                     const target = tabId === 'tab-charts'
                         ? document.querySelector('#tab-charts .charts-dashboard-shell')
@@ -7840,6 +7840,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.339', date: '2026.11.06', items: ['클럽별 정산이력 클럽 선택 드롭다운 추가: 전체 클럽(2x2 그리드)과 특정 클럽 단독 전폭(100%) 뷰 지원', '모바일 최적화 클럽별 요일별 요약 버전 추가: 7개 요일별(월~일) 정산 건수·비율 게이지, 최다 활동 요일 배너, 주중/주말 활동 통계, 요일별 행사 내역 아코디언 제공', '정산이력 탭 상단 필터바 및 개별 클럽 카드별 [📋 상세 내역] / [📅 요일별 요약] 원터치 전환 토글 지원'] },
+        { ver: '1.6.338', date: '2026.11.06', items: ['와이드 레이아웃 적용 범위 확대: 1920 해상도의 다양한 배율(100%, 125%=1536px, 150%=1280px)을 위해 브레이크포인트를 min-width: 1200px로 최적화', '대시보드 관리 좌측 열 여백 최소화: "무엇부터 할까요?" 가이드 바로 밑에 "정산 구간 및 비율 설정" 카드가 10px 간격으로 바짝 밀착되도록 여백 완전 축소'] },
         { ver: '1.6.337', date: '2026.11.06', items: ['대시보드 관리(관리자 모드) 2열 독립 컬럼 구조 전면 개편: 좌측(시작 가이드 바로 밑에 정산 구간·비율 설정 빈틈없이 밀착), 우측(클럽 관리 전체 클럽 및 가입 회원 관리 전체 목록 스크롤 자름 없이 전부 노출)', '카드 접기 연동 개선: 접기 버튼 클릭 시 펼쳐진 내용이 접히고 아래 카드가 위로 즉각 밀착되어 여백 없이 화면에 맞춤 정렬'] },
         { ver: '1.6.336', date: '2026.11.06', items: ['클럽별 정산이력 4분할 뷰 개편: 좌상/우상/좌하/우하 2x2 그리드로 4개 클럽이 한 화면에 배치되고 전체 10개 컬럼(날짜·인원·비용·지원금·자부담·엑셀·삭제)이 온전히 가로 표로 표시되도록 최적화 (스크롤 시 추가 클럽 확인)', '대시보드 관리(관리자 모드) 좌우 2분할 와이드 레이아웃 적용: 좌측(시작 가이드 + 정산 기준 설정), 우측(클럽 관리 + 회원 관리)으로 한눈에 조망 가능'] },
         { ver: '1.6.335', date: '2026.11.06', items: ['와이드 화면(1920x1080/1280) 대응: 차트 탭 선택 시 모든 차트(월별 지출, 소진율, 카테고리 비중, 정산 횟수, 실참석 인원, 자부담 추이, 최근 알림)가 스크롤 없이 한눈에 파노라마 전개', '클럽별 예산 소진율 모션 원형 링 게이지 개편: 클럽 고유 색상 링 + 위험도 % 텍스트 + 진입 애니메이션', '카테고리 도넛 차트 중앙 총 비용 표시 및 KPI 카드 카운트업 모션 적용'] },
@@ -8217,6 +8219,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminUserSelect = document.getElementById('admin-user-select');
     if (adminUserSelect) {
         adminUserSelect.addEventListener('change', () => {
+            renderAdminHistory(lastHistoryList);
+        });
+    }
+
+    const adminClubSelect = document.getElementById('admin-club-select');
+    if (adminClubSelect) {
+        adminClubSelect.addEventListener('change', () => {
+            renderAdminHistory(lastHistoryList);
+        });
+    }
+
+    const detailModeBtn = document.getElementById('admin-history-mode-detail-btn');
+    const weekdayModeBtn = document.getElementById('admin-history-mode-weekday-btn');
+    if (detailModeBtn && weekdayModeBtn) {
+        detailModeBtn.addEventListener('click', () => {
+            adminHistoryViewMode = 'detail';
+            detailModeBtn.classList.add('active');
+            weekdayModeBtn.classList.remove('active');
+            renderAdminHistory(lastHistoryList);
+        });
+        weekdayModeBtn.addEventListener('click', () => {
+            adminHistoryViewMode = 'weekday';
+            weekdayModeBtn.classList.add('active');
+            detailModeBtn.classList.remove('active');
             renderAdminHistory(lastHistoryList);
         });
     }
@@ -10542,6 +10568,224 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.createInlineClubUsageSummary = createInlineClubUsageSummary;
 
+    // 클럽별 정산이력 요일별 요약 (모바일 친화적 뷰)
+    function createInlineClubWeekdaySummary(clubName, entries, year, options = {}) {
+        const { editableDates = false, excelDownloads = false, deleteEntries = false } = options;
+        const data = getClubUsageSummaryData(clubName, entries);
+        const summary = document.createElement('section');
+        summary.className = 'inline-club-usage-summary inline-club-weekday-summary';
+
+        const totalsEl = document.createElement('div');
+        totalsEl.className = 'club-usage-summary-totals';
+        if (data.hasAssignedBudget) {
+            appendClubUsageTotalCard(totalsEl, '클럽 총 예산', data.clubBudget, 'budget');
+            appendClubUsageTotalCard(totalsEl, '현재 잔여 예산', data.clubRemaining, data.clubRemaining < 0 ? 'remaining over-budget' : 'remaining');
+        } else {
+            appendClubUsageTotalCard(totalsEl, '클럽 총 예산', 0, '', () => '미설정');
+            appendClubUsageTotalCard(totalsEl, '현재 잔여 예산', 0, '', () => '미설정');
+        }
+        appendClubUsageTotalCard(totalsEl, '총 참석 인원', data.totals.memberCount, '', value => `${value}명`);
+        appendClubUsageTotalCard(totalsEl, '총 상품비', data.totals.prizeCost, 'prize');
+        appendClubUsageTotalCard(totalsEl, '총 회사 지원금', data.totals.support, 'support');
+        appendClubUsageTotalCard(totalsEl, '총 자부담 비용', data.totals.selfPay, 'selfpay');
+        appendClubUsageTotalCard(totalsEl, '총 비용', data.totals.totalCost, '');
+
+        const DAY_DEFS = [
+            { dayIdx: 1, name: '월', fullName: '월요일', isWeekend: false, color: '#38bdf8' },
+            { dayIdx: 2, name: '화', fullName: '화요일', isWeekend: false, color: '#60a5fa' },
+            { dayIdx: 3, name: '수', fullName: '수요일', isWeekend: false, color: '#818cf8' },
+            { dayIdx: 4, name: '목', fullName: '목요일', isWeekend: false, color: '#a78bfa' },
+            { dayIdx: 5, name: '금', fullName: '금요일', isWeekend: false, color: '#c084fc' },
+            { dayIdx: 6, name: '토', fullName: '토요일', isWeekend: true,  color: '#fb923c' },
+            { dayIdx: 0, name: '일', fullName: '일요일', isWeekend: true,  color: '#f87171' }
+        ];
+
+        const dayMap = {};
+        DAY_DEFS.forEach(d => {
+            dayMap[d.dayIdx] = {
+                ...d,
+                count: 0,
+                attendees: 0,
+                support: 0,
+                selfPay: 0,
+                totalCost: 0,
+                rows: []
+            };
+        });
+
+        data.rows.forEach(row => {
+            const dateStr = formatHistoryUsageDate(row.entry);
+            const parts = (dateStr || '').split('-');
+            let dayIdx = -1;
+            if (parts.length === 3) {
+                const dt = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                if (!isNaN(dt.getTime())) dayIdx = dt.getDay();
+            }
+            if (dayIdx >= 0 && dayMap[dayIdx]) {
+                const target = dayMap[dayIdx];
+                target.count++;
+                target.attendees += row.memberCount;
+                target.support += row.support;
+                target.selfPay += row.selfPay;
+                target.totalCost += row.totalCost;
+                target.rows.push(row);
+            }
+        });
+
+        const totalSettlements = data.rows.length;
+        let maxCount = 0;
+        let maxDays = [];
+        let weekdayCount = 0;
+        let weekendCount = 0;
+
+        DAY_DEFS.forEach(d => {
+            const st = dayMap[d.dayIdx];
+            if (d.isWeekend) weekendCount += st.count;
+            else weekdayCount += st.count;
+            if (st.count > maxCount) {
+                maxCount = st.count;
+                maxDays = [d.fullName];
+            } else if (st.count === maxCount && maxCount > 0) {
+                maxDays.push(d.fullName);
+            }
+        });
+
+        const weekdayWrap = document.createElement('div');
+        weekdayWrap.className = 'club-weekday-summary-wrap';
+
+        const banner = document.createElement('div');
+        banner.className = 'club-weekday-summary-banner';
+        if (totalSettlements > 0 && maxCount > 0) {
+            const maxPct = Math.round((maxCount / totalSettlements) * 100);
+            banner.innerHTML = `
+                <div class="weekday-banner-item">
+                    <span class="weekday-banner-icon">👑</span>
+                    <div>
+                        <div class="weekday-banner-title">최다 활동 요일</div>
+                        <div class="weekday-banner-val"><strong>${maxDays.join(', ')}</strong> (${maxCount}회 · ${maxPct}%)</div>
+                    </div>
+                </div>
+                <div class="weekday-banner-item">
+                    <span class="weekday-banner-icon">📊</span>
+                    <div>
+                        <div class="weekday-banner-title">활동 분포</div>
+                        <div class="weekday-banner-val">주중 ${weekdayCount}회 · 주말 ${weekendCount}회</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            banner.innerHTML = `
+                <div class="weekday-banner-item" style="justify-content:center; width:100%;">
+                    <span class="weekday-banner-icon">ℹ️</span>
+                    <div class="weekday-banner-val">${year}년 정산 이력이 없습니다.</div>
+                </div>
+            `;
+        }
+        weekdayWrap.appendChild(banner);
+
+        const listContainer = document.createElement('div');
+        listContainer.className = 'club-weekday-list';
+
+        DAY_DEFS.forEach(d => {
+            const st = dayMap[d.dayIdx];
+            const pct = totalSettlements > 0 ? Math.round((st.count / totalSettlements) * 100) : 0;
+            const barWidth = maxCount > 0 ? Math.max(pct > 0 ? 8 : 0, Math.round((st.count / maxCount) * 100)) : 0;
+
+            const rowCard = document.createElement('div');
+            rowCard.className = `club-weekday-item ${st.count > 0 ? 'has-events' : 'no-events'}`;
+
+            const headerRow = document.createElement('div');
+            headerRow.className = 'club-weekday-header-row';
+
+            const badgeWrap = document.createElement('div');
+            badgeWrap.className = 'club-weekday-badge-wrap';
+            badgeWrap.innerHTML = `
+                <span class="club-weekday-badge" style="background:${d.isWeekend ? 'rgba(251,146,60,0.18)' : 'rgba(56,189,248,0.18)'}; color:${d.color}; border:1px solid ${d.color}40;">${d.name}</span>
+                <span class="club-weekday-fullname">${d.fullName}</span>
+            `;
+
+            const statsWrap = document.createElement('div');
+            statsWrap.className = 'club-weekday-stats-wrap';
+            if (st.count > 0) {
+                statsWrap.innerHTML = `
+                    <span class="club-weekday-count-tag"><strong>${st.count}건</strong> (${pct}%)</span>
+                    <span class="club-weekday-money-tag">지원 ${SettlementCalculator.formatCurrency(st.support)}</span>
+                    <span class="club-weekday-toggle-arrow">▼</span>
+                `;
+            } else {
+                statsWrap.innerHTML = `<span class="club-weekday-empty-tag">0건</span>`;
+            }
+
+            headerRow.append(badgeWrap, statsWrap);
+
+            const progressWrap = document.createElement('div');
+            progressWrap.className = 'club-weekday-progress-wrap';
+            const progressBar = document.createElement('div');
+            progressBar.className = 'club-weekday-progress-bar';
+            progressBar.style.width = `${barWidth}%`;
+            progressBar.style.background = `linear-gradient(90deg, ${d.color}cc, ${d.color})`;
+            progressWrap.appendChild(progressBar);
+
+            rowCard.append(headerRow, progressWrap);
+
+            if (st.count > 0) {
+                const detailWrap = document.createElement('div');
+                detailWrap.className = 'club-weekday-detail-list hidden';
+                
+                st.rows.forEach(r => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'club-weekday-event-item';
+
+                    const dateBtn = document.createElement('button');
+                    dateBtn.type = 'button';
+                    dateBtn.className = 'club-usage-date-button';
+                    dateBtn.textContent = formatHistoryUsageDate(r.entry);
+                    if (options.editableDates) {
+                        dateBtn.title = '이 정산 이력 수정';
+                        dateBtn.addEventListener('click', () => AppState.loadHistoryEntryForEdit(r.entry));
+                    }
+
+                    const attBtn = document.createElement('button');
+                    attBtn.type = 'button';
+                    attBtn.className = 'club-usage-attendee-button';
+                    attBtn.textContent = `${r.memberCount}명`;
+                    attBtn.title = '참석자 명단 확인';
+                    attBtn.addEventListener('click', () => {
+                        const date = formatHistoryUsageDate(r.entry);
+                        openAttendanceRosterModal(
+                            `${r.entry.clubName || '클럽'} ${date} 참석자 명단`,
+                            `참석 ${r.memberCount}명`,
+                            r.entry.attendees || []
+                        );
+                    });
+
+                    const infoSpan = document.createElement('span');
+                    infoSpan.className = 'club-weekday-event-info';
+                    infoSpan.innerHTML = `지원 <strong class="support">${SettlementCalculator.formatCurrency(r.support)}</strong> · 자부담 <strong class="selfpay">${SettlementCalculator.formatCurrency(r.selfPay)}</strong>`;
+
+                    itemEl.append(dateBtn, attBtn, infoSpan);
+                    detailWrap.appendChild(itemEl);
+                });
+
+                rowCard.appendChild(detailWrap);
+
+                headerRow.style.cursor = 'pointer';
+                headerRow.addEventListener('click', () => {
+                    const isHidden = detailWrap.classList.toggle('hidden');
+                    const arrow = headerRow.querySelector('.club-weekday-toggle-arrow');
+                    if (arrow) arrow.textContent = isHidden ? '▼' : '▲';
+                });
+            }
+
+            listContainer.appendChild(rowCard);
+        });
+
+        weekdayWrap.appendChild(listContainer);
+        summary.append(totalsEl, weekdayWrap);
+        return summary;
+    }
+    window.createInlineClubWeekdaySummary = createInlineClubWeekdaySummary;
+
     function openClubUsageSummaryModal(clubName, entries, year) {
         const modal = document.getElementById('club-usage-summary-modal');
         const titleEl = document.getElementById('club-usage-summary-title');
@@ -11153,6 +11397,21 @@ document.addEventListener('DOMContentLoaded', () => {
         renderRecentSettlements(yearFilteredList);
     }
 
+    // 관리자 클럽별 정산이력 보기 모드 ('detail': 전체 상세 내역, 'weekday': 요일별 요약)
+    let adminHistoryViewMode = 'detail';
+
+    // 클럽별 정산이력 탭 - 특정 클럽 선택 드롭다운
+    function renderAdminClubSelect(allClubNames) {
+        const select = document.getElementById('admin-club-select');
+        const group = document.getElementById('admin-club-select-group');
+        if (!select || !group) return;
+        const current = select.value;
+        const names = [...new Set((allClubNames || []).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        select.innerHTML = `<option value="">전체 클럽</option>` +
+            names.map(n => `<option value="${AppState.escapeHtml(n)}">${AppState.escapeHtml(n)}</option>`).join('');
+        select.value = names.includes(current) ? current : '';
+    }
+
     // 클럽별 정산이력 탭 - 정산인(사용자) 선택 드롭다운
     function renderAdminUserSelect(historyList) {
         const select = document.getElementById('admin-user-select');
@@ -11179,9 +11438,34 @@ document.addEventListener('DOMContentLoaded', () => {
             .sort(compareHistoryEntriesNewestFirst);
         const container = document.getElementById('admin-history-container');
         if (!container) return;
+
+        // 클럽 목록 및 정산인 목록 드롭다운 갱신
+        const allKnownClubNames = Object.values(AppState.clubRegistry || {})
+            .map(club => club && club.name)
+            .filter(Boolean);
+        historyList.forEach(e => {
+            if (e && e.clubName && !allKnownClubNames.includes(e.clubName)) {
+                allKnownClubNames.push(e.clubName);
+            }
+        });
+        renderAdminClubSelect(allKnownClubNames);
         renderAdminUserSelect(historyList);
+
+        const clubSelect = document.getElementById('admin-club-select');
+        const selectedClub = clubSelect ? clubSelect.value : '';
         const userSelect = document.getElementById('admin-user-select');
         const selectedUser = userSelect ? userSelect.value : '';
+
+        // 특정 클럽 단독 선택 시 100% 전폭 레이아웃 적용
+        container.classList.toggle('single-club-view', Boolean(selectedClub));
+
+        // 상단 모드 전환 버튼 상태 동기화
+        const detailModeBtn = document.getElementById('admin-history-mode-detail-btn');
+        const weekdayModeBtn = document.getElementById('admin-history-mode-weekday-btn');
+        if (detailModeBtn && weekdayModeBtn) {
+            detailModeBtn.classList.toggle('active', adminHistoryViewMode === 'detail');
+            weekdayModeBtn.classList.toggle('active', adminHistoryViewMode === 'weekday');
+        }
 
         // 관리자 클럽별 정산 이력 "조회 연도" — 상단 전역 연도(_selectedQueryYear) 기준 연동
         const adminYearSelect = document.getElementById('admin-history-year-select');
@@ -11200,24 +11484,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return entry.creatorName === selectedUser;
         });
 
-        // 클럽 선택 없이 모든 등록 클럽을 기본 접힘 그룹으로 표시한다.
+        // 클럽별 그룹핑
         const entriesByClub = new Map();
-        Object.values(AppState.clubRegistry || {})
-            .map(club => club.name)
-            .filter(Boolean)
-            .sort((a, b) => a.localeCompare(b))
-            .forEach(clubName => entriesByClub.set(clubName, []));
+        allKnownClubNames.sort((a, b) => a.localeCompare(b)).forEach(clubName => entriesByClub.set(clubName, []));
         filtered.forEach(entry => {
             const clubName = entry.clubName || t('label.default_club');
             if (!entriesByClub.has(clubName)) entriesByClub.set(clubName, []);
             entriesByClub.get(clubName).push(entry);
         });
 
-        if (entriesByClub.size === 0) {
+        // 특정 클럽 필터 적용
+        const displayClubNames = selectedClub
+            ? [selectedClub].filter(c => entriesByClub.has(c))
+            : Array.from(entriesByClub.keys());
+
+        if (displayClubNames.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <span class="empty-icon">💨</span>
-                    <p>등록된 클럽 또는 정산 내역이 없습니다.</p>
+                    <p>${selectedClub ? `'${AppState.escapeHtml(selectedClub)}'의 ` : ''}등록된 정산 내역이 없습니다.</p>
                 </div>
             `;
             return;
@@ -11229,7 +11514,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetYearNum = parseInt(selectedYear, 10);
         const yearDisplayLabel = isAllYears ? '전체' : `${targetYearNum}년`;
 
-        entriesByClub.forEach((clubEntries, clubName) => {
+        displayClubNames.forEach(clubName => {
+            const clubEntries = entriesByClub.get(clubName) || [];
             const clubCard = document.createElement('section');
             clubCard.className = 'admin-inline-club-usage-card';
 
@@ -11260,12 +11546,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 newBadge.textContent = `신규 등록 ${newEntryCount}건`;
                 heading.appendChild(newBadge);
             }
-            header.appendChild(heading);
-            clubCard.append(header, createInlineClubUsageSummary(clubName, targetYearEntries, isAllYears ? '전체' : targetYearNum, {
-                editableDates: true,
-                excelDownloads: true,
-                deleteEntries: true
-            }));
+
+            // 개별 클럽 카드별 [📋 상세] / [📅 요일] 뷰 전환 토글 버튼
+            let currentCardMode = adminHistoryViewMode;
+            const modeToggle = document.createElement('div');
+            modeToggle.className = 'club-card-mode-toggle';
+            modeToggle.innerHTML = `
+                <button type="button" class="club-mode-btn ${currentCardMode === 'detail' ? 'active' : ''}" data-mode="detail" title="상세 내역">📋 상세</button>
+                <button type="button" class="club-mode-btn ${currentCardMode === 'weekday' ? 'active' : ''}" data-mode="weekday" title="요일별 요약">📅 요일</button>
+            `;
+
+            header.append(heading, modeToggle);
+
+            const bodyContainer = document.createElement('div');
+            bodyContainer.className = 'admin-history-card-body-wrap';
+
+            const renderCardBody = (mode) => {
+                bodyContainer.innerHTML = '';
+                const opts = {
+                    editableDates: true,
+                    excelDownloads: true,
+                    deleteEntries: true
+                };
+                if (mode === 'weekday') {
+                    bodyContainer.appendChild(createInlineClubWeekdaySummary(clubName, targetYearEntries, isAllYears ? '전체' : targetYearNum, opts));
+                } else {
+                    bodyContainer.appendChild(createInlineClubUsageSummary(clubName, targetYearEntries, isAllYears ? '전체' : targetYearNum, opts));
+                }
+            };
+
+            modeToggle.querySelectorAll('.club-mode-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const newMode = btn.dataset.mode;
+                    if (newMode === currentCardMode) return;
+                    currentCardMode = newMode;
+                    modeToggle.querySelectorAll('.club-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === newMode));
+                    renderCardBody(currentCardMode);
+                });
+            });
+
+            renderCardBody(currentCardMode);
+
+            clubCard.append(header, bodyContainer);
             container.appendChild(clubCard);
         });
         if (needsSeenSave) saveAdminHistorySeenByClub(seenByClub);
