@@ -2079,14 +2079,14 @@ html[data-app-theme="light"] .club-progress-subtext {
 }
 
 .club-usage-total-card {
-    padding: 0.65rem;
+    padding: 0.4rem 0.45rem;
     border: 1px solid var(--card-border);
     border-radius: 9px;
     background: rgba(15, 23, 42, 0.58);
 }
 
-.club-usage-total-card span { display: block; color: var(--text-secondary); font-size: 0.72rem; }
-.club-usage-total-card strong { display: block; margin-top: 0.2rem; color: var(--text-primary); font-size: 0.9rem; }
+.club-usage-total-card span { display: block; color: var(--text-secondary); font-size: 0.65rem; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.club-usage-total-card strong { display: block; margin-top: 0.15rem; color: var(--text-primary); font-size: 0.78rem; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .club-usage-total-card.budget strong { color: #38bdf8; }
 .club-usage-total-card.remaining strong { color: var(--color-secondary); }
 .club-usage-total-card.remaining.over-budget strong { color: var(--warning-text); }
@@ -2103,17 +2103,18 @@ html[data-app-theme="light"] .club-progress-subtext {
 
 .club-usage-summary-table {
     width: 100%;
-    min-width: 940px;
+    min-width: 680px;
     border-collapse: collapse;
-    font-size: 0.81rem;
+    font-size: 0.73rem;
 }
 
 .club-usage-summary-table th,
 .club-usage-summary-table td {
-    padding: 0.65rem 0.7rem;
+    padding: 0.38rem 0.45rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     text-align: right;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .club-usage-summary-table th {
@@ -2123,6 +2124,8 @@ html[data-app-theme="light"] .club-progress-subtext {
     color: var(--text-secondary);
     background: #121a2c;
     font-weight: 700;
+    font-size: 0.68rem;
+    letter-spacing: -0.02em;
 }
 
 .club-usage-summary-table th:first-child,
@@ -5307,29 +5310,31 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     html[data-app-theme="light"] #admin-history-container .admin-inline-club-usage-header {
         border-bottom-color: rgba(0, 0, 0, 0.08);
     }
-    #admin-history-container .admin-history-club-heading strong { font-size: 1.05rem; }
+    #admin-history-container .admin-history-club-heading strong { font-size: 0.95rem; }
+    #admin-history-container .admin-history-club-count { font-size: 0.75rem; }
+    #admin-history-container .admin-history-new-badge { font-size: 0.68rem; }
     #admin-history-container .inline-club-usage-summary {
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
         min-height: 0;
     }
-    /* 상단 요약 지표 카드: 2열 너비(약 900px)에 맞춰 7개 카드가 넉넉하게 1줄 배치 */
+    /* 상단 요약 지표 카드: 7개 카드가 잘리지 않고 컴팩트하게 쏙 들어감 */
     #admin-history-container .inline-club-usage-summary .club-usage-summary-totals {
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 0.45rem;
-        margin-bottom: 0.75rem;
+        gap: 0.32rem;
+        margin-bottom: 0.6rem;
     }
     #admin-history-container .club-usage-total-card {
-        padding: 0.5rem 0.6rem;
+        padding: 0.35rem 0.35rem;
         min-width: 0;
         text-align: center;
     }
-    #admin-history-container .club-usage-total-card span { font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #admin-history-container .club-usage-total-card strong { margin-top: 0.15rem; font-size: 0.86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #admin-history-container .club-usage-total-card span { font-size: 0.62rem; letter-spacing: -0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #admin-history-container .club-usage-total-card strong { margin-top: 0.12rem; font-size: 0.76rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* 정산 목록 테이블: 2열 너비에 맞춰 정상적인 가로 표로 전체 컬럼(10개) 완벽 표시 */
+    /* 정산 목록 테이블: 글씨 크기와 숫자 축소로 10개 컬럼이 짤리지 않고 안정적으로 표시 */
     #admin-history-container .inline-club-usage-table-wrap {
         max-height: 270px;
         overflow-y: auto;
@@ -5344,9 +5349,9 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     #admin-history-container .club-usage-summary-table {
         display: table;
         width: 100%;
-        min-width: 780px;
+        min-width: 610px;
         border-collapse: collapse;
-        font-size: 0.8rem;
+        font-size: 0.70rem;
     }
     #admin-history-container .club-usage-summary-table thead {
         display: table-header-group;
@@ -5355,13 +5360,14 @@ html[data-app-theme="light"] #dedup-clubs-btn {
         position: sticky;
         top: 0;
         z-index: 1;
-        padding: 0.55rem 0.6rem;
+        padding: 0.35rem 0.32rem;
         background: #0f172a;
         color: var(--text-secondary);
-        font-size: 0.74rem;
+        font-size: 0.66rem;
         font-weight: 700;
         text-align: right;
         white-space: nowrap;
+        letter-spacing: -0.02em;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     html[data-app-theme="light"] #admin-history-container .club-usage-summary-table th {
@@ -5386,20 +5392,22 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     }
     #admin-history-container .club-usage-summary-table tbody td {
         display: table-cell;
-        padding: 0.5rem 0.6rem;
+        padding: 0.32rem 0.32rem;
         text-align: right;
         white-space: nowrap;
         vertical-align: middle;
-        font-size: 0.79rem;
+        font-size: 0.70rem;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
     }
     #admin-history-container .club-usage-summary-table tbody td:first-child { text-align: left; }
     #admin-history-container .club-usage-summary-table tbody td:nth-child(2) { text-align: center; }
     #admin-history-container .club-usage-summary-table tbody td::before { display: none; }
-    #admin-history-container .club-usage-date-button { font-size: 0.8rem; font-weight: 600; }
-    #admin-history-container .club-usage-creator-badge { font-size: 0.7rem; }
-    #admin-history-container .club-usage-attendee-button { padding: 0.15rem 0.45rem; font-size: 0.75rem; }
+    #admin-history-container .club-usage-date-button { font-size: 0.71rem; font-weight: 600; }
+    #admin-history-container .club-usage-creator-badge { font-size: 0.63rem; margin-top: 0.12rem; }
+    #admin-history-container .club-usage-attendee-button { padding: 0.08rem 0.3rem; font-size: 0.67rem; }
     #admin-history-container .club-usage-excel-button,
-    #admin-history-container .club-usage-delete-button { padding: 0.18rem 0.45rem; font-size: 0.72rem; }
+    #admin-history-container .club-usage-delete-button { padding: 0.1rem 0.3rem; font-size: 0.65rem; }
 
     /* ── 대시보드 관리(tab-admin): 좌우 2분할 독립 컬럼 레이아웃 ── */
     #tab-admin {
