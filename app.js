@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.339';
-const APP_VERSION_DATE = '2026.11.06';
+const APP_VERSION      = '1.6.340';
+const APP_VERSION_DATE = '2026.11.09';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
 let _selectedQueryYear = String(new Date().getFullYear());
@@ -7840,6 +7840,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.340', date: '2026.11.09', items: ['클럽 사용 요약 상단 지표 수정: "총 참석 인원"을 정산 건당 "평균 참석 인원"으로 변경(소수 첫째자리 지원)', '클럽별 정산이력 UI 정돈: 개별 클럽 헤더의 상세/요일 버튼을 제거하고 우측 상단 필터바의 전체 일괄 변경 버튼으로 통일'] },
         { ver: '1.6.339', date: '2026.11.06', items: ['클럽별 정산이력 클럽 선택 드롭다운 추가: 전체 클럽(2x2 그리드)과 특정 클럽 단독 전폭(100%) 뷰 지원', '모바일 최적화 클럽별 요일별 요약 버전 추가: 7개 요일별(월~일) 정산 건수·비율 게이지, 최다 활동 요일 배너, 주중/주말 활동 통계, 요일별 행사 내역 아코디언 제공', '정산이력 탭 상단 필터바 및 개별 클럽 카드별 [📋 상세 내역] / [📅 요일별 요약] 원터치 전환 토글 지원'] },
         { ver: '1.6.338', date: '2026.11.06', items: ['와이드 레이아웃 적용 범위 확대: 1920 해상도의 다양한 배율(100%, 125%=1536px, 150%=1280px)을 위해 브레이크포인트를 min-width: 1200px로 최적화', '대시보드 관리 좌측 열 여백 최소화: "무엇부터 할까요?" 가이드 바로 밑에 "정산 구간 및 비율 설정" 카드가 10px 간격으로 바짝 밀착되도록 여백 완전 축소'] },
         { ver: '1.6.337', date: '2026.11.06', items: ['대시보드 관리(관리자 모드) 2열 독립 컬럼 구조 전면 개편: 좌측(시작 가이드 바로 밑에 정산 구간·비율 설정 빈틈없이 밀착), 우측(클럽 관리 전체 클럽 및 가입 회원 관리 전체 목록 스크롤 자름 없이 전부 노출)', '카드 접기 연동 개선: 접기 버튼 클릭 시 펼쳐진 내용이 접히고 아래 카드가 위로 즉각 밀착되어 여백 없이 화면에 맞춤 정렬'] },
@@ -10545,7 +10546,10 @@ document.addEventListener('DOMContentLoaded', () => {
             appendClubUsageTotalCard(totalsEl, '클럽 총 예산', 0, '', () => '미설정');
             appendClubUsageTotalCard(totalsEl, '현재 잔여 예산', 0, '', () => '미설정');
         }
-        appendClubUsageTotalCard(totalsEl, '총 참석 인원', data.totals.memberCount, '', value => `${value}명`);
+        const rowCount = data.rows ? data.rows.length : 0;
+        const avgAttendees = rowCount > 0 ? (data.totals.memberCount / rowCount) : 0;
+        const avgAttendeesStr = `${avgAttendees % 1 === 0 ? avgAttendees : Number(avgAttendees.toFixed(1))}명`;
+        appendClubUsageTotalCard(totalsEl, '평균 참석 인원', avgAttendees, '', () => avgAttendeesStr);
         appendClubUsageTotalCard(totalsEl, '총 상품비', data.totals.prizeCost, 'prize');
         appendClubUsageTotalCard(totalsEl, '총 회사 지원금', data.totals.support, 'support');
         appendClubUsageTotalCard(totalsEl, '총 자부담 비용', data.totals.selfPay, 'selfpay');
@@ -10584,7 +10588,10 @@ document.addEventListener('DOMContentLoaded', () => {
             appendClubUsageTotalCard(totalsEl, '클럽 총 예산', 0, '', () => '미설정');
             appendClubUsageTotalCard(totalsEl, '현재 잔여 예산', 0, '', () => '미설정');
         }
-        appendClubUsageTotalCard(totalsEl, '총 참석 인원', data.totals.memberCount, '', value => `${value}명`);
+        const rowCount = data.rows ? data.rows.length : 0;
+        const avgAttendees = rowCount > 0 ? (data.totals.memberCount / rowCount) : 0;
+        const avgAttendeesStr = `${avgAttendees % 1 === 0 ? avgAttendees : Number(avgAttendees.toFixed(1))}명`;
+        appendClubUsageTotalCard(totalsEl, '평균 참석 인원', avgAttendees, '', () => avgAttendeesStr);
         appendClubUsageTotalCard(totalsEl, '총 상품비', data.totals.prizeCost, 'prize');
         appendClubUsageTotalCard(totalsEl, '총 회사 지원금', data.totals.support, 'support');
         appendClubUsageTotalCard(totalsEl, '총 자부담 비용', data.totals.selfPay, 'selfpay');
@@ -10807,7 +10814,10 @@ document.addEventListener('DOMContentLoaded', () => {
             appendClubUsageTotalCard(totalsEl, '클럽 총 예산', 0, '', () => '미설정');
             appendClubUsageTotalCard(totalsEl, '현재 잔여 예산', 0, '', () => '미설정');
         }
-        appendClubUsageTotalCard(totalsEl, '총 참석 인원', data.totals.memberCount, '', value => `${value}명`);
+        const rowCount = data.rows ? data.rows.length : 0;
+        const avgAttendees = rowCount > 0 ? (data.totals.memberCount / rowCount) : 0;
+        const avgAttendeesStr = `${avgAttendees % 1 === 0 ? avgAttendees : Number(avgAttendees.toFixed(1))}명`;
+        appendClubUsageTotalCard(totalsEl, '평균 참석 인원', avgAttendees, '', () => avgAttendeesStr);
         appendClubUsageTotalCard(totalsEl, '총 상품비', data.totals.prizeCost, 'prize');
         appendClubUsageTotalCard(totalsEl, '총 회사 지원금', data.totals.support, 'support');
         appendClubUsageTotalCard(totalsEl, '총 자부담 비용', data.totals.selfPay, 'selfpay');
@@ -11547,48 +11557,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 heading.appendChild(newBadge);
             }
 
-            // 개별 클럽 카드별 [📋 상세] / [📅 요일] 뷰 전환 토글 버튼
-            let currentCardMode = adminHistoryViewMode;
-            const modeToggle = document.createElement('div');
-            modeToggle.className = 'club-card-mode-toggle';
-            modeToggle.innerHTML = `
-                <button type="button" class="club-mode-btn ${currentCardMode === 'detail' ? 'active' : ''}" data-mode="detail" title="상세 내역">📋 상세</button>
-                <button type="button" class="club-mode-btn ${currentCardMode === 'weekday' ? 'active' : ''}" data-mode="weekday" title="요일별 요약">📅 요일</button>
-            `;
+            header.appendChild(heading);
 
-            header.append(heading, modeToggle);
-
-            const bodyContainer = document.createElement('div');
-            bodyContainer.className = 'admin-history-card-body-wrap';
-
-            const renderCardBody = (mode) => {
-                bodyContainer.innerHTML = '';
-                const opts = {
-                    editableDates: true,
-                    excelDownloads: true,
-                    deleteEntries: true
-                };
-                if (mode === 'weekday') {
-                    bodyContainer.appendChild(createInlineClubWeekdaySummary(clubName, targetYearEntries, isAllYears ? '전체' : targetYearNum, opts));
-                } else {
-                    bodyContainer.appendChild(createInlineClubUsageSummary(clubName, targetYearEntries, isAllYears ? '전체' : targetYearNum, opts));
-                }
+            const opts = {
+                editableDates: true,
+                excelDownloads: true,
+                deleteEntries: true
             };
+            const summaryEl = adminHistoryViewMode === 'weekday'
+                ? createInlineClubWeekdaySummary(clubName, targetYearEntries, isAllYears ? '전체' : targetYearNum, opts)
+                : createInlineClubUsageSummary(clubName, targetYearEntries, isAllYears ? '전체' : targetYearNum, opts);
 
-            modeToggle.querySelectorAll('.club-mode-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const newMode = btn.dataset.mode;
-                    if (newMode === currentCardMode) return;
-                    currentCardMode = newMode;
-                    modeToggle.querySelectorAll('.club-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === newMode));
-                    renderCardBody(currentCardMode);
-                });
-            });
-
-            renderCardBody(currentCardMode);
-
-            clubCard.append(header, bodyContainer);
+            clubCard.append(header, summaryEl);
             container.appendChild(clubCard);
         });
         if (needsSeenSave) saveAdminHistorySeenByClub(seenByClub);
