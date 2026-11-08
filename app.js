@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.342';
+const APP_VERSION      = '1.6.343';
 const APP_VERSION_DATE = '2026.11.09';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -454,6 +454,7 @@ const AppState = {
     editingItemId: null,
     editingAttendeeId: null,
     editingDirName: null,
+    dirSearchQuery: '',
     rules: { ...DefaultRules },
     tempCorpReceiptImage: null,
     tempPersonalReceiptImage: null,
@@ -2171,6 +2172,57 @@ const AppState = {
         document.getElementById('cancel-edit-dir-btn').classList.add('hidden');
     },
 
+    filterDirectoryList(rawTerm) {
+        const term = (rawTerm !== undefined ? rawTerm : (this.dirSearchQuery || '')).trim().toLowerCase();
+        this.dirSearchQuery = term;
+
+        const searchInput = document.getElementById('dir-search-input');
+        if (searchInput && rawTerm !== undefined && searchInput.value !== rawTerm) {
+            searchInput.value = rawTerm;
+        }
+        const clearBtn = document.getElementById('dir-search-clear-btn');
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', !term);
+        }
+
+        const container = document.getElementById('directory-container');
+        const countEl = document.getElementById('directory-count');
+        if (!container) return;
+
+        const rows = container.querySelectorAll('.expense-row');
+        const totalCount = rows.length;
+
+        let matchCount = 0;
+        rows.forEach(row => {
+            const name = (row.dataset.dirName || '').toLowerCase();
+            const id = (row.dataset.dirId || '').toLowerCase();
+            const isMatch = !term || name.includes(term) || id.includes(term);
+            row.style.display = isMatch ? 'flex' : 'none';
+            if (isMatch) matchCount++;
+        });
+
+        // 기존 검색 결과 없음 요소 제거
+        const existingNoResult = container.querySelector('#dir-search-no-result');
+        if (existingNoResult) existingNoResult.remove();
+
+        if (totalCount > 0 && matchCount === 0 && term) {
+            const noResultEl = document.createElement('div');
+            noResultEl.id = 'dir-search-no-result';
+            noResultEl.className = 'empty-state';
+            noResultEl.style.padding = '1.5rem 0';
+            noResultEl.innerHTML = `<p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0;">'<strong style="color:var(--text-primary);">${this.escapeHtml(term)}</strong>' 와(과) 일치하는 사원이 없습니다.</p>`;
+            container.appendChild(noResultEl);
+        }
+
+        if (countEl) {
+            if (!term) {
+                countEl.textContent = totalCount;
+            } else {
+                countEl.innerHTML = `<span style="color:var(--color-secondary); font-weight:700;">${matchCount}</span><span style="font-size:0.85em; opacity:0.8;">/${totalCount}</span>`;
+            }
+        }
+    },
+
     updateAttendance(_memberCount, previousPrizeTotal) {
         this.memberCount = this.attendees.length; // Override count from attendees
         this.previousPrizeTotal = Math.max(0, previousPrizeTotal);
@@ -2784,6 +2836,9 @@ const AppState = {
                         });
                     });
                 });
+
+                // 현재 검색어가 있는 경우 실시간 필터 적용 유지
+                this.filterDirectoryList(this.dirSearchQuery || '');
             }
         }
 
@@ -6481,6 +6536,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 전사원 명부 실시간 검색 리스너
+    const dirSearchInput = document.getElementById('dir-search-input');
+    const dirSearchClearBtn = document.getElementById('dir-search-clear-btn');
+    if (dirSearchInput) {
+        dirSearchInput.addEventListener('input', (e) => {
+            AppState.filterDirectoryList(e.target.value);
+        });
+        dirSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                dirSearchInput.value = '';
+                AppState.filterDirectoryList('');
+            }
+        });
+    }
+    if (dirSearchClearBtn) {
+        dirSearchClearBtn.addEventListener('click', () => {
+            if (dirSearchInput) {
+                dirSearchInput.value = '';
+                dirSearchInput.focus();
+            }
+            AppState.filterDirectoryList('');
+        });
+    }
+
     // Clear attendees handler
     document.getElementById('clear-attendees-btn').addEventListener('click', () => {
         if (AppState.attendees.length > 0) {
@@ -7851,6 +7930,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.343', date: '2026.11.09', items: ['전사원 명부 실시간 검색 기능 추가: 검색창에 한 글자(예: "김") 또는 두 글자 이상(예: "김종") 입력 시 즉시 해당 이름 및 사번과 일치하는 항목만 실시간 필터링', '검색어 일치 건수/전체 인원 분수 표시 및 원터치 검색어 지우기(×) 버튼 지원'] },
         { ver: '1.6.342', date: '2026.11.09', items: ['클럽별 정산이력 폰트 및 숫자 크기 최적화: 상단 7개 요약 타일과 정산 테이블(10개 컬럼)의 글씨·금액 숫자를 컴팩트하게 축소하여 어떤 해상도에서도 짤림 없이 한눈에 표시되도록 개선'] },
         { ver: '1.6.341', date: '2026.11.09', items: ['전사원 명부 탭 좌측 패널 명칭 변경: "전사원 등록" ➔ "사원 등록"으로 간소화', '우측 명부 리스트 UI 개선: 우측 개별 "추가" 버튼 제거 및 24시간 동안 유지되는 "✨ 신규 등록" 배지 도입'] },
         { ver: '1.6.340', date: '2026.11.09', items: ['클럽 사용 요약 상단 지표 수정: "총 참석 인원"을 정산 건당 "평균 참석 인원"으로 변경(소수 첫째자리 지원)', '클럽별 정산이력 UI 정돈: 개별 클럽 헤더의 상세/요일 버튼을 제거하고 우측 상단 필터바의 전체 일괄 변경 버튼으로 통일'] },
