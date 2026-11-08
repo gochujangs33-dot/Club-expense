@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.340';
+const APP_VERSION      = '1.6.341';
 const APP_VERSION_DATE = '2026.11.09';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -2107,14 +2107,21 @@ const AppState = {
                 this.directory[name] = { id: primaryId, count: currentCount, ids };
             }
         } else {
+            const now = Date.now();
             const existing = this.directory[name];
             if (existing && typeof existing === 'object') {
                 // 이미 존재하는 이름 → 사번 추가
                 if (!existing.ids) existing.ids = [String(existing.id)];
                 if (!existing.ids.includes(eid)) existing.ids.push(eid);
+                if (!existing.createdAts) existing.createdAts = {};
+                existing.createdAts[eid] = now;
+                existing.createdAt = now;
             } else {
-                this.directory[name] = { id: eid, count: 0, ids: [eid] };
+                this.directory[name] = { id: eid, count: 0, ids: [eid], createdAts: { [eid]: now }, createdAt: now };
             }
+            try {
+                localStorage.setItem(`dir_reg_${name}_${eid}`, String(now));
+            } catch (e) {}
         }
         this.cancelEditDirectory();
         const savePromise = this.save();
@@ -2675,10 +2682,10 @@ const AppState = {
                 directoryCount.textContent = dirRows.length;
 
                 const canDeleteDir = (this.userName === '관리자' || this.currentPin === '002531');
+                const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+                const nowTime = Date.now();
 
                 dirRows.forEach(({ name, id, count: countValue }) => {
-                    const isAdded = this.attendees.some(att => att.name === name && String(att.employeeId) === id);
-
                     const row = document.createElement('div');
                     row.className = 'expense-row';
                     row.dataset.dirName = name;
@@ -2686,9 +2693,21 @@ const AppState = {
                     row.style.padding = '0.5rem 0.75rem';
                     row.style.cursor = 'pointer';
 
-                    const addBtnHtml = isAdded
-                        ? `<button class="btn-primary-sm" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--text-muted); cursor: not-allowed;" disabled>✓ 추가됨</button>`
-                        : `<button class="btn-add-to-current btn-primary-sm" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">추가</button>`;
+                    const entry = this.directory[name];
+                    let regTime = (typeof entry === 'object' && entry.createdAts) ? (entry.createdAts[id] || 0) : 0;
+                    if (!regTime && typeof entry === 'object' && entry.createdAt) {
+                        regTime = entry.createdAt;
+                    }
+                    if (!regTime) {
+                        try {
+                            const cached = localStorage.getItem(`dir_reg_${name}_${id}`);
+                            if (cached) regTime = Number(cached) || 0;
+                        } catch (e) {}
+                    }
+                    const isNew = regTime > 0 && (nowTime - regTime < ONE_DAY_MS);
+                    const newBadgeHtml = isNew
+                        ? `<span class="badge-new-dir" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 700; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 0.25rem;">✨ 신규 등록</span>`
+                        : '';
 
                     const deleteDirBtnHtml = canDeleteDir
                         ? `<button class="btn-delete-from-directory btn-delete btn-text-danger" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" style="padding: 0.5rem; font-size: 1.1rem; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(239, 68, 68, 0.1); margin-left: 0.5rem;" title="명부에서 삭제">&times;</button>`
@@ -2702,8 +2721,8 @@ const AppState = {
                             </span>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">EMP ID: ${this.escapeHtml(id)}</span>
                         </div>
-                        <div class="expense-row-right" style="gap: 0.4rem;">
-                            ${addBtnHtml}
+                        <div class="expense-row-right" style="gap: 0.4rem; align-items: center;">
+                            ${newBadgeHtml}
                             ${deleteDirBtnHtml}
                         </div>
                     `;
@@ -2752,15 +2771,7 @@ const AppState = {
                     });
                 });
 
-                // Bind click handlers to add to current buttons
-                directoryContainer.querySelectorAll('.btn-add-to-current').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const name = button.getAttribute('data-name');
-                        const id = button.getAttribute('data-id');
-                        if (name && id) this.addAttendee(name, id);
-                    });
-                });
+
 
                 // Bind click handlers to delete from directory buttons
                 directoryContainer.querySelectorAll('.btn-delete-from-directory').forEach(button => {
@@ -7840,6 +7851,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.341', date: '2026.11.09', items: ['전사원 명부 탭 좌측 패널 명칭 변경: "전사원 등록" ➔ "사원 등록"으로 간소화', '우측 명부 리스트 UI 개선: 우측 개별 "추가" 버튼 제거 및 24시간 동안 유지되는 "✨ 신규 등록" 배지 도입'] },
         { ver: '1.6.340', date: '2026.11.09', items: ['클럽 사용 요약 상단 지표 수정: "총 참석 인원"을 정산 건당 "평균 참석 인원"으로 변경(소수 첫째자리 지원)', '클럽별 정산이력 UI 정돈: 개별 클럽 헤더의 상세/요일 버튼을 제거하고 우측 상단 필터바의 전체 일괄 변경 버튼으로 통일'] },
         { ver: '1.6.339', date: '2026.11.06', items: ['클럽별 정산이력 클럽 선택 드롭다운 추가: 전체 클럽(2x2 그리드)과 특정 클럽 단독 전폭(100%) 뷰 지원', '모바일 최적화 클럽별 요일별 요약 버전 추가: 7개 요일별(월~일) 정산 건수·비율 게이지, 최다 활동 요일 배너, 주중/주말 활동 통계, 요일별 행사 내역 아코디언 제공', '정산이력 탭 상단 필터바 및 개별 클럽 카드별 [📋 상세 내역] / [📅 요일별 요약] 원터치 전환 토글 지원'] },
         { ver: '1.6.338', date: '2026.11.06', items: ['와이드 레이아웃 적용 범위 확대: 1920 해상도의 다양한 배율(100%, 125%=1536px, 150%=1280px)을 위해 브레이크포인트를 min-width: 1200px로 최적화', '대시보드 관리 좌측 열 여백 최소화: "무엇부터 할까요?" 가이드 바로 밑에 "정산 구간 및 비율 설정" 카드가 10px 간격으로 바짝 밀착되도록 여백 완전 축소'] },
