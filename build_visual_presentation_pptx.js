@@ -17,7 +17,7 @@ const path = require('path');
     };
 
     const images = {
-        nanoBanana: getImgBase64('00_nano_banana_architecture.jpg'),
+        archDiagram: getImgBase64('00_system_architecture_flow.jpg'),
         login: getImgBase64('01_login_pin.png'),
         register: getImgBase64('02_register.png'),
         header: getImgBase64('03_header_theme.png'),
@@ -204,70 +204,74 @@ const path = require('path');
         }
 
         // =========================================================================
-        // SLIDE 1-B: 시스템 아키텍처 (나노바나나가 알려주는 클라우드 인프라)
+        // SLIDE 1-B: 시스템 구성 & 전체 데이터 흐름도 (아키텍처 및 보고 체계)
         // =========================================================================
         {
             const sArch = createBaseSlide(
-                '시스템 아키텍처: 안전한 전용 클라우드 & 자동화 인프라',
-                '개인 PC 파일이 아닌 전용 구글 계정 기반의 Firebase 실시간 DB와 자동 메일링 시스템으로 운영됩니다.'
+                '시스템 구성 & 데이터 취합 보고 전체 흐름도',
+                '구글 클라우드 기반으로 사용자 신청 ➔ 관리자 통제 ➔ 품의서 취합 및 보고까지 원스톱으로 연결됩니다.'
             );
 
-            // 좌측: 나노바나나 3D 클라우드 아키텍처 일러스트
-            if (imgs.nanoBanana) {
+            // 좌측: 전문 엔터프라이즈 아키텍처 다이어그램 (4단계 흐름도)
+            if (imgs.archDiagram) {
                 sArch.addImage({
-                    data: 'image/jpeg;base64,' + imgs.nanoBanana,
-                    x: 0.6, y: 1.40, w: 4.9, h: 3.65
+                    data: 'image/jpeg;base64,' + imgs.archDiagram,
+                    x: 0.6, y: 1.40, w: 5.2, h: 3.65
                 });
             }
 
-            // 우측: 3대 핵심 인프라 설명 카드
+            // 우측: 4대 핵심 구조 설명 카드
             sArch.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 5.7, y: 1.40, w: 3.7, h: 3.65,
+                x: 6.0, y: 1.40, w: 3.4, h: 3.65,
                 fill: { color: C.cardBg }, line: { color: C.cardBorder, width: 1 },
                 rectRadius: 0.12
             });
 
-            sArch.addText('☁️ 3대 핵심 클라우드 인프라', {
-                x: 5.9, y: 1.55, w: 3.3, h: 0.30,
+            sArch.addText('🔄 4대 프로세스 통합 흐름', {
+                x: 6.2, y: 1.55, w: 3.0, h: 0.30,
                 fontSize: 12.0, fontFace: FONT_TITLE, color: C.primary, bold: true,
                 margin: 0
             });
 
             const archGuides = [
                 {
-                    title: '① 시스템 전용 구글 계정 분리 운영',
-                    desc: '개발자 개인 계정이 아닌, 시스템 운영 전용 구글 계정을 독립 구축하여 인프라 보안과 서비스 관리 권한을 안전하게 일원화했습니다.'
+                    title: '① 구글 클라우드 기반 (인프라)',
+                    desc: '시스템 전용 구글 계정 분리 운영 및 Google Firebase 실시간 DB를 통해 1,316명 명부와 예산 데이터를 안전하게 동기화합니다.'
                 },
                 {
-                    title: '② Google Firebase 실시간 공유 DB',
-                    desc: '개인 PC 고장이나 로컬 파일 분실 위험 없이, 1,316명 전사원 명부와 클럽별 예산·정산 이력이 구글 클라우드에 100% 실시간 동기화됩니다.'
+                    title: '② 사용자 페이지 (정산 신청)',
+                    desc: '동아리 총무·회원이 모바일/PC에서 참석자를 원클릭 등록하고, 영수증 금액 입력 시 4구간 자부담이 자동 산출됩니다.'
                 },
                 {
-                    title: '③ 자동 메일링 & 공식 품의 통보',
-                    desc: '정산이 최종 확정되면 해당 전용 계정을 통해 정산 담당자 및 클럽 회장단에게 정산 결과 보고서와 공식 엑셀이 누락 없이 자동 발송됩니다.'
+                    title: '③ 관리자 페이지 (통제·모니터링)',
+                    desc: '회장단(관리자)이 10개 클럽의 예산 소진율과 집행 내역을 실시간 모니터링하며, 구간 설정 및 감사 로그를 총괄합니다.'
+                },
+                {
+                    title: '④ 파일 취합 및 보고 형태 (완전 자동)',
+                    desc: '정산 완료 즉시 공식 품의 엑셀(.xlsx)이 자동 생성·취합되며, Gmail 자동 발송 및 연간 결산 PPTX로 즉시 출력됩니다.'
                 }
             ];
 
             archGuides.forEach((g, idx) => {
-                const gy = 1.95 + idx * 0.78;
+                const gy = 1.90 + idx * 0.60;
                 sArch.addText([
-                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
-                    { text: g.desc, options: { fontSize: 8.5, color: C.textSub } }
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 9.8, color: C.textMain } },
+                    { text: g.desc, options: { fontSize: 8.2, color: C.textSub } }
                 ], {
-                    x: 5.9, y: gy, w: 3.3, h: 0.72,
-                    margin: 0, lineSpacing: 13.5, valign: 'top'
+                    x: 6.2, y: gy, w: 3.0, h: 0.55,
+                    margin: 0, lineSpacing: 12.5, valign: 'top'
                 });
             });
 
             // 하단 보안 배너
             sArch.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 5.9, y: 4.42, w: 3.3, h: 0.48,
+                x: 6.2, y: 4.42, w: 3.0, h: 0.48,
                 fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 0.8 },
                 rectRadius: 0.06
             });
-            sArch.addText('🔒 무결성 & 보안: Google 엔터프라이즈 인프라에서 24시간 안전하게 데이터가 암호화 보관됩니다.', {
-                x: 6.0, y: 4.45, w: 3.1, h: 0.42,
-                fontSize: 8.0, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12, valign: 'middle',
+            sArch.addText('💡 완전 자동화: 수기 취합이나 계산 과정 없이 전사 정산 데이터가 실시간 집계 및 보고됩니다.', {
+                x: 6.3, y: 4.45, w: 2.8, h: 0.42,
+                fontSize: 7.8, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 11, valign: 'middle',
                 margin: 0
             });
         }
