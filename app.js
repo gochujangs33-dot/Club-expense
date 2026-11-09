@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.355';
+const APP_VERSION      = '1.6.356';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -380,12 +380,22 @@ const AppState = {
         return { pin, name, role };
     },
 
-    // 로그인/접속 자체는 감사 로그 대상이 아니다. 감사 로그에는 실제 자료 변경만 남긴다.
+    // 로그인/접속 및 정산내용 초기화는 감사 로그 대상에서 제외한다.
     isLoginAuditEvent(event = {}) {
         const action = String(event.action || '').trim().toUpperCase();
         const targetType = String(event.targetType || '').replace(/\s+/g, '').toLowerCase();
         return action === 'LOGIN' || action === 'SIGNIN'
             || ['로그인', '로그인이력', '로그인기록', '접속', '접속이력', '접속기록', 'login', 'signin'].includes(targetType);
+    },
+
+    isExcludedAuditEvent(event = {}) {
+        if (this.isLoginAuditEvent(event)) return true;
+        const targetType = String(event.targetType || '').replace(/\s+/g, '').toLowerCase();
+        const summary = String(event.summary || '').replace(/\s+/g, '').toLowerCase();
+        if (targetType.includes('정산초기화') || summary.includes('정산내용을초기화') || summary.includes('정산내용초기화') || summary.includes('정산초기화')) {
+            return true;
+        }
+        return false;
     },
 
     buildAuditEntry(event = {}, actorOverride = null) {
@@ -420,7 +430,7 @@ const AppState = {
     },
 
     appendAuditUpdate(updates, event, actorOverride = null) {
-        if (!this.firebaseDb || !updates || !event || this.isLoginAuditEvent(event)) return null;
+        if (!this.firebaseDb || !updates || !event || this.isExcludedAuditEvent(event)) return null;
         const logKey = this.firebaseDb.ref('auditLogs').push().key;
         if (!logKey) return null;
         updates[`auditLogs/${logKey}`] = this.buildAuditEntry(event, actorOverride);
@@ -428,7 +438,7 @@ const AppState = {
     },
 
     writeAuditLog(event, actorOverride = null) {
-        if (!this.firebaseDb || !event || this.isLoginAuditEvent(event)) return Promise.resolve(false);
+        if (!this.firebaseDb || !event || this.isExcludedAuditEvent(event)) return Promise.resolve(false);
         const logKey = this.firebaseDb.ref('auditLogs').push().key;
         if (!logKey) return Promise.resolve(false);
         return this.firebaseDb.ref(`auditLogs/${logKey}`).set(this.buildAuditEntry(event, actorOverride))
@@ -4346,17 +4356,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target === resetSessionModal) resetSessionModal.classList.add('hidden');
         });
         resetSessionConfirmBtn.addEventListener('click', () => {
-            const expenseCount = AppState.expenseItems.length;
-            const attendeeCount = AppState.attendees.length;
-            const photoCount = AppState.eventPhotos.length;
             resetSessionModal.classList.add('hidden');
-            resetSettlementSession({
-                action: 'DELETE',
-                targetType: '현재 정산 초기화',
-                targetLabel: AppState.clubName || '현재 정산',
-                summary: '사용자가 현재 정산 내용을 초기화',
-                details: { 삭제비용항목수: expenseCount, 삭제참석자수: attendeeCount, 삭제행사사진수: photoCount }
-            });
+            resetSettlementSession();
         });
     }
 
@@ -4655,7 +4656,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function isLoginAuditEntry(entry) {
-        return AppState.isLoginAuditEvent(entry);
+        return AppState.isExcludedAuditEvent ? AppState.isExcludedAuditEvent(entry) : AppState.isLoginAuditEvent(entry);
     }
 
     function formatAuditDetailValue(value, key = '') {
@@ -7901,6 +7902,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.356', date: '2026.11.10', items: ['전체 작업 로그에서 "현재 정산 내용 초기화" 기록 제외: 정산 화면 초기화 시 감사 로그 저장 중단 및 기존 저장된 정산 초기화 로그 목록 숨김 필터링 적용'] },
         { ver: '1.6.355', date: '2026.11.10', items: ['비용 항목 재클릭 시 수정 모드 입력값 보존 버그 해결: 기존에 사용자가 직접 수정한 법인카드/개인카드 및 1인당 자부담 분할값이 기본 자동계산값으로 덮어씌워지던 문제 수정 및 저장값 완전 보존'] },
         { ver: '1.6.354', date: '2026.11.10', items: ['스크립트 런타임 구문 정상화 및 로그인 PIN 키패드 입력 동작 복원'] },
         { ver: '1.6.353', date: '2026.11.10', items: ['정산 결과 화면의 "총 자부담 금액 (수정 가능)"에서 "(수정 가능)" 문구 삭제 및 결과 표시 전용(수정 불가)으로 전환: 자부담 금액 조정은 비용 항목 추가/수정 폼(좌측)의 1인당 자부담 및 카드 분할을 통해서만 진행되도록 일원화'] },
