@@ -4478,6 +4478,20 @@ html[data-app-theme="light"] .rules-guide-btn:hover {
     font-size: 0.76rem;
     line-height: 1.5;
 }
+.rules-bracket-warning {
+    color: #f87171;
+    font-size: 0.74rem;
+    margin-top: 0.3rem;
+    line-height: 1.45;
+}
+.rules-bracket-note {
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px dashed rgba(255, 255, 255, 0.15);
+    font-size: 0.73rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+}
 .rules-extra-box {
     background: rgba(255, 255, 255, 0.04);
     border: 1px dashed rgba(255, 255, 255, 0.18);
@@ -4613,6 +4627,13 @@ html[data-app-theme="light"] .bracket-card-d .rules-bracket-example {
     background: #ffffff !important;
     border: 1px solid #fca5a5 !important;
     color: #991b1b !important;
+}
+html[data-app-theme="light"] .rules-bracket-warning {
+    color: #b91c1c !important;
+}
+html[data-app-theme="light"] .rules-bracket-note {
+    border-top-color: #fca5a5 !important;
+    color: #7f1d1d !important;
 }
 
 html[data-app-theme="light"] .rules-extra-box {
