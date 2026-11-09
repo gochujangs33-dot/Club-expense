@@ -4396,6 +4396,61 @@ html[data-app-theme="light"] #changelog-close-btn:hover {
     border-color: #a78bfa !important;
 }
 
+/* ── 정산 기준 안내 버튼 및 모달 ────────────────────────────── */
+.rules-guide-btn {
+    padding: 0.16rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 999px;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.38);
+    color: #38bdf8;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s ease;
+    line-height: 1.2;
+}
+.rules-guide-btn:hover {
+    background: rgba(56, 189, 248, 0.25);
+    border-color: #38bdf8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
+}
+.rules-guide-btn .guide-icon {
+    font-size: 0.8rem;
+    line-height: 1;
+}
+
+html[data-app-theme="light"] .rules-guide-btn {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #0369a1;
+}
+html[data-app-theme="light"] .rules-guide-btn:hover {
+    background: #bae6fd;
+    border-color: #38bdf8;
+}
+
+/* 정산 기준 모달 라이트 테마 */
+html[data-app-theme="light"] .rules-guide-modal-card {
+    background: #ffffff !important;
+    border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.16) !important;
+}
+html[data-app-theme="light"] .rules-guide-modal-card h3 {
+    color: #0f172a !important;
+}
+html[data-app-theme="light"] .rules-guide-modal-card p {
+    color: #64748b !important;
+}
+html[data-app-theme="light"] #rules-guide-modal-close-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
 html[data-app-theme="light"] .changelog-date {
     color: #334155 !important;
 }

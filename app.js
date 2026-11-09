@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.343';
+const APP_VERSION      = '1.6.344';
 const APP_VERSION_DATE = '2026.11.09';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -4332,6 +4332,7 @@ const AppState = {
                   .replace(/'/g, "&#039;");
     }
 };
+window.AppState = AppState;
 
 // --- 4. Event Listeners & Initialization ---
 
@@ -7930,6 +7931,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.344', date: '2026.11.09', items: ['비용 항목 추가 금액 입력란에 "❓ 정산 기준" 안내 버튼 및 상세 설명 팝업 추가', '관리자가 정산 구간·비율 수정 시 실시간으로 연동되는 가/나/다/라 구간별 계산 공식 및 구체적 금액 예시 제공 (다 구간 초과 누진 계산 원리 안내)'] },
         { ver: '1.6.343', date: '2026.11.09', items: ['전사원 명부 실시간 검색 기능 추가: 검색창에 한 글자(예: "김") 또는 두 글자 이상(예: "김종") 입력 시 즉시 해당 이름 및 사번과 일치하는 항목만 실시간 필터링', '검색어 일치 건수/전체 인원 분수 표시 및 원터치 검색어 지우기(×) 버튼 지원'] },
         { ver: '1.6.342', date: '2026.11.09', items: ['클럽별 정산이력 폰트 및 숫자 크기 최적화: 상단 7개 요약 타일과 정산 테이블(10개 컬럼)의 글씨·금액 숫자를 컴팩트하게 축소하여 어떤 해상도에서도 짤림 없이 한눈에 표시되도록 개선'] },
         { ver: '1.6.341', date: '2026.11.09', items: ['전사원 명부 탭 좌측 패널 명칭 변경: "전사원 등록" ➔ "사원 등록"으로 간소화', '우측 명부 리스트 UI 개선: 우측 개별 "추가" 버튼 제거 및 24시간 동안 유지되는 "✨ 신규 등록" 배지 도입'] },
@@ -12179,6 +12181,139 @@ function showFacilityApprovalModal() {
     const onOkClick = () => { close(); okBtn.removeEventListener('click', onOkClick); };
     okBtn.addEventListener('click', onOkClick);
 }
+
+// ── 정산 구간 및 자부담 기준 안내 모달 ──────────────────────────────
+function renderRulesGuideModalContent() {
+    const content = document.getElementById('rules-guide-modal-content');
+    if (!content) return;
+
+    const rules = AppState.rules || DefaultRules;
+    const l1 = rules.limit1 || 30000;
+    const l2 = rules.limit2 || 60000;
+    const r2Ratio = rules.rate2 !== undefined ? rules.rate2 : 0.2;
+    const r2Pct = Math.round(r2Ratio * 100);
+    const l3 = rules.limit3 || 120000;
+    const r3Ratio = rules.rate3 !== undefined ? rules.rate3 : 0.4;
+    const r3Pct = Math.round(r3Ratio * 100);
+    const ded4 = rules.deduction4 || 85000;
+    const facilityLimit = rules.facilityLimit || 85000;
+    const prizeLimit = rules.prizeLimit || 500000;
+
+    // 다 구간 예시 금액 (중간 기준)
+    const midSample = Math.min(l3, Math.max(l2 + 10000, 100000));
+    const part1 = Math.round(l2 * r2Ratio);
+    const part2 = Math.round((midSample - l2) * r3Ratio);
+    const totalSelfMid = part1 + part2;
+    const totalCorpMid = midSample - totalSelfMid;
+
+    // 라 구간 예시 금액
+    const overSample = l3 + 30000;
+    const selfOver = overSample - ded4;
+
+    content.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+            <!-- 상단 안내 바 -->
+            <div style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:0.65rem 0.85rem; font-size:0.78rem; line-height:1.5; color:#bae6fd;">
+                💡 <strong>구간 기준:</strong> 식대·활동비 등 <strong>순수 행사비</strong>를 참석 인원수로 나눈 <strong>1인당 금액</strong>을 기준으로 자부담이 결정됩니다. (시설비·상품비는 별도 규정 적용)
+            </div>
+
+            <!-- 가 구간 -->
+            <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:0.75rem 0.9rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.35rem; flex-wrap:wrap; gap:0.3rem;">
+                    <span style="font-weight:800; font-size:0.88rem; color:#4ade80;">가. 전액 지원 (1인당 ${formatAmount(l1)}원 이하)</span>
+                    <span style="font-size:0.72rem; font-weight:700; color:#4ade80; background:rgba(34,197,94,0.2); padding:0.15rem 0.45rem; border-radius:6px;">자부담 0% · 회사 100% 지원</span>
+                </div>
+                <div style="font-size:0.78rem; color:#cbd5e1; line-height:1.5;">
+                    인당 행사비가 <strong>${formatAmount(l1)}원</strong> 이하인 경우, 자부담 없이 회사가 <strong>전액 지원</strong>합니다.
+                </div>
+                <div style="margin-top:0.4rem; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.2); border-radius:8px; font-size:0.75rem; color:#a7f3d0; line-height:1.45;">
+                    📌 <strong>예시:</strong> 4명이 식대 총 ${formatAmount(l1 * 4)}원 지출 ➔ 인당 ${formatAmount(l1)}원 ➔ <strong>자부담 0원</strong> (회사 전액 지원)
+                </div>
+            </div>
+
+            <!-- 나 구간 -->
+            <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:0.75rem 0.9rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.35rem; flex-wrap:wrap; gap:0.3rem;">
+                    <span style="font-weight:800; font-size:0.88rem; color:#38bdf8;">나. 일반 지원 (${formatAmount(l1 + 1)}원 ~ ${formatAmount(l2)}원 이하)</span>
+                    <span style="font-size:0.72rem; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.2); padding:0.15rem 0.45rem; border-radius:6px;">자부담 ${r2Pct}% · 회사 지원 ${100 - r2Pct}%</span>
+                </div>
+                <div style="font-size:0.78rem; color:#cbd5e1; line-height:1.5;">
+                    인당 행사비의 <strong>${r2Pct}%</strong>는 개인이 부담하고, <strong>${100 - r2Pct}%</strong>는 회사가 지원합니다.
+                </div>
+                <div style="margin-top:0.4rem; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.2); border-radius:8px; font-size:0.75rem; color:#bae6fd; line-height:1.45;">
+                    📌 <strong>예시:</strong> 인당 ${formatAmount(l2)}원 시 ➔ 자부담 <strong>${formatAmount(Math.round(l2 * r2Ratio))}원</strong> (회사 지원 ${formatAmount(l2 - Math.round(l2 * r2Ratio))}원)
+                </div>
+            </div>
+
+            <!-- 다 구간 -->
+            <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.3); border-radius:12px; padding:0.75rem 0.9rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.35rem; flex-wrap:wrap; gap:0.3rem;">
+                    <span style="font-weight:800; font-size:0.88rem; color:#fbbf24;">다. 초과 누진 (${formatAmount(l2 + 1)}원 ~ ${formatAmount(l3)}원 이하)</span>
+                    <span style="font-size:0.72rem; font-weight:700; color:#fbbf24; background:rgba(245,158,11,0.2); padding:0.15rem 0.45rem; border-radius:6px;">누진 자부담 (초과분 ${r3Pct}%)</span>
+                </div>
+                <div style="font-size:0.78rem; color:#cbd5e1; line-height:1.5;">
+                    ⚠️ 전체 금액에 ${r3Pct}%를 곱하는 것이 아니라, <strong>${formatAmount(l2)}원까지는 ${r2Pct}%(${formatAmount(part1)}원)</strong>만 내고 <strong>${formatAmount(l2)}원을 초과한 금액에 대해서만 ${r3Pct}%</strong>를 내도록 누진 적용되어 직원 부담을 낮춰줍니다.
+                </div>
+                <div style="margin-top:0.4rem; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.2); border-radius:8px; font-size:0.75rem; color:#fde68a; line-height:1.45;">
+                    📌 <strong>예시:</strong> 인당 ${formatAmount(midSample)}원 시<br>
+                    • 앞 ${formatAmount(l2)}원: ${formatAmount(part1)}원 (${r2Pct}%)<br>
+                    • 초과 ${formatAmount(midSample - l2)}원: ${formatAmount(part2)}원 (${r3Pct}%)<br>
+                    ➔ <strong>인당 자부담 ${formatAmount(totalSelfMid)}원</strong> (회사 지원 ${formatAmount(totalCorpMid)}원)
+                </div>
+            </div>
+
+            <!-- 라 구간 -->
+            <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:0.75rem 0.9rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.35rem; flex-wrap:wrap; gap:0.3rem;">
+                    <span style="font-weight:800; font-size:0.88rem; color:#f87171;">라. 한도 초과 (${formatAmount(l3)}원 초과)</span>
+                    <span style="font-size:0.72rem; font-weight:700; color:#f87171; background:rgba(239,68,68,0.2); padding:0.15rem 0.45rem; border-radius:6px;">최대 ${formatAmount(ded4)}원 지원</span>
+                </div>
+                <div style="font-size:0.78rem; color:#cbd5e1; line-height:1.5;">
+                    인당 행사비가 ${formatAmount(l3)}원을 넘으면 회사는 <strong>인당 최대 ${formatAmount(ded4)}원까지만 지원</strong>하며, 초과분은 전액 자부담입니다.
+                </div>
+                <div style="margin-top:0.4rem; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.2); border-radius:8px; font-size:0.75rem; color:#fecaca; line-height:1.45;">
+                    📌 <strong>예시:</strong> 인당 ${formatAmount(overSample)}원 시 ➔ <strong>자부담 ${formatAmount(selfOver)}원</strong> (회사 최대 ${formatAmount(ded4)}원 지원)
+                </div>
+            </div>
+
+            <!-- 기타 비용 기준 요약 -->
+            <div style="background:rgba(255,255,255,0.04); border:1px dashed rgba(255,255,255,0.15); border-radius:10px; padding:0.6rem 0.8rem; font-size:0.75rem; color:#94a3b8; line-height:1.5;">
+                <div style="font-weight:700; color:#e2e8f0; margin-bottom:0.25rem;">🏢 기타 비용 규정 안내</div>
+                <div>• <strong>시설 및 장비 이용료:</strong> 인당 최대 ${formatAmount(facilityLimit)}원 flat 지원 (임원진 사전 승인 필요, 초과분 자부담)</div>
+                <div>• <strong>상품비:</strong> 클럽당 연간 최대 ${formatAmount(prizeLimit)}원 한도 (정회원 10명 이상 행사 시 집행 가능)</div>
+            </div>
+        </div>
+    `;
+}
+
+function openRulesGuideModal() {
+    renderRulesGuideModalContent();
+    const overlay = document.getElementById('rules-guide-modal-overlay');
+    if (overlay) overlay.style.display = 'flex';
+}
+
+function closeRulesGuideModal() {
+    const overlay = document.getElementById('rules-guide-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+(function initRulesGuideModal() {
+    const btn = document.getElementById('expense-rules-guide-btn');
+    if (btn) btn.addEventListener('click', openRulesGuideModal);
+
+    const closeBtn = document.getElementById('rules-guide-modal-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', closeRulesGuideModal);
+
+    const confirmBtn = document.getElementById('rules-guide-modal-confirm-btn');
+    if (confirmBtn) confirmBtn.addEventListener('click', closeRulesGuideModal);
+
+    const overlay = document.getElementById('rules-guide-modal-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeRulesGuideModal();
+        });
+    }
+})();
 
 // 전역 커스텀 툴팁 — [data-tooltip] 요소는 어디에 있든(스크롤 컨테이너 내부 포함) 이 위치를 통해
 // document.body 기준 position:fixed 로 뜬다. 이벤트 위임 방식이라 나중에 동적으로 그려지는

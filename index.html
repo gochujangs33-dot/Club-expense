@@ -205,7 +205,12 @@
                                 </div>
                                 <div class="input-row">
                                     <div class="input-group flex-2">
-                                        <label for="expense-amount-input" data-i18n="label.expense_amount">금액 (원)</label>
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:0.4rem; margin-bottom:0.25rem;">
+                                            <label for="expense-amount-input" data-i18n="label.expense_amount" style="margin-bottom:0;">금액 (원)</label>
+                                            <button type="button" id="expense-rules-guide-btn" class="rules-guide-btn" title="구간별 지원 및 자부담 기준 안내">
+                                                <span class="guide-icon">❓</span> <span class="guide-text">정산 기준</span>
+                                            </button>
+                                        </div>
                                         <input type="text" inputmode="numeric" id="expense-amount-input" placeholder="예: 150,000" required autocomplete="off">
                                     </div>
                                     <div class="input-group flex-3">
@@ -1387,6 +1392,28 @@
             <div style="display:flex; gap:0.6rem; justify-content:center; margin-top:1.2rem;">
                 <button id="edit-user-modal-ok" class="edit-user-ok-btn" style="padding:0.5rem 1.6rem; background:rgba(99,102,241,0.25); border:2px solid rgba(99,102,241,0.6); color:#c7d2fe; border-radius:10px; font-size:0.9rem; font-weight:800; cursor:pointer;">저장</button>
                 <button id="edit-user-modal-cancel" class="edit-user-cancel-btn" style="padding:0.5rem 1.6rem; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.75); border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 정산 구간 및 자부담 기준 안내 모달 -->
+    <div id="rules-guide-modal-overlay" style="display:none; position:fixed; inset:0; z-index:10300; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem; box-sizing:border-box;">
+        <div class="rules-guide-modal-card" style="background:linear-gradient(160deg,#0d1424,#0f1a36); border:1.5px solid rgba(56,189,248,0.4); border-radius:20px; padding:1.4rem 1.3rem 1.2rem; max-width:560px; width:100%; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 0 40px rgba(56,189,248,0.18), 0 16px 48px rgba(0,0,0,0.7); box-sizing:border-box;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:1.4rem;">📊</span>
+                    <div>
+                        <h3 style="font-size:1.05rem; font-weight:800; color:#f8fafc; margin:0; letter-spacing:-0.01em;">정산 구간 및 자부담 기준 안내</h3>
+                        <p style="font-size:0.74rem; color:#94a3b8; margin:0.15rem 0 0;">인당 행사비(=행사비 ÷ 참석 인원수) 기준 계산 공식 및 예시</p>
+                    </div>
+                </div>
+                <button type="button" id="rules-guide-modal-close-btn" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#cbd5e1; font-size:1.1rem; border-radius:50%; width:2rem; height:2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
+            </div>
+            <div id="rules-guide-modal-content" style="overflow-y:auto; flex:1; padding-right:0.3rem;">
+                <!-- JS에서 AppState.rules 기준으로 동적 렌더링 -->
+            </div>
+            <div style="margin-top:0.9rem; flex-shrink:0;">
+                <button type="button" id="rules-guide-modal-confirm-btn" style="width:100%; padding:0.65rem; background:linear-gradient(135deg,#0284c7,#0369a1); border:none; color:#ffffff; border-radius:10px; font-size:0.92rem; font-weight:700; cursor:pointer; box-shadow:0 4px 16px rgba(2,132,199,0.35);">확인</button>
             </div>
         </div>
     </div>
