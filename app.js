@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.349';
+const APP_VERSION      = '1.6.350';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -7822,6 +7822,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.350', date: '2026.11.10', items: ['정산 기준 안내 모달 예시 항목 슬림화: 중복되거나 불필요한 예시를 정돈하여 핵심 경계값(30,001원 / 60,001원·120,000원 / 120,001원)만 명확하게 제시하고 스크롤 부담 완화', '실무 설명회 발표 자료(PPTX) 정산 기준 안내 슬림 팝업 및 최신 스크린샷 동기화'] },
         { ver: '1.6.349', date: '2026.11.10', items: ['정산 기준 안내 모달 상세 설명 및 경계값 예시 보강: 30,001원(나 구간 진입 시 전체 20% 적용으로 6,000원 자부담), 60,001원(다 구간 초과분 40% 누진으로 12,000원 동일), 120,001원(라 구간 최대 85,000원 정액 지원 전환으로 35,001원 자부담) 사규 공식 원리 및 구체적 계산 예시 추가'] },
         { ver: '1.6.348', date: '2026.11.10', items: ['전사원 명부 와이드 데스크톱(≥1200px/1600px) 레이아웃 전면 개편: 차트 탭 규격에 맞춰 전폭(최대 1840px) 확장 및 좌측 사원 등록(360px 고정·sticky) / 우측 명부 목록(3~4열 멀티 컬럼 그리드) 1:4 최적 비율 적용', '명부 스크롤 높이 대폭 확장(calc(100vh - 260px), 최소 580~640px): 큰 화면에서 스크롤 없이 한 번에 20~30명 이상의 사원을 시원하게 조망 가능'] },
         { ver: '1.6.347', date: '2026.11.09', items: ['연간 결산 PPT 우수 클럽 랭킹 기준 개편: "안정적 예산 운용 클럽"을 "알뜰 예산 운용 클럽"으로 명칭 변경하고, 산출 기준을 기존 85% 근접에서 "배정 예산 내 100% 소진(100% 이하 최다 소진, 불용 예산 최소화)"으로 개선', '설명회 발표 자료(PPTX)에 나노바나나 클라우드 아키텍처(전용 구글 계정·Firebase 실시간 DB·자동 메일 발송) 인포그래픽 및 설명 보강'] },
@@ -12095,18 +12096,10 @@ function renderRulesGuideModalContent() {
     const facilityLimit = rules.facilityLimit || 85000;
     const prizeLimit = rules.prizeLimit || 500000;
 
-    // 구간별 경계 및 예시 금액
+    // 구간별 경계 및 핵심 예시 금액
     const part1 = Math.round(l2 * r2Ratio); // 60,000 * 20% = 12,000
-    const midSample = Math.min(l3, Math.max(l2 + 10000, 100000)); // 100,000
-    const part2 = Math.round((midSample - l2) * r3Ratio); // (100,000 - 60,000) * 40% = 16,000
-    const totalSelfMid = part1 + part2; // 28,000
-    const totalCorpMid = midSample - totalSelfMid; // 72,000
-
     const selfAtL3 = part1 + Math.round((l3 - l2) * r3Ratio); // 120,000원 시 자부담 36,000
     const corpAtL3 = l3 - selfAtL3; // 120,000원 시 회사 지원 84,000
-
-    const overSample = l3 + 30000; // 150,000
-    const selfOver = overSample - ded4; // 65,000
 
     content.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:0.75rem;">
@@ -12142,9 +12135,7 @@ function renderRulesGuideModalContent() {
                     ⚠️ <strong>참고 (전체 비율 적용):</strong> 초과분만이 아니라 <strong>전체 금액에 ${r2Pct}%</strong>가 적용되므로, ${formatAmount(l1 + 1)}원 지출 시 즉시 ${formatAmount(Math.round((l1 + 1) * r2Ratio))}원의 자부담이 발생합니다.
                 </div>
                 <div class="rules-bracket-example">
-                    📌 <strong>예시:</strong><br>
-                    • 1인당 <strong>${formatAmount(l1 + 1)}원</strong> 지출 시 ➔ <strong>자부담 ${formatAmount(Math.round((l1 + 1) * r2Ratio))}원</strong> (회사 지원 ${formatAmount(l1 + 1 - Math.round((l1 + 1) * r2Ratio))}원)<br>
-                    • 1인당 <strong>${formatAmount(l2)}원</strong> 지출 시 ➔ <strong>자부담 ${formatAmount(Math.round(l2 * r2Ratio))}원</strong> (회사 지원 ${formatAmount(l2 - Math.round(l2 * r2Ratio))}원)
+                    📌 <strong>예시:</strong> 1인당 <strong>${formatAmount(l1 + 1)}원</strong> 지출 시 ➔ <strong>자부담 ${formatAmount(Math.round((l1 + 1) * r2Ratio))}원</strong> (회사 지원 ${formatAmount(l1 + 1 - Math.round((l1 + 1) * r2Ratio))}원)
                 </div>
             </div>
 
@@ -12160,7 +12151,6 @@ function renderRulesGuideModalContent() {
                 <div class="rules-bracket-example">
                     📌 <strong>예시:</strong><br>
                     • 1인당 <strong>${formatAmount(l2 + 1)}원</strong> 지출 시: 앞 ${formatAmount(l2)}원(${formatAmount(part1)}원) + 초과 1원(0.4원 반올림 0원) ➔ <strong>자부담 ${formatAmount(part1)}원 동일</strong> (회사 지원 ${formatAmount(l2 + 1 - part1)}원)<br>
-                    • 1인당 <strong>${formatAmount(midSample)}원</strong> 지출 시: 앞 ${formatAmount(l2)}원(${formatAmount(part1)}원) + 초과 ${formatAmount(midSample - l2)}원(${formatAmount(part2)}원) ➔ <strong>자부담 ${formatAmount(totalSelfMid)}원</strong> (회사 지원 ${formatAmount(totalCorpMid)}원)<br>
                     • 1인당 <strong>${formatAmount(l3)}원</strong> 지출 시: 앞 ${formatAmount(l2)}원(${formatAmount(part1)}원) + 초과 ${formatAmount(l3 - l2)}원(${formatAmount(Math.round((l3 - l2) * r3Ratio))}원) ➔ <strong>자부담 ${formatAmount(selfAtL3)}원</strong> (회사 지원 ${formatAmount(corpAtL3)}원)
                 </div>
             </div>
@@ -12175,9 +12165,7 @@ function renderRulesGuideModalContent() {
                     인당 행사비가 ${formatAmount(l3)}원을 넘으면 회사는 <strong>인당 최대 ${formatAmount(ded4)}원까지만 지원</strong>하며(법인카드 상한), <strong>${formatAmount(ded4)}원을 초과한 잔여 금액은 전액 개인이 부담</strong>합니다. (공식: 인당 행사비 - ${formatAmount(ded4)}원)
                 </div>
                 <div class="rules-bracket-example">
-                    📌 <strong>예시:</strong><br>
-                    • 1인당 <strong>${formatAmount(l3 + 1)}원</strong> 지출 시 ➔ <strong>자부담 ${formatAmount(l3 + 1 - ded4)}원</strong> (회사 최대 ${formatAmount(ded4)}원 지원)<br>
-                    • 1인당 <strong>${formatAmount(overSample)}원</strong> 지출 시 ➔ <strong>자부담 ${formatAmount(selfOver)}원</strong> (회사 최대 ${formatAmount(ded4)}원 지원)
+                    📌 <strong>예시:</strong> 1인당 <strong>${formatAmount(l3 + 1)}원</strong> 지출 시 ➔ <strong>자부담 ${formatAmount(l3 + 1 - ded4)}원</strong> (회사 최대 ${formatAmount(ded4)}원 지원)
                     <div class="rules-bracket-note">
                         💡 <strong>사규 공식 구간 전환 안내:</strong> [다] 구간 최대치(${formatAmount(l3)}원 지출 시 회사 지원 ${formatAmount(corpAtL3)}원 / 자부담 ${formatAmount(selfAtL3)}원) 대비, [라] 구간(${formatAmount(l3 + 1)}원 이상)부터는 회사 지원금이 사규상 최대 지원 한도인 <strong>${formatAmount(ded4)}원</strong>으로 정액 고정 지원되므로 자부담이 ${formatAmount(l3 + 1 - ded4)}원으로 산출됩니다.
                     </div>
