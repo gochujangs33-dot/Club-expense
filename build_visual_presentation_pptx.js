@@ -228,49 +228,49 @@ const path = require('path');
             });
 
             sArch.addText('🔄 4대 프로세스 통합 흐름', {
-                x: 6.2, y: 1.55, w: 3.0, h: 0.30,
-                fontSize: 12.0, fontFace: FONT_TITLE, color: C.primary, bold: true,
+                x: 6.2, y: 1.55, w: 3.0, h: 0.28,
+                fontSize: 11.5, fontFace: FONT_TITLE, color: C.primary, bold: true,
                 margin: 0
             });
 
             const archGuides = [
                 {
                     title: '① 구글 클라우드 기반 (인프라)',
-                    desc: '시스템 전용 구글 계정 분리 운영 및 Google Firebase 실시간 DB를 통해 1,316명 명부와 예산 데이터를 안전하게 동기화합니다.'
+                    desc: '전용 구글 계정 분리 운영 & Firebase 실시간 DB\n1,316명 명부 및 클럽 예산 실시간 무결점 동기화'
                 },
                 {
                     title: '② 사용자 페이지 (정산 신청)',
-                    desc: '동아리 총무·회원이 모바일/PC에서 참석자를 원클릭 등록하고, 영수증 금액 입력 시 4구간 자부담이 자동 산출됩니다.'
+                    desc: '모바일·PC 간편 접속 후 참석자 원클릭 선택\n영수증 금액 입력 시 4구간 자부담 실시간 자동 산출'
                 },
                 {
                     title: '③ 관리자 페이지 (통제·모니터링)',
-                    desc: '회장단(관리자)이 10개 클럽의 예산 소진율과 집행 내역을 실시간 모니터링하며, 구간 설정 및 감사 로그를 총괄합니다.'
+                    desc: '10개 클럽 실시간 예산 감시 & 정산 규정 설정\n데이터 위변조 방지를 위한 전사 작업 로그 총괄'
                 },
                 {
-                    title: '④ 파일 취합 및 보고 형태 (완전 자동)',
-                    desc: '정산 완료 즉시 공식 품의 엑셀(.xlsx)이 자동 생성·취합되며, Gmail 자동 발송 및 연간 결산 PPTX로 즉시 출력됩니다.'
+                    title: '④ 파일 취합 및 보고 형태 (자동화)',
+                    desc: '정산 확정 시 공식 품의 엑셀(.xlsx) 자동 매핑 생성\nGmail 자동 메일링 & 연말 결산 PPTX 원클릭 빌드'
                 }
             ];
 
             archGuides.forEach((g, idx) => {
-                const gy = 1.90 + idx * 0.60;
+                const gy = 1.88 + idx * 0.62;
                 sArch.addText([
-                    { text: `${g.title}\n`, options: { bold: true, fontSize: 9.8, color: C.textMain } },
-                    { text: g.desc, options: { fontSize: 8.2, color: C.textSub } }
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 9.2, color: C.textMain } },
+                    { text: g.desc, options: { fontSize: 7.8, color: C.textSub } }
                 ], {
-                    x: 6.2, y: gy, w: 3.0, h: 0.55,
-                    margin: 0, lineSpacing: 12.5, valign: 'top'
+                    x: 6.18, y: gy, w: 3.05, h: 0.52,
+                    margin: 0, lineSpacing: 11.5, valign: 'top'
                 });
             });
 
             // 하단 보안 배너
             sArch.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 6.2, y: 4.42, w: 3.0, h: 0.48,
+                x: 6.15, y: 4.42, w: 3.10, h: 0.48,
                 fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 0.8 },
                 rectRadius: 0.06
             });
             sArch.addText('💡 완전 자동화: 수기 취합이나 계산 과정 없이 전사 정산 데이터가 실시간 집계 및 보고됩니다.', {
-                x: 6.3, y: 4.45, w: 2.8, h: 0.42,
+                x: 6.22, y: 4.45, w: 2.95, h: 0.42,
                 fontSize: 7.8, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 11, valign: 'middle',
                 margin: 0
             });
@@ -469,13 +469,13 @@ const path = require('path');
             ];
 
             guides4.forEach((g, idx) => {
-                const gy = 1.90 + idx * 0.60;
+                const gy = 1.88 + idx * 0.62;
                 s4.addText([
-                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
-                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 9.5, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.0, color: C.textSub } }
                 ], {
-                    x: 6.0, y: gy, w: 3.2, h: 0.55,
-                    margin: 0, lineSpacing: 13, valign: 'top'
+                    x: 6.0, y: gy, w: 3.2, h: 0.52,
+                    margin: 0, lineSpacing: 12, valign: 'top'
                 });
             });
 
@@ -693,13 +693,13 @@ const path = require('path');
             ];
 
             guides7.forEach((g, idx) => {
-                const gy = 1.90 + idx * 0.60;
+                const gy = 1.88 + idx * 0.62;
                 s7.addText([
-                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
-                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 9.5, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.0, color: C.textSub } }
                 ], {
-                    x: 6.2, y: gy, w: 3.0, h: 0.55,
-                    margin: 0, lineSpacing: 13, valign: 'top'
+                    x: 6.2, y: gy, w: 3.0, h: 0.52,
+                    margin: 0, lineSpacing: 11.5, valign: 'top'
                 });
             });
 
@@ -755,13 +755,13 @@ const path = require('path');
             ];
 
             guides8.forEach((g, idx) => {
-                const gy = 1.90 + idx * 0.60;
+                const gy = 1.88 + idx * 0.62;
                 s8.addText([
-                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
-                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 9.5, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.0, color: C.textSub } }
                 ], {
-                    x: 6.1, y: gy, w: 3.1, h: 0.55,
-                    margin: 0, lineSpacing: 13, valign: 'top'
+                    x: 6.1, y: gy, w: 3.1, h: 0.52,
+                    margin: 0, lineSpacing: 11.5, valign: 'top'
                 });
             });
 
@@ -817,13 +817,13 @@ const path = require('path');
             ];
 
             guides9.forEach((g, idx) => {
-                const gy = 1.90 + idx * 0.60;
+                const gy = 1.88 + idx * 0.62;
                 s9.addText([
-                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
-                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 9.5, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.0, color: C.textSub } }
                 ], {
-                    x: 6.2, y: gy, w: 3.0, h: 0.55,
-                    margin: 0, lineSpacing: 13, valign: 'top'
+                    x: 6.2, y: gy, w: 3.0, h: 0.52,
+                    margin: 0, lineSpacing: 11.5, valign: 'top'
                 });
             });
 
