@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.351';
+const APP_VERSION      = '1.6.352';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -7503,13 +7503,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ).totalSelfPay);
         const diff = newValue - minSelfPay;
 
+        if (diff < 0) {
+            const minFmt = minSelfPay.toLocaleString();
+            const absDiff = Math.abs(diff).toLocaleString();
+            showDiffPopup(`⚠️ 사규 최소 기준 미달 ⚠️\n사규 규정상 최소 총 자부담은 ${minFmt}원입니다.\n규정보다 ${absDiff}원 적게 부담할 수 없어 ${minFmt}원으로 자동 복원됩니다.`, diff);
+            selfPayInput.value = formatAmount(minSelfPay);
+            AppState.lastCalculatedSelfPay = minSelfPay;
+            AppState.selfPayManuallyOverridden = false;
+            AppState.render();
+            return;
+        }
+
         const absDiff = Math.abs(diff).toLocaleString();
         const minFmt = minSelfPay.toLocaleString();
         const popupMsg = diff > 0
             ? `원래 총 자부담: ${minFmt}원 + ${absDiff}원 초과\n정산에 문제 없음`
-            : diff === 0
-            ? `총 자부담: ${minFmt}원 (자동 계산값과 동일)\n정산에 문제 없음`
-            : `⚠️ 정산에 문제 있음 ⚠️\n원래 총 자부담: ${minFmt}원보다 ${absDiff}원 적게 부담함`;
+            : `총 자부담: ${minFmt}원 (자동 계산값과 동일)\n정산에 문제 없음`;
         showDiffPopup(popupMsg, diff);
 
         AppState.lastCalculatedSelfPay = newValue;
@@ -7857,6 +7866,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.352', date: '2026.11.10', items: ['사규 최소 기준 자부담 이하 입력 원천 차단 및 실시간 사유 안내: 1인당 자부담 입력란 및 정산 결과의 총 자부담란에서 사규 규정(나 구간 20%, 다 구간 초과 40% 누진 등) 최소 금액보다 낮은 금액 입력 시 즉각적인 사규 위반 사유 표시 및 최소 기준값 자동 복원 적용'] },
         { ver: '1.6.351', date: '2026.11.10', items: ['정산 결과 화면의 "인당 자부담 비용" 표시 정합성 개선: 실제 총 자부담 금액을 참석 인원수로 나눈 실제 1인당 자부담(예: 36,000원÷3명=12,000원)이 정확하게 일치 표시되도록 수정하고, 사규 최소 기준값과의 차이가 있는 경우 보조 안내 라벨로 함께 표시', '비용 항목 추가 시 하단 실시간 프리뷰 배너의 라벨을 "(개인부담)"에서 "(1인당 자부담)"으로 명확화하여 개별 항목 개인카드 금액과의 혼동 해소'] },
         { ver: '1.6.350', date: '2026.11.10', items: ['정산 기준 안내 모달 예시 항목 슬림화: 중복되거나 불필요한 예시를 정돈하여 핵심 경계값(30,001원 / 60,001원·120,000원 / 120,001원)만 명확하게 제시하고 스크롤 부담 완화', '실무 설명회 발표 자료(PPTX) 정산 기준 안내 슬림 팝업 및 최신 스크린샷 동기화'] },
         { ver: '1.6.349', date: '2026.11.10', items: ['정산 기준 안내 모달 상세 설명 및 경계값 예시 보강: 30,001원(나 구간 진입 시 전체 20% 적용으로 6,000원 자부담), 60,001원(다 구간 초과분 40% 누진으로 12,000원 동일), 120,001원(라 구간 최대 85,000원 정액 지원 전환으로 35,001원 자부담) 사규 공식 원리 및 구체적 계산 예시 추가'] },
@@ -11890,7 +11900,19 @@ function applyManualPerPersonToCards(totalAmount, manualPerPerson, existingSelfP
     const personalAmountInput = document.getElementById('expense-personal-amount-input');
     if (!corpCheck || !personalCheck || !corpAmountInput || !personalAmountInput) return;
 
-    const targetTotalSelfPay = manualPerPerson * memberCount;
+    // 사규 정책상 최소 1인당 자부담 계산 (사규 최소 기준 이하로 카드가 내려가지 않도록 안전 가드)
+    const categorySelect = document.getElementById('expense-category-select');
+    const currentCat = categorySelect ? categorySelect.value : 'EVENT';
+    const rules = AppState.rules || DefaultRules;
+    const editingId = AppState.editingItemId || null;
+    const existingItems = (AppState.expenseItems || []).filter(item => item.id !== editingId);
+    const allItemsForPolicy = [...existingItems, { amount: totalAmount, category: currentCat }];
+    const policyResult = SettlementCalculator.calculate(memberCount, allItemsForPolicy, 0, rules);
+    const minRequiredTotalSelfPay = Math.round(policyResult.totalSelfPay);
+    const minRequiredPerPerson = Math.round(minRequiredTotalSelfPay / memberCount);
+
+    const safeManualPerPerson = Math.max(minRequiredPerPerson, manualPerPerson);
+    const targetTotalSelfPay = safeManualPerPerson * memberCount;
     // 이번 항목에서 개인카드로 부담해야 할 금액 = 목표 총 자부담 - 기존 항목들의 개인카드 합계
     let requiredItemPersonal = Math.max(0, targetTotalSelfPay - existingSelfPay);
     // 이번 항목 총액 내로 제한 (초과 시 전액 개인카드)
@@ -11967,6 +11989,28 @@ function updatePendingSelfPayPreview() {
     const isManual = _manualPendingPerPerson !== null;
     const currentPerPerson = isManual ? _manualPendingPerPerson : autoPerPerson;
 
+    // ── 사규 기준 최소 1인당 자부담 및 규정 구간 원인 계산 ──
+    const categorySelect = document.getElementById('expense-category-select');
+    const currentCat = categorySelect ? categorySelect.value : 'EVENT';
+    const rules = AppState.rules || DefaultRules;
+
+    const allItemsForPolicy = [...existingItems, { amount: totalAmount, category: currentCat }];
+    const policyResult = SettlementCalculator.calculate(memberCount, allItemsForPolicy, 0, rules);
+    const minRequiredTotalSelfPay = Math.round(policyResult.totalSelfPay);
+    const minRequiredPerPerson = memberCount > 0 ? Math.round(minRequiredTotalSelfPay / memberCount) : 0;
+
+    let policyReasonText = '';
+    const pEventCost = policyResult.perPersonEventCost;
+    if (pEventCost > rules.limit3) {
+        policyReasonText = `라 구간(인당 최대 ${formatAmount(rules.deduction4 || 85000)}원 지원 한도 캡)`;
+    } else if (pEventCost > rules.limit2) {
+        policyReasonText = `다 구간(앞 ${formatAmount(rules.limit2)}원 20% + 초과분 ${Math.round((rules.rate3 || 0.4) * 100)}% 누진)`;
+    } else if (pEventCost > rules.limit1) {
+        policyReasonText = `나 구간(${Math.round((rules.rate2 || 0.2) * 100)}% 자부담)`;
+    } else {
+        policyReasonText = `가 구간(전액 지원)`;
+    }
+
     // 만약 이미 DOM 요소들이 렌더링되어 있고 사용자가 인라인 입력창에 포커스를 두고 있다면,
     // input 엘리먼트를 새로 만들지 않고 값과 텍스트만 업데이트하여 포커스/타이핑을 유지한다.
     let perPersonInput = document.getElementById('pending-per-person-input');
@@ -12024,6 +12068,7 @@ function updatePendingSelfPayPreview() {
                 ${inputHtml}
                 <span class="preview-personal-suffix">)</span>
             </div>
+            <div id="pending-per-person-error" class="pending-per-person-error hidden"></div>
             <div class="preview-sub">
                 <span>예상 자부담 비율:</span> <strong class="pending-ratio-val">${projectedRatioText}</strong>
                 ${isManual ? '<span class="manual-tag">✍️ 1인당 자부담 직접 입력 반영됨</span>' : ''}
@@ -12035,14 +12080,58 @@ function updatePendingSelfPayPreview() {
     perPersonInput = document.getElementById('pending-per-person-input');
     if (perPersonInput) {
         setupCurrencyInput(perPersonInput);
-        perPersonInput.addEventListener('input', () => {
+
+        const validateAndSync = (isCommit = false) => {
             const rawVal = perPersonInput.value.replace(/[^0-9]/g, '');
+            const errorEl = document.getElementById('pending-per-person-error');
+
             if (rawVal === '') {
-                _manualPendingPerPerson = 0;
-            } else {
-                _manualPendingPerPerson = parseInt(rawVal, 10) || 0;
+                _manualPendingPerPerson = null;
+                if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+                perPersonInput.classList.remove('input-error');
+                return;
             }
-            applyManualPerPersonToCards(totalAmount, _manualPendingPerPerson, existingSelfPay, memberCount);
+
+            let enteredVal = parseInt(rawVal, 10) || 0;
+
+            if (minRequiredPerPerson > 0 && enteredVal < minRequiredPerPerson) {
+                const errMsg = `⚠️ ${policyReasonText} 사규 규정에 따라 최소 1인당 ${formatAmount(minRequiredPerPerson)}원 이상 부담해야 합니다. (${formatAmount(minRequiredPerPerson)}원 미만 입력 불가)`;
+                if (errorEl) {
+                    errorEl.textContent = errMsg;
+                    errorEl.classList.remove('hidden');
+                }
+                perPersonInput.classList.add('input-error');
+
+                if (isCommit) {
+                    enteredVal = minRequiredPerPerson;
+                    perPersonInput.value = formatAmount(enteredVal);
+                    perPersonInput.classList.remove('input-error');
+                    if (errorEl) {
+                        errorEl.textContent = `ℹ️ 사규 최소 기준인 ${formatAmount(minRequiredPerPerson)}원으로 자동 복원되었습니다.`;
+                        setTimeout(() => { if (errorEl) errorEl.classList.add('hidden'); }, 3000);
+                    }
+                    _manualPendingPerPerson = enteredVal;
+                    applyManualPerPersonToCards(totalAmount, enteredVal, existingSelfPay, memberCount);
+                    updatePendingSelfPayPreview();
+                } else {
+                    applyManualPerPersonToCards(totalAmount, minRequiredPerPerson, existingSelfPay, memberCount);
+                }
+            } else {
+                if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+                perPersonInput.classList.remove('input-error');
+                _manualPendingPerPerson = enteredVal;
+                applyManualPerPersonToCards(totalAmount, enteredVal, existingSelfPay, memberCount);
+            }
+        };
+
+        perPersonInput.addEventListener('input', () => validateAndSync(false));
+        perPersonInput.addEventListener('blur', () => validateAndSync(true));
+        perPersonInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                validateAndSync(true);
+                perPersonInput.blur();
+            }
         });
     }
 

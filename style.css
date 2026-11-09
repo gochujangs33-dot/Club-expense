@@ -5209,6 +5209,36 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     font-weight: 700;
 }
 
+.pending-per-person-error {
+    margin-top: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.3rem;
+}
+[data-app-theme="light"] .pending-per-person-error {
+    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #fca5a5;
+}
+.pending-per-person-input.input-error {
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+[data-app-theme="light"] .pending-per-person-input.input-error {
+    border-color: #dc2626 !important;
+    color: #dc2626 !important;
+    background: #fff5f5 !important;
+}
+
 [data-app-theme="light"] .pending-self-pay-preview {
     background: #eef2ff;
     border-color: #c7d2fe;
