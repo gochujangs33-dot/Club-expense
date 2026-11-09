@@ -1316,6 +1316,10 @@ html[data-app-theme="light"] #dir-search-input {
     }
 }
 
+.dir-list-scroll {
+    max-height: 480px;
+}
+
 /* Scroll Container */
 .scroll-y {
     max-height: 250px;
@@ -5511,7 +5515,8 @@ html[data-app-theme="light"] #dedup-clubs-btn {
 @media (min-width: 1200px) {
     .app-container:has(#tab-charts:not(.hidden)),
     .app-container:has(#tab-club-history:not(.hidden)),
-    .app-container:has(#tab-admin:not(.hidden)) {
+    .app-container:has(#tab-admin:not(.hidden)),
+    .app-container:has(#tab-directory:not(.hidden)) {
         max-width: min(1840px, calc(100vw - 2.5rem));
     }
 
@@ -5762,6 +5767,57 @@ html[data-app-theme="light"] #dedup-clubs-btn {
         max-height: none !important;
         overflow-y: visible !important;
     }
+
+    /* ── 전사원 명부 탭: 와이드 데스크톱(≥1200px) 최적화 (차트 탭 규격 반영) ── */
+    #tab-directory .layout-grid {
+        display: grid !important;
+        grid-template-columns: 360px minmax(0, 1fr) !important;
+        gap: 1.25rem !important;
+        align-items: start;
+        width: 100%;
+    }
+    #tab-directory .panel-left {
+        position: sticky;
+        top: 1rem;
+        z-index: 10;
+    }
+    #tab-directory #add-dir-card,
+    #tab-directory #dir-list-card {
+        margin: 0 !important;
+    }
+    #tab-directory .dir-list-scroll {
+        max-height: calc(100vh - 280px) !important;
+        min-height: 560px;
+    }
+    #tab-directory #directory-container {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)) !important;
+        gap: 0.6rem !important;
+        align-content: start;
+    }
+    #tab-directory #directory-container .empty-state {
+        grid-column: 1 / -1;
+    }
+    #tab-directory #directory-container .expense-row {
+        margin: 0 !important;
+        background: rgba(30, 41, 59, 0.45);
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 8px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    #tab-directory #directory-container .expense-row:hover {
+        transform: translateY(-1px);
+        border-color: rgba(56, 189, 248, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+    html[data-app-theme="light"] #tab-directory #directory-container .expense-row {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+    }
+    html[data-app-theme="light"] #tab-directory #directory-container .expense-row:hover {
+        border-color: #38bdf8;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
 }
 
 /* 높이가 충분한 와이드 화면: 차트 탭 전체를 한 화면(뷰포트)에 맞춤 */
@@ -5786,6 +5842,21 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     #tab-charts .usage-ring-grid { min-height: 100%; align-content: center; }
     #tab-charts .usage-ring-svg-wrap { width: 64px; }
     #tab-charts .recent-settlement-list { flex: 1 1 0; min-height: 0; }
+}
+
+@media (min-width: 1600px) {
+    #tab-directory .layout-grid {
+        grid-template-columns: 380px minmax(0, 1fr) !important;
+        gap: 1.5rem !important;
+    }
+    #tab-directory .dir-list-scroll {
+        max-height: calc(100vh - 260px) !important;
+        min-height: 640px;
+    }
+    #tab-directory #directory-container {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+        gap: 0.75rem !important;
+    }
 }
 
 /* ── 관리자 클럽별 정산이력: 특정 클럽 단독 선택 시 100% 전폭 표시 ── */
