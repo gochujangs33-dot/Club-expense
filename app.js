@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.354';
+const APP_VERSION      = '1.6.355';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1760,18 +1760,49 @@ const AppState = {
 
             // Card type / split payment
             const cardType = item.cardType || 'corporate';
-            document.getElementById('expense-corp-check').checked = (cardType === 'corporate' || cardType === 'split');
-            document.getElementById('expense-personal-check').checked = (cardType === 'personal' || cardType === 'split');
-            document.getElementById('expense-corporate-amount-input').value = (item.corporateAmount !== undefined && item.corporateAmount !== null) ? formatAmount(item.corporateAmount) : '';
-            document.getElementById('expense-personal-amount-input').value = (item.personalAmount !== undefined && item.personalAmount !== null) ? formatAmount(item.personalAmount) : '';
+            const corpAmount = (item.corporateAmount !== undefined && item.corporateAmount !== null)
+                ? item.corporateAmount
+                : (cardType === 'personal' ? 0 : item.amount);
+            const personalAmount = (item.personalAmount !== undefined && item.personalAmount !== null)
+                ? item.personalAmount
+                : (cardType === 'corporate' ? 0 : item.amount);
+
+            document.getElementById('expense-corp-check').checked = (cardType === 'corporate' || cardType === 'split' || corpAmount > 0);
+            document.getElementById('expense-personal-check').checked = (cardType === 'personal' || cardType === 'split' || personalAmount > 0);
+            document.getElementById('expense-corporate-amount-input').value = corpAmount > 0 ? formatAmount(corpAmount) : '';
+            document.getElementById('expense-personal-amount-input').value = personalAmount > 0 ? formatAmount(personalAmount) : '';
 
             // Load receipt preview status
             this.tempCorpReceiptImage = (cardType === 'split') ? (item.corporateReceiptImage || null) : (cardType === 'corporate' ? (item.receiptImage || null) : null);
             this.tempPersonalReceiptImage = (cardType === 'split') ? (item.personalReceiptImage || null) : (cardType === 'personal' ? (item.receiptImage || null) : null);
 
-            // 누적 계산식으로 법인/개인 금액 및 토글 재계산
-            autoSetTogglesAndCorp();
+            // ⚠️ 기존 저장된 카드 금액(수동 분할값 등)을 보존해야 하므로 autoSetTogglesAndCorp()는 호출하지 않는다.
+            // 대신 수동 입력된 1인당 자부담 상태를 프리뷰에 정확히 동기화
+            const memberCount = this.memberCount || (this.attendees ? this.attendees.length : 0);
+            if (memberCount > 0) {
+                const otherItems = (this.expenseItems || []).filter(it => it.id !== id);
+                const otherSelfPay = otherItems.reduce((s, it) => s + (it.personalAmount || 0), 0);
+                const totalProjSelfPay = otherSelfPay + personalAmount;
+                const perPersonVal = Math.round(totalProjSelfPay / memberCount);
+
+                const policyResult = SettlementCalculator.calculate(
+                    memberCount,
+                    [...otherItems, { amount: item.amount, category: item.category }],
+                    0,
+                    this.rules || DefaultRules
+                );
+                const policyPerPerson = Math.round(policyResult.totalSelfPay / memberCount);
+                if (Math.abs(perPersonVal - policyPerPerson) >= 1) {
+                    _manualPendingPerPerson = perPersonVal;
+                } else {
+                    _manualPendingPerPerson = null;
+                }
+            } else {
+                _manualPendingPerPerson = null;
+            }
+
             updateCardTypeUI();
+            updatePendingSelfPayPreview();
 
             const corpStatusEl = document.getElementById('receipt-corp-status');
             const deleteCorpBtn = document.getElementById('delete-receipt-corp-btn');
@@ -1808,6 +1839,7 @@ const AppState = {
 
     cancelEdit() {
         this.editingItemId = null;
+        _manualPendingPerPerson = null;
         document.getElementById('expense-desc-input').value = '';
         document.getElementById('expense-amount-input').value = '';
         document.getElementById('expense-category-select').selectedIndex = 0;
@@ -1830,6 +1862,7 @@ const AppState = {
         if (deletePersonalBtn) deletePersonalBtn.classList.add('hidden');
 
         updateCardTypeUI();
+        updatePendingSelfPayPreview();
 
         const submitBtn = document.getElementById('add-expense-btn');
         submitBtn.innerHTML = `<span class="btn-icon">✨</span> 항목 추가`;
@@ -7868,6 +7901,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.355', date: '2026.11.10', items: ['비용 항목 재클릭 시 수정 모드 입력값 보존 버그 해결: 기존에 사용자가 직접 수정한 법인카드/개인카드 및 1인당 자부담 분할값이 기본 자동계산값으로 덮어씌워지던 문제 수정 및 저장값 완전 보존'] },
         { ver: '1.6.354', date: '2026.11.10', items: ['스크립트 런타임 구문 정상화 및 로그인 PIN 키패드 입력 동작 복원'] },
         { ver: '1.6.353', date: '2026.11.10', items: ['정산 결과 화면의 "총 자부담 금액 (수정 가능)"에서 "(수정 가능)" 문구 삭제 및 결과 표시 전용(수정 불가)으로 전환: 자부담 금액 조정은 비용 항목 추가/수정 폼(좌측)의 1인당 자부담 및 카드 분할을 통해서만 진행되도록 일원화'] },
         { ver: '1.6.352', date: '2026.11.10', items: ['사규 최소 기준 자부담 이하 입력 원천 차단 및 실시간 사유 안내: 1인당 자부담 입력란 및 정산 결과의 총 자부담란에서 사규 규정(나 구간 20%, 다 구간 초과 40% 누진 등) 최소 금액보다 낮은 금액 입력 시 즉각적인 사규 위반 사유 표시 및 최소 기준값 자동 복원 적용'] },
