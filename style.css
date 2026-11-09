@@ -4433,10 +4433,87 @@ html[data-app-theme="light"] .rules-guide-btn:hover {
     border-color: #38bdf8;
 }
 
-/* 정산 기준 모달 라이트 테마 */
+/* 정산 기준 모달 공통 및 다크 모드 스타일 */
+.rules-guide-tip-banner {
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: #bae6fd;
+}
+.rules-bracket-card {
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    transition: all 0.2s ease;
+}
+.rules-bracket-title {
+    font-weight: 800;
+    font-size: 0.88rem;
+}
+.rules-bracket-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+}
+.rules-bracket-desc {
+    font-size: 0.78rem;
+    color: #cbd5e1;
+    line-height: 1.5;
+    margin-top: 0.2rem;
+}
+.rules-bracket-example {
+    margin-top: 0.45rem;
+    padding: 0.5rem 0.7rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    font-size: 0.76rem;
+    line-height: 1.5;
+}
+.rules-extra-box {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.76rem;
+    color: #94a3b8;
+    line-height: 1.55;
+}
+.rules-extra-title {
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 0.3rem;
+}
+
+/* 다크 모드 구간별 테마 */
+.bracket-card-a { background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.35); }
+.bracket-card-a .rules-bracket-title { color: #4ade80; }
+.bracket-card-a .rules-bracket-badge { color: #4ade80; background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.3); }
+.bracket-card-a .rules-bracket-example { color: #a7f3d0; border: 1px solid rgba(34, 197, 94, 0.2); }
+
+.bracket-card-b { background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); }
+.bracket-card-b .rules-bracket-title { color: #38bdf8; }
+.bracket-card-b .rules-bracket-badge { color: #38bdf8; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.3); }
+.bracket-card-b .rules-bracket-example { color: #bae6fd; border: 1px solid rgba(56, 189, 248, 0.2); }
+
+.bracket-card-c { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); }
+.bracket-card-c .rules-bracket-title { color: #fbbf24; }
+.bracket-card-c .rules-bracket-badge { color: #fbbf24; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.3); }
+.bracket-card-c .rules-bracket-example { color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.2); }
+
+.bracket-card-d { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.35); }
+.bracket-card-d .rules-bracket-title { color: #f87171; }
+.bracket-card-d .rules-bracket-badge { color: #f87171; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); }
+.bracket-card-d .rules-bracket-example { color: #fecaca; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+/* 정산 기준 모달 라이트 테마 (고대비 가독성 보정) */
 html[data-app-theme="light"] .rules-guide-modal-card {
     background: #ffffff !important;
-    border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
+    border: 1.5px solid rgba(56, 189, 248, 0.5) !important;
     box-shadow: 0 16px 48px rgba(15, 23, 42, 0.16) !important;
 }
 html[data-app-theme="light"] .rules-guide-modal-card h3 {
@@ -4449,6 +4526,98 @@ html[data-app-theme="light"] #rules-guide-modal-close-btn {
     background: #f1f5f9 !important;
     border: 1px solid #cbd5e1 !important;
     color: #475569 !important;
+}
+html[data-app-theme="light"] .rules-guide-tip-banner {
+    background: #f0f9ff !important;
+    border: 1px solid #bae6fd !important;
+    color: #0369a1 !important;
+    font-weight: 500;
+}
+html[data-app-theme="light"] .rules-bracket-desc {
+    color: #334155 !important;
+    font-weight: 500;
+}
+
+/* 라이트 모드 구간별 고대비 카드 */
+html[data-app-theme="light"] .bracket-card-a {
+    background: #f0fdf4 !important;
+    border: 1.5px solid #86efac !important;
+}
+html[data-app-theme="light"] .bracket-card-a .rules-bracket-title {
+    color: #15803d !important;
+}
+html[data-app-theme="light"] .bracket-card-a .rules-bracket-badge {
+    color: #15803d !important;
+    background: #dcfce7 !important;
+    border: 1px solid #86efac !important;
+}
+html[data-app-theme="light"] .bracket-card-a .rules-bracket-example {
+    background: #ffffff !important;
+    border: 1px solid #86efac !important;
+    color: #166534 !important;
+}
+
+html[data-app-theme="light"] .bracket-card-b {
+    background: #f0f9ff !important;
+    border: 1.5px solid #7dd3fc !important;
+}
+html[data-app-theme="light"] .bracket-card-b .rules-bracket-title {
+    color: #0284c7 !important;
+}
+html[data-app-theme="light"] .bracket-card-b .rules-bracket-badge {
+    color: #0284c7 !important;
+    background: #e0f2fe !important;
+    border: 1px solid #7dd3fc !important;
+}
+html[data-app-theme="light"] .bracket-card-b .rules-bracket-example {
+    background: #ffffff !important;
+    border: 1px solid #7dd3fc !important;
+    color: #0369a1 !important;
+}
+
+html[data-app-theme="light"] .bracket-card-c {
+    background: #fffbeb !important;
+    border: 1.5px solid #fcd34d !important;
+}
+html[data-app-theme="light"] .bracket-card-c .rules-bracket-title {
+    color: #b45309 !important;
+}
+html[data-app-theme="light"] .bracket-card-c .rules-bracket-badge {
+    color: #b45309 !important;
+    background: #fef3c7 !important;
+    border: 1px solid #fcd34d !important;
+}
+html[data-app-theme="light"] .bracket-card-c .rules-bracket-example {
+    background: #ffffff !important;
+    border: 1px solid #fcd34d !important;
+    color: #92400e !important;
+}
+
+html[data-app-theme="light"] .bracket-card-d {
+    background: #fef2f2 !important;
+    border: 1.5px solid #fca5a5 !important;
+}
+html[data-app-theme="light"] .bracket-card-d .rules-bracket-title {
+    color: #b91c1c !important;
+}
+html[data-app-theme="light"] .bracket-card-d .rules-bracket-badge {
+    color: #b91c1c !important;
+    background: #fee2e2 !important;
+    border: 1px solid #fca5a5 !important;
+}
+html[data-app-theme="light"] .bracket-card-d .rules-bracket-example {
+    background: #ffffff !important;
+    border: 1px solid #fca5a5 !important;
+    color: #991b1b !important;
+}
+
+html[data-app-theme="light"] .rules-extra-box {
+    background: #f8fafc !important;
+    border: 1.5px dashed #cbd5e1 !important;
+    color: #475569 !important;
+}
+html[data-app-theme="light"] .rules-extra-title {
+    color: #0f172a !important;
 }
 
 html[data-app-theme="light"] .changelog-date {
