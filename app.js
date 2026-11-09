@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.350';
+const APP_VERSION      = '1.6.351';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -2290,8 +2290,25 @@ const AppState = {
             }
         }
 
-        document.getElementById('result-per-person-self-pay').textContent = SettlementCalculator.formatCurrency(result.perPersonSelfPay);
-        updatePerPersonSelfPayIcon(result.perPersonSelfPay);
+        // 실제 인당 자부담 비용: 실제 총 자부담(finalSelfPay) ÷ 참석자 수 (계산식_명세서.md 5번 명세 준수)
+        const actualPerPersonSelfPay = (this.memberCount > 0 && finalSelfPay > 0)
+            ? Math.round(finalSelfPay / this.memberCount)
+            : result.perPersonSelfPay;
+
+        document.getElementById('result-per-person-self-pay').textContent = SettlementCalculator.formatCurrency(actualPerPersonSelfPay);
+        updatePerPersonSelfPayIcon(actualPerPersonSelfPay);
+
+        // 사규 최소 기준값과의 차이가 있는 경우 보조 안내 라벨 표시
+        const policyNoteEl = document.getElementById('result-per-person-policy-note');
+        if (policyNoteEl) {
+            const minSelfPayTotal = Math.round(result.totalSelfPay);
+            if (this.memberCount > 0 && finalSelfPay > 0 && Math.abs(finalSelfPay - minSelfPayTotal) >= 100) {
+                policyNoteEl.textContent = `(사규 최소 기준: ${SettlementCalculator.formatCurrency(Math.round(result.perPersonSelfPay))})`;
+                policyNoteEl.classList.remove('hidden');
+            } else {
+                policyNoteEl.classList.add('hidden');
+            }
+        }
         document.getElementById('result-self-pay-ratio').textContent = `${(result.totalCost > 0 ? (finalSelfPay / result.totalCost * 100) : 0).toFixed(1)}%`;
         document.getElementById('result-total-cost').textContent = SettlementCalculator.formatCurrency(result.totalCost);
         document.getElementById('result-event-cost').textContent = SettlementCalculator.formatCurrency(result.eventCost);
@@ -3087,7 +3104,10 @@ const AppState = {
         body += `- 총 소요 비용: ${SettlementCalculator.formatCurrency(result.totalCost)}\n`;
         body += `- 회사 지원금: ${SettlementCalculator.formatCurrency(finalSupport)}\n`;
         body += `- 총 자부담 금액: ${SettlementCalculator.formatCurrency(finalSelfPay)}\n`;
-        body += `- 인당 자부담 비용: ${SettlementCalculator.formatCurrency(Math.round(result.perPersonSelfPay))}\n`;
+        const actualPerPersonEmail = (result.memberCount > 0 && finalSelfPay > 0)
+            ? Math.round(finalSelfPay / result.memberCount)
+            : Math.round(result.perPersonSelfPay);
+        body += `- 인당 자부담 비용: ${SettlementCalculator.formatCurrency(actualPerPersonEmail)}\n`;
         body += `- 참석 인원: ${result.memberCount}명\n`;
         body += `- 자부담 비율: ${(finalRatio * 100).toFixed(1)}%\n`;
         body += `=========================================\n\n`;
@@ -7495,15 +7515,30 @@ document.addEventListener('DOMContentLoaded', () => {
         AppState.lastCalculatedSelfPay = newValue;
         AppState.selfPayManuallyOverridden = true;
 
-        // 인당 자부담 비용 표시는 항상 자동 계산값 기준 (CALCULATION_SPEC.md 4번 참조)
+        // 실제 인당 자부담 비용: 수정한 총 자부담(newValue) ÷ 참석자 수 (계산식_명세서.md 5번 명세 준수)
         const calcResult = SettlementCalculator.calculate(
             AppState.memberCount,
             AppState.expenseItems,
             AppState.previousPrizeTotal,
             AppState.rules
         );
-        document.getElementById('result-per-person-self-pay').textContent = SettlementCalculator.formatCurrency(calcResult.perPersonSelfPay);
-        updatePerPersonSelfPayIcon(calcResult.perPersonSelfPay);
+        const actualPerPerson = (AppState.memberCount > 0 && newValue > 0)
+            ? Math.round(newValue / AppState.memberCount)
+            : calcResult.perPersonSelfPay;
+
+        document.getElementById('result-per-person-self-pay').textContent = SettlementCalculator.formatCurrency(actualPerPerson);
+        updatePerPersonSelfPayIcon(actualPerPerson);
+
+        const policyNoteEl = document.getElementById('result-per-person-policy-note');
+        if (policyNoteEl) {
+            const minSelfPayTotal = Math.round(calcResult.totalSelfPay);
+            if (AppState.memberCount > 0 && newValue > 0 && Math.abs(newValue - minSelfPayTotal) >= 100) {
+                policyNoteEl.textContent = `(사규 최소 기준: ${SettlementCalculator.formatCurrency(Math.round(calcResult.perPersonSelfPay))})`;
+                policyNoteEl.classList.remove('hidden');
+            } else {
+                policyNoteEl.classList.add('hidden');
+            }
+        }
 
         const totalCost = AppState.expenseItems.reduce((sum, item) => sum + item.amount, 0);
         const ratio = totalCost > 0 ? newValue / totalCost : 0;
@@ -7822,6 +7857,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.351', date: '2026.11.10', items: ['정산 결과 화면의 "인당 자부담 비용" 표시 정합성 개선: 실제 총 자부담 금액을 참석 인원수로 나눈 실제 1인당 자부담(예: 36,000원÷3명=12,000원)이 정확하게 일치 표시되도록 수정하고, 사규 최소 기준값과의 차이가 있는 경우 보조 안내 라벨로 함께 표시', '비용 항목 추가 시 하단 실시간 프리뷰 배너의 라벨을 "(개인부담)"에서 "(1인당 자부담)"으로 명확화하여 개별 항목 개인카드 금액과의 혼동 해소'] },
         { ver: '1.6.350', date: '2026.11.10', items: ['정산 기준 안내 모달 예시 항목 슬림화: 중복되거나 불필요한 예시를 정돈하여 핵심 경계값(30,001원 / 60,001원·120,000원 / 120,001원)만 명확하게 제시하고 스크롤 부담 완화', '실무 설명회 발표 자료(PPTX) 정산 기준 안내 슬림 팝업 및 최신 스크린샷 동기화'] },
         { ver: '1.6.349', date: '2026.11.10', items: ['정산 기준 안내 모달 상세 설명 및 경계값 예시 보강: 30,001원(나 구간 진입 시 전체 20% 적용으로 6,000원 자부담), 60,001원(다 구간 초과분 40% 누진으로 12,000원 동일), 120,001원(라 구간 최대 85,000원 정액 지원 전환으로 35,001원 자부담) 사규 공식 원리 및 구체적 계산 예시 추가'] },
         { ver: '1.6.348', date: '2026.11.10', items: ['전사원 명부 와이드 데스크톱(≥1200px/1600px) 레이아웃 전면 개편: 차트 탭 규격에 맞춰 전폭(최대 1840px) 확장 및 좌측 사원 등록(360px 고정·sticky) / 우측 명부 목록(3~4열 멀티 컬럼 그리드) 1:4 최적 비율 적용', '명부 스크롤 높이 대폭 확장(calc(100vh - 260px), 최소 580~640px): 큰 화면에서 스크롤 없이 한 번에 20~30명 이상의 사원을 시원하게 조망 가능'] },
@@ -11947,7 +11983,7 @@ function updatePendingSelfPayPreview() {
             if (sub) {
                 const newTag = document.createElement('span');
                 newTag.className = 'manual-tag';
-                newTag.textContent = '✍️ 개인부담금 직접 입력 반영됨';
+                newTag.textContent = '✍️ 1인당 자부담 직접 입력 반영됨';
                 sub.appendChild(newTag);
             }
         }
@@ -11972,7 +12008,7 @@ function updatePendingSelfPayPreview() {
 
     const inputHtml = memberCount > 0
         ? `<span class="pending-input-wrapper">
-             <input type="text" inputmode="numeric" id="pending-per-person-input" class="pending-per-person-input" value="${formatAmount(currentPerPerson)}" placeholder="${formatAmount(autoPerPerson)}" title="11,000원, 15,000원 등 원하는 개인부담금 단위로 직접 입력 시 카드 결제액이 자동 분할됩니다" />원
+             <input type="text" inputmode="numeric" id="pending-per-person-input" class="pending-per-person-input" value="${formatAmount(currentPerPerson)}" placeholder="${formatAmount(autoPerPerson)}" title="1인당 원하는 자부담 금액(11,000원, 12,000원 등)을 직접 입력 시 카드 결제액이 자동 분할됩니다" />원
              ${isManual ? '<button type="button" id="pending-per-person-reset-btn" class="pending-reset-btn" title="정책 자동계산값으로 복원">↺ 자동값</button>' : ''}
            </span>`
         : `<strong>참석자 미등록</strong>`;
@@ -11984,13 +12020,13 @@ function updatePendingSelfPayPreview() {
                 <strong>이번 금액 반영 시:</strong> 총 자부담 <strong class="pending-total-val">${formatAmount(projectedTotalSelfPay)}원</strong>
             </div>
             <div class="preview-personal-row">
-                <span class="preview-personal-prefix">(개인부담</span>
+                <span class="preview-personal-prefix">(1인당 자부담</span>
                 ${inputHtml}
                 <span class="preview-personal-suffix">)</span>
             </div>
             <div class="preview-sub">
                 <span>예상 자부담 비율:</span> <strong class="pending-ratio-val">${projectedRatioText}</strong>
-                ${isManual ? '<span class="manual-tag">✍️ 개인부담금 직접 입력 반영됨</span>' : ''}
+                ${isManual ? '<span class="manual-tag">✍️ 1인당 자부담 직접 입력 반영됨</span>' : ''}
             </div>
         </div>
     `;

@@ -4628,6 +4628,9 @@ html[data-app-theme="light"] .bracket-card-d .rules-bracket-example {
     border: 1px solid #fca5a5 !important;
     color: #991b1b !important;
 }
+html[data-app-theme="light"] #result-per-person-policy-note {
+    color: #b91c1c !important;
+}
 html[data-app-theme="light"] .rules-bracket-warning {
     color: #b91c1c !important;
 }
