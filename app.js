@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.345';
+const APP_VERSION      = '1.6.346';
 const APP_VERSION_DATE = '2026.11.09';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1728,68 +1728,25 @@ const AppState = {
         this.selfPayManuallyOverridden = false;
         this.cancelEdit();
         this.render();
-        const savedItem = editingItemId !== null
-            ? this.expenseItems.find(item => item.id === editingItemId)
-            : this.expenseItems[this.expenseItems.length - 1];
-        const savePromise = this.save();
-        return this.writeAuditAfterSave(savePromise, {
-            action: previousItem ? 'UPDATE' : 'CREATE',
-            targetType: '비용 항목',
-            targetId: savedItem?.id || editingItemId || '',
-            targetLabel: description,
-            summary: previousItem
-                ? `비용 항목 '${previousItem.description}'을(를) '${description}'으로 수정`
-                : `비용 항목 '${description}' 추가`,
-            details: {
-                이전금액: previousItem?.amount,
-                변경금액: amount,
-                이전구분: previousItem?.category,
-                변경구분: category,
-                결제방식: cardType,
-                법인카드금액: corpAmount || 0,
-                개인카드금액: personalAmount || 0
-            }
-        });
+        return this.save();
     },
 
     deleteExpense(id) {
-        const deletedItem = this.expenseItems.find(item => item.id === id);
         this.expenseItems = this.expenseItems.filter(item => item.id !== id);
         this.selfPayManuallyOverridden = false;
         if (this.editingItemId === id) {
             this.cancelEdit();
         }
-        const savePromise = this.save();
-        this.writeAuditAfterSave(savePromise, {
-            action: 'DELETE',
-            targetType: '비용 항목',
-            targetId: id,
-            targetLabel: deletedItem?.description || '',
-            summary: `비용 항목 '${deletedItem?.description || id}' 삭제`,
-            details: {
-                금액: deletedItem?.amount,
-                구분: deletedItem?.category,
-                결제방식: deletedItem?.cardType
-            }
-        });
+        this.save();
         this.render();
     },
 
     clearAll() {
-        const expenseCount = this.expenseItems.length;
-        const attendeeCount = this.attendees.length;
         this.expenseItems = [];
         this.attendees = [];
         this.memberCount = 0;
         this.cancelEdit();
-        const savePromise = this.save();
-        this.writeAuditAfterSave(savePromise, {
-            action: 'DELETE',
-            targetType: '현재 정산',
-            targetLabel: this.clubName || '현재 정산',
-            summary: '현재 정산의 비용 항목과 참석자 전체 삭제',
-            details: { 삭제비용항목수: expenseCount, 삭제참석자수: attendeeCount }
-        });
+        this.save();
         this.render();
     },
 
@@ -1932,17 +1889,7 @@ const AppState = {
         this.memberCount = this.attendees.length;
 
         this.cancelEditAttendee();
-        const savePromise = this.save();
-        this.writeAuditAfterSave(savePromise, {
-            action: previousAttendee ? 'UPDATE' : 'CREATE',
-            targetType: '현재 참석자',
-            targetId: editingAttendeeId || this.attendees[this.attendees.length - 1]?.id || '',
-            targetLabel: `${name} (${employeeId})`,
-            summary: previousAttendee
-                ? `현재 참석자 '${previousAttendee.name} (${previousAttendee.employeeId})'을(를) '${name} (${employeeId})'으로 수정`
-                : `현재 참석자 '${name} (${employeeId})' 추가`,
-            details: { 이전이름: previousAttendee?.name, 이전사번: previousAttendee?.employeeId, 변경이름: name, 변경사번: employeeId }
-        });
+        this.save();
         this.render();
         this.updateDatalist();
         return true;
@@ -1974,37 +1921,20 @@ const AppState = {
     },
 
     deleteAttendee(id) {
-        const deletedAttendee = this.attendees.find(att => att.id === id);
         this.attendees = this.attendees.filter(att => att.id !== id);
         if (this.editingAttendeeId === id) {
             this.cancelEditAttendee();
         }
         this.memberCount = this.attendees.length;
-        const savePromise = this.save();
-        this.writeAuditAfterSave(savePromise, {
-            action: 'DELETE',
-            targetType: '현재 참석자',
-            targetId: id,
-            targetLabel: deletedAttendee ? `${deletedAttendee.name} (${deletedAttendee.employeeId})` : '',
-            summary: `현재 참석자 '${deletedAttendee?.name || id}' 삭제`,
-            details: { 이름: deletedAttendee?.name, 사번: deletedAttendee?.employeeId }
-        });
+        this.save();
         this.render();
     },
 
     clearAttendees() {
-        const deletedCount = this.attendees.length;
         this.attendees = [];
         this.cancelEditAttendee();
         this.memberCount = 0;
-        const savePromise = this.save();
-        this.writeAuditAfterSave(savePromise, {
-            action: 'DELETE',
-            targetType: '현재 참석자',
-            targetLabel: this.clubName || '현재 참석자',
-            summary: `현재 참석자 ${deletedCount}명 전체 삭제`,
-            details: { 삭제인원수: deletedCount }
-        });
+        this.save();
         this.render();
     },
 
@@ -2311,22 +2241,7 @@ const AppState = {
         this.selfPayManuallyOverridden = false;
         this.editingItemId = null;
         this.editingAttendeeId = null;
-        const savePromise = this.save();
-        if (deletedExpenseCount || deletedAttendeeCount || deletedPhotoCount) {
-            this.writeAuditAfterSave(savePromise, {
-                action: 'DELETE',
-                targetType: '클럽 전환 전 임시 정산',
-                targetLabel: previousClub?.name || '이전 클럽 임시 정산',
-                summary: `클럽 전환으로 '${previousClub?.name || '이전 클럽'}'의 미확정 정산 내용 삭제`,
-                clubId: previousClub?.id || '',
-                clubName: previousClub?.name || '',
-                details: {
-                    삭제비용항목수: deletedExpenseCount,
-                    삭제참석자수: deletedAttendeeCount,
-                    삭제행사사진수: deletedPhotoCount
-                }
-            });
-        }
+        this.save();
         this.render();
 
         const memberInput = document.getElementById('member-count-input');
@@ -2595,15 +2510,7 @@ const AppState = {
                             } else {
                                 item.receiptImage = null;
                             }
-                            const savePromise = this.save();
-                            this.writeAuditAfterSave(savePromise, {
-                                action: 'DELETE',
-                                targetType: '비용 항목 영수증',
-                                targetId: itemId,
-                                targetLabel: item.description,
-                                summary: `비용 항목 '${item.description}'의 ${type === 'corporate' ? '법인카드' : (type === 'personal' ? '개인카드' : '')} 영수증 삭제`,
-                                details: { 비용항목: item.description, 영수증구분: type || '단일' }
-                            });
+                            this.save();
                             this.render();
                         }
                     }
@@ -7305,15 +7212,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 AppState.render();
                 const synced = await AppState.save();
                 const totalBytes = accepted.reduce((sum, value) => sum + getMediaDataSize(value), 0);
-                if (synced) {
-                    AppState.writeAuditLog({
-                        action: 'CREATE',
-                        targetType: '행사 사진',
-                        targetLabel: AppState.clubName || '현재 정산',
-                        summary: `현재 정산에 행사 사진 ${accepted.length}장 추가`,
-                        details: { 추가사진수: accepted.length, 현재사진수: AppState.eventPhotos.length, 추가용량: formatMediaSize(totalBytes) }
-                    });
-                }
                 if (eventPhotoStatus) {
                     if (synced) {
                         eventPhotoStatus.textContent = `✓ ${accepted.length}장 서버 임시 저장 완료 (${formatMediaSize(totalBytes)})${rejected ? ` · ${rejected}장은 용량 초과로 제외` : ''}`;
@@ -7344,15 +7242,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 AppState.eventPhotos.splice(idx, 1);
                 AppState.render();
                 AppState.save().then(synced => {
-                    if (synced) {
-                        AppState.writeAuditLog({
-                            action: 'DELETE',
-                            targetType: '행사 사진',
-                            targetLabel: AppState.clubName || '현재 정산',
-                            summary: '현재 정산에서 행사 사진 1장 삭제',
-                            details: { 삭제위치: idx + 1, 남은사진수: AppState.eventPhotos.length }
-                        });
-                    }
                     if (!eventPhotoStatus) return;
                     eventPhotoStatus.textContent = synced
                         ? '✓ 행사 사진 삭제 내용이 서버에 반영됐습니다.'
@@ -7931,6 +7820,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.346', date: '2026.11.09', items: ['전체 작업 로그 기록 범위 최적화: 정산 작성 과정의 임시 작업(비용 항목·참석자·영수증·사진의 개별 추가/삭제/초기화)에 대한 불필요한 과다 로그를 제거하고, "정산 확정 완료" 및 "정산 이력 수정" 시점에만 큰 틀로 명확히 기록되도록 개편', '관리자 화면에서의 마스터 데이터(클럽 관리·회원 관리·정산 규칙·전사원 명부·이력 삭제)에 대한 추가/수정/삭제 기록은 기존대로 철저하게 유지'] },
         { ver: '1.6.345', date: '2026.11.09', items: ['정산 기준 안내 모달 색상 및 가독성 전면 개선: 라이트/다크 테마별 고대비 텍스트 색상과 화이트 카드 배경을 적용하여 흐릿하게 보이던 텍스트 및 예시 박스를 선명하게 보정'] },
         { ver: '1.6.344', date: '2026.11.09', items: ['비용 항목 추가 금액 입력란에 "❓ 정산 기준" 안내 버튼 및 상세 설명 팝업 추가', '관리자가 정산 구간·비율 수정 시 실시간으로 연동되는 가/나/다/라 구간별 계산 공식 및 구체적 금액 예시 제공 (다 구간 초과 누진 계산 원리 안내)'] },
         { ver: '1.6.343', date: '2026.11.09', items: ['전사원 명부 실시간 검색 기능 추가: 검색창에 한 글자(예: "김") 또는 두 글자 이상(예: "김종") 입력 시 즉시 해당 이름 및 사번과 일치하는 항목만 실시간 필터링', '검색어 일치 건수/전체 인원 분수 표시 및 원터치 검색어 지우기(×) 버튼 지원'] },
