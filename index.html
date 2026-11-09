@@ -348,12 +348,10 @@
                                     <span class="summary-label" data-i18n="label.final_support">최종 지원금 (지원 한도 내)</span>
                                     <span class="summary-value highlight" id="result-final-support">0원</span>
                                 </div>
-                                <div class="summary-item" style="flex-wrap: wrap; gap: 0.4rem;">
-                                    <span class="summary-label" data-i18n="label.total_self_pay">총 자부담 금액 (수정 가능)</span>
-                                    <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                                        <input type="text" inputmode="numeric" id="result-total-self-pay-input" style="width: 130px; padding: 0.35rem 0.5rem; text-align: right; font-weight: 600; font-size: 1rem; border-radius: 8px; border: 1px solid var(--card-border); color: var(--text-primary);" placeholder="0" />
-                                        <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">원</span>
-                                    </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">총 자부담 금액</span>
+                                    <span class="summary-value" id="result-total-self-pay" style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">0원</span>
+                                    <input type="hidden" id="result-total-self-pay-input" />
                                 </div>
                                 <div class="summary-item" id="result-per-person-box" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(249, 115, 22, 0.12)); border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 12px; padding: 0.65rem 0.9rem; margin: 0.3rem 0; box-shadow: 0 0 14px rgba(239, 68, 68, 0.25);">
                                     <span class="summary-label" style="font-weight:800; color:#f87171; font-size:1rem;"><span id="result-per-person-icon">🔥</span> <span data-i18n="label.per_person_self_pay">인당 자부담 비용</span></span>

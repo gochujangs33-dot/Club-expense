@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.352';
+const APP_VERSION      = '1.6.353';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -2282,12 +2282,14 @@ const AppState = {
         // Update Results UI
         document.getElementById('result-final-support').textContent = SettlementCalculator.formatCurrency(finalSupport);
 
+        const selfPaySpan = document.getElementById('result-total-self-pay');
+        if (selfPaySpan) {
+            selfPaySpan.textContent = SettlementCalculator.formatCurrency(finalSelfPay);
+        }
         const selfPayInput = document.getElementById('result-total-self-pay-input');
         if (selfPayInput) {
-            if (document.activeElement !== selfPayInput) {
-                selfPayInput.value = formatAmount(finalSelfPay);
-                if (!this.selfPayManuallyOverridden) this.lastCalculatedSelfPay = finalSelfPay;
-            }
+            selfPayInput.value = formatAmount(finalSelfPay);
+            if (!this.selfPayManuallyOverridden) this.lastCalculatedSelfPay = finalSelfPay;
         }
 
         // 실제 인당 자부담 비용: 실제 총 자부담(finalSelfPay) ÷ 참석자 수 (계산식_명세서.md 5번 명세 준수)
@@ -7866,6 +7868,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.353', date: '2026.11.10', items: ['정산 결과 화면의 "총 자부담 금액 (수정 가능)"에서 "(수정 가능)" 문구 삭제 및 결과 표시 전용(수정 불가)으로 전환: 자부담 금액 조정은 비용 항목 추가/수정 폼(좌측)의 1인당 자부담 및 카드 분할을 통해서만 진행되도록 일원화'] },
         { ver: '1.6.352', date: '2026.11.10', items: ['사규 최소 기준 자부담 이하 입력 원천 차단 및 실시간 사유 안내: 1인당 자부담 입력란 및 정산 결과의 총 자부담란에서 사규 규정(나 구간 20%, 다 구간 초과 40% 누진 등) 최소 금액보다 낮은 금액 입력 시 즉각적인 사규 위반 사유 표시 및 최소 기준값 자동 복원 적용'] },
         { ver: '1.6.351', date: '2026.11.10', items: ['정산 결과 화면의 "인당 자부담 비용" 표시 정합성 개선: 실제 총 자부담 금액을 참석 인원수로 나눈 실제 1인당 자부담(예: 36,000원÷3명=12,000원)이 정확하게 일치 표시되도록 수정하고, 사규 최소 기준값과의 차이가 있는 경우 보조 안내 라벨로 함께 표시', '비용 항목 추가 시 하단 실시간 프리뷰 배너의 라벨을 "(개인부담)"에서 "(1인당 자부담)"으로 명확화하여 개별 항목 개인카드 금액과의 혼동 해소'] },
         { ver: '1.6.350', date: '2026.11.10', items: ['정산 기준 안내 모달 예시 항목 슬림화: 중복되거나 불필요한 예시를 정돈하여 핵심 경계값(30,001원 / 60,001원·120,000원 / 120,001원)만 명확하게 제시하고 스크롤 부담 완화', '실무 설명회 발표 자료(PPTX) 정산 기준 안내 슬림 팝업 및 최신 스크린샷 동기화'] },
