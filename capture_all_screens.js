@@ -72,6 +72,21 @@ const fs = require('fs');
         console.log('Saved 05_expense_form.png');
     }
 
+    // 5-1-1. 정산 기준 안내 모달
+    const guideBtn = await page1.$('#expense-rules-guide-btn');
+    if (guideBtn) {
+        await guideBtn.click();
+        await page1.waitForTimeout(400);
+        const modalEl = await page1.$('#rules-guide-modal-overlay .rules-guide-modal-card');
+        if (modalEl) {
+            await modalEl.screenshot({ path: path.join(outDir, '05_rules_modal.png') });
+            console.log('Saved 05_rules_modal.png');
+        }
+        const closeBtn = await page1.$('#rules-guide-modal-close-btn');
+        if (closeBtn) await closeBtn.click();
+        await page1.waitForTimeout(300);
+    }
+
     // 5-2. 자동 정산 결과 카드
     const resultCard = await page1.$('#result-card');
     if (resultCard) {
@@ -88,6 +103,17 @@ const fs = require('fs');
         await page1.waitForTimeout(800);
         await page1.screenshot({ path: path.join(outDir, '07_directory_tab.png'), clip: { x: 40, y: 145, width: 1360, height: 750 } });
         console.log('Saved 07_directory_tab.png');
+
+        // 6-1. 전사원 명부 실시간 검색 캡처
+        const searchInput = await page1.$('#dir-search-input');
+        if (searchInput) {
+            await searchInput.fill('김종');
+            await page1.waitForTimeout(400);
+            await page1.screenshot({ path: path.join(outDir, '07_directory_search.png'), clip: { x: 40, y: 145, width: 1360, height: 750 } });
+            console.log('Saved 07_directory_search.png');
+            await searchInput.fill('');
+            await page1.waitForTimeout(300);
+        }
     }
 
     // 7. 정산 이력 탭

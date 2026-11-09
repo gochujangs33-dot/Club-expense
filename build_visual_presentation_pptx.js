@@ -22,8 +22,10 @@ const path = require('path');
         header: getImgBase64('03_header_theme.png'),
         settleTab: getImgBase64('04_settlement_tab.png'),
         expenseForm: getImgBase64('05_expense_form.png'),
+        rulesModal: getImgBase64('05_rules_modal.png'),
         settleResult: getImgBase64('06_settlement_result.png'),
         directory: getImgBase64('07_directory_tab.png'),
+        dirSearch: getImgBase64('07_directory_search.png'),
         history: getImgBase64('08_history_tab.png'),
         adminDash: getImgBase64('09_admin_dashboard.png'),
         clubHistory: getImgBase64('10_club_history_tab.png'),
@@ -112,7 +114,7 @@ const path = require('path');
                 x: 0.6, y: 5.25, w: 8.8, h: 0,
                 line: { color: 'E2E8F0', width: 0.8 }
             });
-            slide.addText('3M 사내 동아리·클럽 비용 정산기 (v1.6.310) | 실무 사용자 설명회', {
+            slide.addText('3M 사내 동아리·클럽 비용 정산기 (v1.6.346) | 실무 사용자 설명회', {
                 x: 0.6, y: 5.28, w: 6.0, h: 0.25,
                 fontSize: 8, fontFace: FONT_BODY, color: C.textMuted, valign: 'middle',
                 margin: 0
@@ -193,7 +195,7 @@ const path = require('path');
             });
 
             // 하단 메타정보
-            s1.addText('발표일: 2026. 10. 24 (금)  |  발표자: 김종필 (시스템 개발자)  |  시스템 버전: v1.6.310 (최신 배포 버전)', {
+            s1.addText('발표일: 2026. 11. 09  |  발표자: 김종필 (시스템 개발자)  |  시스템 버전: v1.6.346 (최신 정식 배포판)', {
                 x: 1.0, y: 4.88, w: 8.0, h: 0.35,
                 fontSize: 9.2, fontFace: FONT_BODY, color: C.textMuted,
                 margin: 0
@@ -362,14 +364,15 @@ const path = require('path');
         // =========================================================================
         {
             const s4 = createBaseSlide(
-                'Step 2. 전사원 명부 검색 & 참석자 원클릭 담기',
-                '전사 1,317명 임직원 DB가 완벽 연동되어, 오타나 동명이인 착오 없이 정확하게 참석자를 등록합니다.'
+                'Step 2. 전사원 명부 실시간 검색 & 참석자 관리',
+                '전사 1,316명 임직원 DB가 완벽 연동되어, 한 글자 입력만으로 초고속 실시간 검색 및 등록이 가능합니다.'
             );
 
-            // 좌측 실제 스크린샷
-            if (imgs.directory) {
+            // 좌측 실제 스크린샷 (실시간 검색된 최신 화면 우선)
+            const dirImg = imgs.dirSearch || imgs.directory;
+            if (dirImg) {
                 s4.addImage({
-                    data: 'image/png;base64,' + imgs.directory,
+                    data: 'image/png;base64,' + dirImg,
                     x: 0.6, y: 1.40, w: 5.0, h: 3.65
                 });
             }
@@ -381,17 +384,17 @@ const path = require('path');
                 rectRadius: 0.12
             });
 
-            s4.addText('👥 참석자 관리 4대 핵심 포인트', {
+            s4.addText('👥 참석자 및 명부 관리 4대 핵심 포인트', {
                 x: 6.0, y: 1.55, w: 3.2, h: 0.32,
                 fontSize: 12.5, fontFace: FONT_TITLE, color: C.primary, bold: true,
                 margin: 0
             });
 
             const guides4 = [
-                { no: '①', title: '전사 임직원 1,317명 완벽 탑재', text: '사내 전 직원의 이름과 사번(EMP ID)이 사전 등록되어 있어 이름이나 사번 검색으로 즉시 조회됩니다.' },
-                { no: '②', title: '[추가] 버튼 1클릭으로 반영', text: "검색된 사원 옆의 [추가] 버튼을 누르면 즉시 '✓ 추가됨'으로 변경되며 현재 정산 참석자 명단에 자동 등록됩니다." },
-                { no: '③', title: '올해 누적 참석 횟수 자동 표시', text: "'홍준영(올해 누적: 17회)'처럼 연간 참여 횟수가 자동 표시되어 공평한 활동 기회 관리가 가능합니다." },
-                { no: '④', title: '동명이인 사번 완벽 식별', text: '이진호(4035) 등 동명이인이 존재해도 고유 사번 기준으로 참석 횟수가 독립 관리되어 오귀속이 원천 차단됩니다.' }
+                { no: '①', title: '전사 임직원 1,316명 DB 연동', text: '사내 전 직원의 이름과 사번(EMP ID)이 사전 탑재되어 있어 오타나 누락 없이 정확한 참석자 등록이 가능합니다.' },
+                { no: '②', title: '실시간 초성·이름·사번 검색 (NEW)', text: "검색창에 '김', '김종' 등 입력 시 즉시 필터링되며 '11/1,316명'과 같이 일치 건수가 분수로 실시간 표시됩니다." },
+                { no: '③', title: '✨ 신규 등록 배지 & 누적 참석 자동 집계', text: "신규 등록 사원은 24시간 동안 '✨ 신규 등록' 배지가 표시되며, 연간 누적 참석 횟수가 투명하게 자동 관리됩니다." },
+                { no: '④', title: '동명이인 고유 사번 완벽 식별', text: '이진호(4035/4277) 등 동명이인이 존재해도 고유 사번 기준으로 참석 횟수가 독립 관리되어 오귀속을 원천 차단합니다.' }
             ];
 
             guides4.forEach((g, idx) => {
@@ -414,7 +417,7 @@ const path = require('path');
                 fill: { color: C.emeraldLight }, line: { color: '#A7F3D0', width: 0.8 },
                 rectRadius: 0.06
             });
-            s4.addText('✓ 명부에서 선택된 인원수는 정산 탭에 실시간 자동 반영되어 1인당 비용을 자동 나눗셈합니다.', {
+            s4.addText('✓ 명부의 참석 인원수는 정산 탭에 실시간 자동 반영되어 1인당 비용을 오차 없이 계산합니다.', {
                 x: 6.12, y: 4.50, w: 2.98, h: 0.38,
                 fontSize: 8.0, fontFace: FONT_BODY, color: '#065F46', lineSpacing: 12,
                 margin: 0
@@ -422,92 +425,100 @@ const path = require('path');
         }
 
         // =========================================================================
-        // SLIDE 5: Step 3. 비용 항목 입력 및 구분
+        // SLIDE 5: Step 3. 비용 항목 입력 및 구분 & 정산 기준 안내 팝업 (v1.6.345 NEW)
         // =========================================================================
         {
             const s5 = createBaseSlide(
-                'Step 3. 비용 항목 추가 & 3대 카테고리 규정 분류',
-                '식대, 장비 대관료, 상품비 등 항목별 특성에 맞춰 최적의 지원 규정이 자동으로 적용됩니다.'
+                'Step 3. 비용 항목 입력 & 실시간 정산 기준 안내 (NEW)',
+                '금액 옆 [❓ 정산 기준] 버튼으로 4구간 누진 공식을 즉시 확인하고, 3대 카테고리 규정이 자동 적용됩니다.'
             );
 
-            // 좌측 실제 스크린샷
+            // 좌측 실제 스크린샷 1: 비용 입력 폼
             if (imgs.expenseForm) {
                 s5.addImage({
                     data: 'image/png;base64,' + imgs.expenseForm,
-                    x: 0.6, y: 1.40, w: 3.4, h: 3.65
+                    x: 0.6, y: 1.40, w: 2.30, h: 3.65
                 });
             }
 
-            // 우측: 3대 카테고리 규정 설명 카드
+            // 가운데 실제 스크린샷 2: [❓ 정산 기준] 클릭 시 나타나는 가/나/다/라 구간 안내 팝업
+            if (imgs.rulesModal) {
+                s5.addImage({
+                    data: 'image/png;base64,' + imgs.rulesModal,
+                    x: 3.02, y: 1.40, w: 2.35, h: 3.65
+                });
+            }
+
+            // 우측: 3대 카테고리 규정 및 실시간 연동 설명 카드
             s5.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 4.2, y: 1.40, w: 5.2, h: 3.65,
+                x: 5.50, y: 1.40, w: 3.90, h: 3.65,
                 fill: { color: C.cardBg }, line: { color: C.cardBorder, width: 1 },
                 rectRadius: 0.12
             });
 
-            s5.addText('📋 비용 입력 방법 및 3대 카테고리 규정', {
-                x: 4.4, y: 1.55, w: 4.8, h: 0.32,
-                fontSize: 12.5, fontFace: FONT_TITLE, color: C.amber, bold: true,
+            s5.addText('📋 비용 입력 핵심 & 정산 기준 안내', {
+                x: 5.70, y: 1.55, w: 3.50, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.amber, bold: true,
                 margin: 0
             });
 
             const categories = [
                 {
-                    name: '① 행사비 (식대, 다과비 등)',
-                    badge: '인원수 비례 4구간 분할',
+                    name: '① [❓ 정산 기준] 원클릭 안내 (NEW)',
+                    badge: '관리자 설정 실시간 연동',
                     badgeColor: C.primary,
                     lightBg: C.primaryLight,
-                    desc: '참석자 1인당 비용으로 자동 환산되어 [가/나/다/라] 4단계 규정 구간에 따라 회사 지원금과 자부담으로 정밀 분할됩니다.'
+                    desc: '금액 입력란 옆 물음표 클릭 시 현재 관리자 설정 기준의 가/나/다/라 구간표와 다 구간 초과 누진 계산법이 상세 예시와 함께 즉시 팝업 안내됩니다.'
                 },
                 {
-                    name: '② 시설 및 장비 (대관료, 장비 렌탈)',
-                    badge: '인당 85,000원 Flat 한도',
-                    badgeColor: C.blue,
-                    lightBg: C.blueLight,
-                    desc: '인원수와 무관한 정액 비용 특성을 반영하여, 인당 85,000원 × 인원수 한도 내에서 전액 법인카드로 우선 지원 제안됩니다.'
+                    name: '② 행사비 (식대/다과비 등)',
+                    badge: '인원수 비례 4구간 분할',
+                    badgeColor: C.emerald,
+                    lightBg: C.emeraldLight,
+                    desc: '참석자 1인당 행사비(=행사비÷인원수)로 자동 환산되어 [가:0% / 나:20% / 다:초과분40% / 라:85,000원캡] 공식을 실시간 적용합니다.'
                 },
                 {
-                    name: '③ 상품비 (기념품, 시상품)',
-                    badge: '연간 50만원 한도 실시간 감시',
+                    name: '③ 시설·장비 & 상품비 규정',
+                    badge: 'Flat 한도 & 연 50만원 한도',
                     badgeColor: C.rose,
                     lightBg: C.roseLight,
-                    desc: '동아리당 연간 총 상품비 누적 한도(500,000원)를 실시간 감시하며, 잔여 한도 초과 시 자동으로 등록이 차단됩니다.'
+                    desc: '시설비는 인당 85,000원 flat 한도 우선 지원, 상품비는 클럽당 연간 500,000원 누적 한도를 실시간 감시하여 초과를 원천 차단합니다.'
                 }
             ];
 
             categories.forEach((c, idx) => {
-                const cy = 1.88 + idx * 0.78;
+                const cy = 1.90 + idx * 0.76;
                 s5.addText(c.name, {
-                    x: 4.4, y: cy, w: 3.0, h: 0.24,
-                    fontSize: 10.5, fontFace: FONT_TITLE, color: C.textMain, bold: true,
+                    x: 5.70, y: cy, w: 2.30, h: 0.22,
+                    fontSize: 9.6, fontFace: FONT_TITLE, color: C.textMain, bold: true,
                     margin: 0
                 });
                 s5.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                    x: 7.2, y: cy, w: 2.0, h: 0.22,
-                    fill: { color: c.lightBg }, line: { color: c.badgeColor, width: 0.8 },
-                    rectRadius: 0.05
+                    x: 7.65, y: cy, w: 1.55, h: 0.20,
+                    fill: { color: c.lightBg }, line: { color: c.badgeColor, width: 0.7 },
+                    rectRadius: 0.04
                 });
                 s5.addText(c.badge, {
-                    x: 7.2, y: cy, w: 2.0, h: 0.22,
-                    fontSize: 7.5, fontFace: FONT_BODY, color: c.badgeColor, align: 'center', valign: 'middle',
+                    x: 7.65, y: cy, w: 1.55, h: 0.20,
+                    fontSize: 6.8, fontFace: FONT_BODY, color: c.badgeColor, align: 'center', valign: 'middle',
                     margin: 0
                 });
                 s5.addText(c.desc, {
-                    x: 4.45, y: cy + 0.24, w: 4.75, h: 0.44,
-                    fontSize: 8.8, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 13.5,
+                    x: 5.75, y: cy + 0.22, w: 3.45, h: 0.44,
+                    fontSize: 8.2, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 12.5,
                     margin: 0
                 });
             });
 
             // 결제 수단 스위치 팁
             s5.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 4.4, y: 4.36, w: 4.8, h: 0.55,
+                x: 5.70, y: 4.36, w: 3.50, h: 0.55,
                 fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 0.8 },
                 rectRadius: 0.06
             });
-            s5.addText('💳 결제 수단 간편 스위치: 상단 [법인카드 / 개인카드] 토글 스위치로 결제 방식을 선택하면, 회사 지원금과 개인 정산금이 100% 자동 분리됩니다.', {
-                x: 4.5, y: 4.40, w: 4.6, h: 0.46,
-                fontSize: 8.3, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12.5,
+            s5.addText('💳 결제 수단 간편 스위치: 상단 [법인카드 / 개인카드] 토글 스위치로 결제 방식을 선택하면 회사 지원금과 개인 정산금이 100% 자동 분리 계산됩니다.', {
+                x: 5.80, y: 4.40, w: 3.30, h: 0.46,
+                fontSize: 8.0, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12,
                 margin: 0
             });
         }
@@ -666,12 +677,12 @@ const path = require('path');
         }
 
         // =========================================================================
-        // SLIDE 8: [관리자] 대시보드 관리
+        // SLIDE 8: [관리자] 대시보드 관리 & 2열 레이아웃 & 작업 로그 (v1.6.346)
         // =========================================================================
         {
             const s8 = createBaseSlide(
-                '[관리자] 전체 관리자 모드: 대시보드 & KPI 모니터링',
-                '클럽 회장단 및 관리자(PIN: 000000)를 위한 전사 운영 현황 통합 관리 화면입니다.',
+                '[관리자] 대시보드 관리: 2열 레이아웃 & 작업 로그 최적화',
+                '클럽 회장단 및 관리자(PIN: 000000)를 위한 전사 운영 현황, 2열 분할 레이아웃 및 최적화된 작업 감사 로그입니다.',
                 '관리자 전용 기능 (회장단)'
             );
 
@@ -697,10 +708,10 @@ const path = require('path');
             });
 
             const guides8 = [
-                { no: '①', title: '전사 총괄 4대 KPI 실시간 타일', text: '총 등록 가입자(7명), 전체 누적 지출액(1,159만원), 회사 지원금(948만원), 임직원 자부담(211만원) 실시간 집계' },
-                { no: '②', title: '초보 관리자 3단계 온보딩 가이드', text: '① 클럽·예산 설정 ➔ ② 정산 기준 확인 ➔ ③ 정산 현황 확인으로 이어지는 간편 네비게이션 제공' },
-                { no: '③', title: '정산 구간 및 비율 전사 설정', text: '지원 규정 변경 시 가/나/다/라 구간 한도액(3만/6만/12만)과 자부담 비율(20%/40%)을 관리자가 유연하게 조정' },
-                { no: '④', title: '연간 결산 PPT & 감사 로그', text: '경영진 보고용 파워포인트 자동 생성 및 데이터 위변조 방지를 위한 전사 작업 로그 완벽 기록' }
+                { no: '①', title: '전사 총괄 4대 KPI 실시간 타일', text: '총 등록 가입자, 전체 누적 지출액, 회사 지원금, 임직원 자부담이 상단에 실시간 통합 집계됩니다.' },
+                { no: '②', title: '2열 독립 컬럼 레이아웃 (NEW)', text: '좌측(클럽·예산 관리)과 우측(정산 기준·데이터 관리) 2열 분할로 대화면을 최적화하며 카드 접기/펼침을 지원합니다.' },
+                { no: '③', title: '정산 구간 및 비율 전사 설정', text: '지원 규정 변경 시 가/나/다/라 구간 한도액(3만/6만/12만)과 비율(20%/40%)을 수정하면 전 사용자에게 실시간 반영됩니다.' },
+                { no: '④', title: '전체 작업 로그 정예화 (v1.6.346)', text: '임시 작성 로그를 제외하고 최종 정산 확정/수정 및 관리자의 추가·수정·삭제 등 실제 데이터 변경만 투명하게 기록합니다.' }
             ];
 
             guides8.forEach((g, idx) => {
@@ -731,12 +742,12 @@ const path = require('path');
         }
 
         // =========================================================================
-        // SLIDE 9: [관리자] 클럽별 정산 이력 & 정산인별 필터링 (IMAGE 1 완벽 개선)
+        // SLIDE 9: [관리자] 클럽별 정산 이력 & 2x2 그리드 뷰 (v1.6.342)
         // =========================================================================
         {
             const s9 = createBaseSlide(
-                '[관리자] 전사 클럽별 정산 이력 & 정산인별 필터링',
-                '전사 10개 클럽의 행사 집행 내역을 한곳에서 모니터링하고 작성자별로 교차 검토합니다.',
+                '[관리자] 전사 클럽별 정산 이력: 2x2 와이드 그리드 & 다중 필터',
+                '10개 클럽 집행 내역을 2x2 와이드 4분할 그리드로 한눈에 비교하고, 정산인·클럽별로 교차 검토합니다.',
                 '관리자 전용 기능 (회장단)'
             );
 
@@ -762,10 +773,10 @@ const path = require('path');
             });
 
             const guides9 = [
-                { no: '①', title: '10개 클럽 집행 내역 통합 조회', text: '전체 클럽을 자유롭게 선택하여 예산 소진 현황과 행사 집행 내역을 즉시 조회합니다.' },
-                { no: '②', title: '정산인(작성자) 스마트 필터링', text: '정산인이 2명 이상인 클럽은 자동 드롭다운이 노출되어 담당자별로 교차 검토합니다.' },
-                { no: '③', title: '행사 일자 수정 및 명단 재확인', text: '날짜 클릭으로 일정을 수정하고, 인원 배지(4명) 클릭 시 당시 참석 명단을 확인합니다.' },
-                { no: '④', title: '무결성 보장 삭제 (관리자 전용)', text: '오등록 삭제 시 globalHistory + 개인 이력 + 누적 카운트가 완벽히 동시 롤백됩니다.' }
+                { no: '①', title: '2x2 와이드 4분할 그리드 뷰 (NEW)', text: "'전체 클럽' 모드에서 4분할 와이드 그리드로 여러 클럽의 집행 현황을 한 화면에서 동시 모니터링합니다." },
+                { no: '②', title: '특정 클럽 단독 와이드 뷰', text: "상단 드롭다운에서 특정 클럽을 선택하면 전체 폭(100%)을 활용하여 해당 클럽의 모든 행사 내역을 집중 조회합니다." },
+                { no: '③', title: '정산인(작성자) 스마트 필터링', text: '정산인이 2명 이상인 클럽은 자동 드롭다운이 노출되어 담당자별로 교차 검토가 가능합니다.' },
+                { no: '④', title: '모바일 요약 & 무결성 보장 삭제', text: '모바일 전용 요일별 압축 요약 뷰를 제공하며, 오등록 삭제 시 전사 이력과 명부 카운트가 완벽히 동시 롤백됩니다.' }
             ];
 
             guides9.forEach((g, idx) => {
