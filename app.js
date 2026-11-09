@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.346';
+const APP_VERSION      = '1.6.347';
 const APP_VERSION_DATE = '2026.11.09';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -5614,9 +5614,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // 우측: 올해의 우수 클럽 & 경영 인사이트 카드
             const mostActiveClub = [...data.clubStats].sort((a, b) => b.eventCount - a.eventCount)[0] || { name: '-', eventCount: 0 };
             const mostPopularClub = [...data.clubStats].sort((a, b) => b.uniqueCount - a.uniqueCount)[0] || { name: '-', uniqueCount: 0 };
-            const bestBudgetClub = [...data.clubStats]
-                .filter(c => c.budget > 0)
-                .sort((a, b) => Math.abs(85 - a.burnRate) - Math.abs(85 - b.burnRate))[0] || { name: '-', burnRate: 0 };
+            // 배정 예산 내 100% 소진을 이상적으로 평가: 100% 이하이면서 가장 많이 소진한 클럽 우선 (불용 최소화)
+            const eligibleUnder100 = data.clubStats.filter(c => c.budget > 0 && c.burnRate <= 100);
+            const bestBudgetClub = (eligibleUnder100.length > 0
+                ? [...eligibleUnder100].sort((a, b) => b.burnRate - a.burnRate)[0]
+                : [...data.clubStats].filter(c => c.budget > 0).sort((a, b) => Math.abs(100 - a.burnRate) - Math.abs(100 - b.burnRate))[0]) || { name: '-', burnRate: 0 };
 
             s3.addShape(pptx.ShapeType.roundRect, {
                 x: 5.6, y: 1.15, w: 3.6, h: 4.05,
@@ -5641,9 +5643,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     color: 'D97706', bg: 'FFFBEB'
                 },
                 {
-                    badge: '🎯 안정적 예산 운용 클럽',
+                    badge: '🎯 알뜰 예산 운용 클럽',
                     name: bestBudgetClub.name,
-                    detail: `소진율 ${bestBudgetClub.burnRate.toFixed(1)}% (배정 예산 내 규정 준수)`,
+                    detail: `소진율 ${bestBudgetClub.burnRate.toFixed(1)}% (배정 예산 내 불용 최소화)`,
                     color: '059669', bg: 'ECFDF5'
                 }
             ];
@@ -7820,6 +7822,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.347', date: '2026.11.09', items: ['연간 결산 PPT 우수 클럽 랭킹 기준 개편: "안정적 예산 운용 클럽"을 "알뜰 예산 운용 클럽"으로 명칭 변경하고, 산출 기준을 기존 85% 근접에서 "배정 예산 내 100% 소진(100% 이하 최다 소진, 불용 예산 최소화)"으로 개선', '설명회 발표 자료(PPTX)에 나노바나나 클라우드 아키텍처(전용 구글 계정·Firebase 실시간 DB·자동 메일 발송) 인포그래픽 및 설명 보강'] },
         { ver: '1.6.346', date: '2026.11.09', items: ['전체 작업 로그 기록 범위 최적화: 정산 작성 과정의 임시 작업(비용 항목·참석자·영수증·사진의 개별 추가/삭제/초기화)에 대한 불필요한 과다 로그를 제거하고, "정산 확정 완료" 및 "정산 이력 수정" 시점에만 큰 틀로 명확히 기록되도록 개편', '관리자 화면에서의 마스터 데이터(클럽 관리·회원 관리·정산 규칙·전사원 명부·이력 삭제)에 대한 추가/수정/삭제 기록은 기존대로 철저하게 유지'] },
         { ver: '1.6.345', date: '2026.11.09', items: ['정산 기준 안내 모달 색상 및 가독성 전면 개선: 라이트/다크 테마별 고대비 텍스트 색상과 화이트 카드 배경을 적용하여 흐릿하게 보이던 텍스트 및 예시 박스를 선명하게 보정'] },
         { ver: '1.6.344', date: '2026.11.09', items: ['비용 항목 추가 금액 입력란에 "❓ 정산 기준" 안내 버튼 및 상세 설명 팝업 추가', '관리자가 정산 구간·비율 수정 시 실시간으로 연동되는 가/나/다/라 구간별 계산 공식 및 구체적 금액 예시 제공 (다 구간 초과 누진 계산 원리 안내)'] },

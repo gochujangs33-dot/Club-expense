@@ -17,6 +17,7 @@ const path = require('path');
     };
 
     const images = {
+        nanoBanana: getImgBase64('00_nano_banana_architecture.jpg'),
         login: getImgBase64('01_login_pin.png'),
         register: getImgBase64('02_register.png'),
         header: getImgBase64('03_header_theme.png'),
@@ -114,7 +115,7 @@ const path = require('path');
                 x: 0.6, y: 5.25, w: 8.8, h: 0,
                 line: { color: 'E2E8F0', width: 0.8 }
             });
-            slide.addText('3M 사내 동아리·클럽 비용 정산기 (v1.6.346) | 실무 사용자 설명회', {
+            slide.addText('3M 사내 동아리·클럽 비용 정산기 (v1.6.347) | 실무 사용자 설명회', {
                 x: 0.6, y: 5.28, w: 6.0, h: 0.25,
                 fontSize: 8, fontFace: FONT_BODY, color: C.textMuted, valign: 'middle',
                 margin: 0
@@ -195,9 +196,78 @@ const path = require('path');
             });
 
             // 하단 메타정보
-            s1.addText('발표일: 2026. 11. 09  |  발표자: 김종필 (시스템 개발자)  |  시스템 버전: v1.6.346 (최신 정식 배포판)', {
+            s1.addText('발표일: 2026. 11. 09  |  발표자: 김종필 (시스템 개발자)  |  시스템 버전: v1.6.347 (최신 정식 배포판)', {
                 x: 1.0, y: 4.88, w: 8.0, h: 0.35,
                 fontSize: 9.2, fontFace: FONT_BODY, color: C.textMuted,
+                margin: 0
+            });
+        }
+
+        // =========================================================================
+        // SLIDE 1-B: 시스템 아키텍처 (나노바나나가 알려주는 클라우드 인프라)
+        // =========================================================================
+        {
+            const sArch = createBaseSlide(
+                '시스템 아키텍처: 안전한 전용 클라우드 & 자동화 인프라',
+                '개인 PC 파일이 아닌 전용 구글 계정 기반의 Firebase 실시간 DB와 자동 메일링 시스템으로 운영됩니다.'
+            );
+
+            // 좌측: 나노바나나 3D 클라우드 아키텍처 일러스트
+            if (imgs.nanoBanana) {
+                sArch.addImage({
+                    data: 'image/jpeg;base64,' + imgs.nanoBanana,
+                    x: 0.6, y: 1.40, w: 4.9, h: 3.65
+                });
+            }
+
+            // 우측: 3대 핵심 인프라 설명 카드
+            sArch.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+                x: 5.7, y: 1.40, w: 3.7, h: 3.65,
+                fill: { color: C.cardBg }, line: { color: C.cardBorder, width: 1 },
+                rectRadius: 0.12
+            });
+
+            sArch.addText('☁️ 3대 핵심 클라우드 인프라', {
+                x: 5.9, y: 1.55, w: 3.3, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.primary, bold: true,
+                margin: 0
+            });
+
+            const archGuides = [
+                {
+                    title: '① 시스템 전용 구글 계정 분리 운영',
+                    desc: '개발자 개인 계정이 아닌, 시스템 운영 전용 구글 계정을 독립 구축하여 인프라 보안과 서비스 관리 권한을 안전하게 일원화했습니다.'
+                },
+                {
+                    title: '② Google Firebase 실시간 공유 DB',
+                    desc: '개인 PC 고장이나 로컬 파일 분실 위험 없이, 1,316명 전사원 명부와 클럽별 예산·정산 이력이 구글 클라우드에 100% 실시간 동기화됩니다.'
+                },
+                {
+                    title: '③ 자동 메일링 & 공식 품의 통보',
+                    desc: '정산이 최종 확정되면 해당 전용 계정을 통해 정산 담당자 및 클럽 회장단에게 정산 결과 보고서와 공식 엑셀이 누락 없이 자동 발송됩니다.'
+                }
+            ];
+
+            archGuides.forEach((g, idx) => {
+                const gy = 1.95 + idx * 0.78;
+                sArch.addText([
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
+                    { text: g.desc, options: { fontSize: 8.5, color: C.textSub } }
+                ], {
+                    x: 5.9, y: gy, w: 3.3, h: 0.72,
+                    margin: 0, lineSpacing: 13.5, valign: 'top'
+                });
+            });
+
+            // 하단 보안 배너
+            sArch.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+                x: 5.9, y: 4.42, w: 3.3, h: 0.48,
+                fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 0.8 },
+                rectRadius: 0.06
+            });
+            sArch.addText('🔒 무결성 & 보안: Google 엔터프라이즈 인프라에서 24시간 안전하게 데이터가 암호화 보관됩니다.', {
+                x: 6.0, y: 4.45, w: 3.1, h: 0.42,
+                fontSize: 8.0, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12, valign: 'middle',
                 margin: 0
             });
         }
