@@ -321,40 +321,37 @@ const path = require('path');
             });
 
             s3.addText('📱 조작 가이드 및 핵심 기능', {
-                x: 5.0, y: 1.55, w: 4.15, h: 0.32,
-                fontSize: 12.5, fontFace: FONT_TITLE, color: C.primary, bold: true,
+                x: 5.0, y: 1.55, w: 4.15, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.primary, bold: true,
                 margin: 0
             });
 
             const guides3 = [
-                { no: '①', title: '6자리 사번 PIN 원터치 로그인', text: '화면 터치패드 또는 키보드로 본인의 6자리 PIN을 누르면 별도 엔터 없이 즉시 메인 화면으로 이동합니다.' },
-                { no: '②', title: '신규 회원 1회 등록 (30초)', text: "처음 사용자는 하단 '회원 등록하기'를 눌러 이름과 6자리 PIN(사번 CG001234인 경우 '001234')만 등록하면 완료됩니다." },
-                { no: '③', title: '다크 / 라이트 모드 상시 지원', text: '상단 우측 [Dark / Light] 토글 스위치로 야간이나 주간 어디서든 눈이 편안한 테마로 즉시 전환됩니다.' }
+                { title: '① 6자리 사번 PIN 원터치 로그인', text: '화면 터치패드 또는 키보드로 본인의 6자리 PIN을 누르면 별도 엔터 없이 즉시 접속' },
+                { title: '② 신규 회원 간편 등록 (최초 1회)', text: "처음 사용자는 '회원 등록하기'에서 이름과 사번 PIN(6자리)만 등록하면 즉시 완료" },
+                { title: '③ 다크 / 라이트 모드 상시 지원', text: '우측 상단 토글 스위치로 주간/야간 어디서든 눈이 편안한 테마로 즉시 전환' }
             ];
 
             guides3.forEach((g, idx) => {
-                const gy = 1.94 + idx * 0.74;
-                s3.addText(`${g.no} ${g.title}`, {
-                    x: 5.0, y: gy, w: 4.15, h: 0.24,
-                    fontSize: 10.5, fontFace: FONT_TITLE, color: C.textMain, bold: true,
-                    margin: 0
-                });
-                s3.addText(g.text, {
-                    x: 5.25, y: gy + 0.24, w: 3.90, h: 0.44,
-                    fontSize: 9.0, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 14,
-                    margin: 0
+                const gy = 1.95 + idx * 0.74;
+                s3.addText([
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                ], {
+                    x: 5.0, y: gy, w: 4.15, h: 0.65,
+                    margin: 0, lineSpacing: 13.5, valign: 'top'
                 });
             });
 
             // 꿀팁 박스
             s3.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 5.0, y: 4.25, w: 4.15, h: 0.65,
+                x: 5.0, y: 4.28, w: 4.15, h: 0.60,
                 fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 0.8 },
                 rectRadius: 0.08
             });
-            s3.addText('💡 모바일 PWA 앱 설치 팁: 스마트폰 브라우저에서 [홈 화면에 추가]를 누르면 별도 설치 없이 모바일 앱 아이콘으로 상시 원터치 실행됩니다.', {
-                x: 5.15, y: 4.30, w: 3.85, h: 0.55,
-                fontSize: 8.5, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 13,
+            s3.addText('💡 모바일 앱 설치 팁: 스마트폰 브라우저에서 [홈 화면에 추가]를 누르면 별도 설치 없이 모바일 앱 아이콘으로 상시 원터치 실행됩니다.', {
+                x: 5.15, y: 4.32, w: 3.85, h: 0.52,
+                fontSize: 8.2, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12, valign: 'middle',
                 margin: 0
             });
         }
@@ -384,42 +381,39 @@ const path = require('path');
                 rectRadius: 0.12
             });
 
-            s4.addText('👥 참석자 및 명부 관리 4대 핵심 포인트', {
-                x: 6.0, y: 1.55, w: 3.2, h: 0.32,
-                fontSize: 12.5, fontFace: FONT_TITLE, color: C.primary, bold: true,
+            s4.addText('👥 참석자 및 명부 관리 핵심', {
+                x: 6.0, y: 1.55, w: 3.2, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.primary, bold: true,
                 margin: 0
             });
 
             const guides4 = [
-                { no: '①', title: '전사 임직원 1,316명 DB 연동', text: '사내 전 직원의 이름과 사번(EMP ID)이 사전 탑재되어 있어 오타나 누락 없이 정확한 참석자 등록이 가능합니다.' },
-                { no: '②', title: '실시간 초성·이름·사번 검색 (NEW)', text: "검색창에 '김', '김종' 등 입력 시 즉시 필터링되며 '11/1,316명'과 같이 일치 건수가 분수로 실시간 표시됩니다." },
-                { no: '③', title: '✨ 신규 등록 배지 & 누적 참석 자동 집계', text: "신규 등록 사원은 24시간 동안 '✨ 신규 등록' 배지가 표시되며, 연간 누적 참석 횟수가 투명하게 자동 관리됩니다." },
-                { no: '④', title: '동명이인 고유 사번 완벽 식별', text: '이진호(4035/4277) 등 동명이인이 존재해도 고유 사번 기준으로 참석 횟수가 독립 관리되어 오귀속을 원천 차단합니다.' }
+                { title: '① 전사 임직원 1,316명 DB 탑재', text: '사내 전 직원 이름과 사번이 등록되어 있어 오타나 누락 없이 정확하게 선택' },
+                { title: '② 실시간 초성·이름·사번 검색 (NEW)', text: '초성 또는 이름 한 글자만 입력해도 즉시 필터링되며 검색 인원수가 분수로 표시' },
+                { title: '③ 신규 사원 배지 & 참석 횟수 관리', text: '신규 등록 시 24시간 동안 배지 표시 및 연간 누적 참석 횟수 투명하게 자동 관리' },
+                { title: '④ 동명이인 고유 사번 자동 식별', text: '이름이 같아도 고유 사번 기준으로 참석 횟수가 개별 관리되어 오귀속 원천 차단' }
             ];
 
             guides4.forEach((g, idx) => {
-                const gy = 1.86 + idx * 0.62;
-                s4.addText(`${g.no} ${g.title}`, {
-                    x: 6.0, y: gy, w: 3.2, h: 0.22,
-                    fontSize: 9.8, fontFace: FONT_TITLE, color: C.textMain, bold: true,
-                    margin: 0
-                });
-                s4.addText(g.text, {
-                    x: 6.22, y: gy + 0.22, w: 2.98, h: 0.36,
-                    fontSize: 8.4, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 13,
-                    margin: 0
+                const gy = 1.90 + idx * 0.60;
+                s4.addText([
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                ], {
+                    x: 6.0, y: gy, w: 3.2, h: 0.55,
+                    margin: 0, lineSpacing: 13, valign: 'top'
                 });
             });
 
             // 팁 박스
             s4.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 6.0, y: 4.46, w: 3.2, h: 0.46,
+                x: 6.0, y: 4.42, w: 3.2, h: 0.48,
                 fill: { color: C.emeraldLight }, line: { color: '#A7F3D0', width: 0.8 },
                 rectRadius: 0.06
             });
             s4.addText('✓ 명부의 참석 인원수는 정산 탭에 실시간 자동 반영되어 1인당 비용을 오차 없이 계산합니다.', {
-                x: 6.12, y: 4.50, w: 2.98, h: 0.38,
-                fontSize: 8.0, fontFace: FONT_BODY, color: '#065F46', lineSpacing: 12,
+                x: 6.12, y: 4.45, w: 2.98, h: 0.42,
+                fontSize: 8.0, fontFace: FONT_BODY, color: '#065F46', lineSpacing: 12, valign: 'middle',
                 margin: 0
             });
         }
@@ -464,61 +458,39 @@ const path = require('path');
 
             const categories = [
                 {
-                    name: '① [❓ 정산 기준] 원클릭 안내 (NEW)',
-                    badge: '관리자 설정 실시간 연동',
-                    badgeColor: C.primary,
-                    lightBg: C.primaryLight,
-                    desc: '금액 입력란 옆 물음표 클릭 시 현재 관리자 설정 기준의 가/나/다/라 구간표와 다 구간 초과 누진 계산법이 상세 예시와 함께 즉시 팝업 안내됩니다.'
+                    title: '① [❓ 정산 기준] 실시간 팝업 안내 (NEW)',
+                    desc: '금액 입력란 옆 물음표 클릭 시 관리자 설정과 연동된 4구간 지원표와 초과 누진 계산법이 상세 예시와 함께 즉시 팝업 안내됩니다.'
                 },
                 {
-                    name: '② 행사비 (식대/다과비 등)',
-                    badge: '인원수 비례 4구간 분할',
-                    badgeColor: C.emerald,
-                    lightBg: C.emeraldLight,
-                    desc: '참석자 1인당 행사비(=행사비÷인원수)로 자동 환산되어 [가:0% / 나:20% / 다:초과분40% / 라:85,000원캡] 공식을 실시간 적용합니다.'
+                    title: '② 행사비: 인원수 비례 4구간 자동 분할',
+                    desc: '참석자 1인당 행사비(=행사비÷인원) 기준 [가: 0% / 나: 20% / 다: 초과분 40% / 라: 85,000원 캡] 공식에 따라 회사 지원금과 자부담이 자동 산출됩니다.'
                 },
                 {
-                    name: '③ 시설·장비 & 상품비 규정',
-                    badge: 'Flat 한도 & 연 50만원 한도',
-                    badgeColor: C.rose,
-                    lightBg: C.roseLight,
-                    desc: '시설비는 인당 85,000원 flat 한도 우선 지원, 상품비는 클럽당 연간 500,000원 누적 한도를 실시간 감시하여 초과를 원천 차단합니다.'
+                    title: '③ 시설·장비 & 상품비 규정 자동 검증',
+                    desc: '시설비는 인당 85,000원 한도 내 우선 지원되며, 상품비는 클럽당 연간 50만원 누적 한도를 실시간 감시하여 초과 등록을 원천 차단합니다.'
                 }
             ];
 
             categories.forEach((c, idx) => {
-                const cy = 1.90 + idx * 0.76;
-                s5.addText(c.name, {
-                    x: 5.70, y: cy, w: 2.30, h: 0.22,
-                    fontSize: 9.6, fontFace: FONT_TITLE, color: C.textMain, bold: true,
-                    margin: 0
-                });
-                s5.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                    x: 7.65, y: cy, w: 1.55, h: 0.20,
-                    fill: { color: c.lightBg }, line: { color: c.badgeColor, width: 0.7 },
-                    rectRadius: 0.04
-                });
-                s5.addText(c.badge, {
-                    x: 7.65, y: cy, w: 1.55, h: 0.20,
-                    fontSize: 6.8, fontFace: FONT_BODY, color: c.badgeColor, align: 'center', valign: 'middle',
-                    margin: 0
-                });
-                s5.addText(c.desc, {
-                    x: 5.75, y: cy + 0.22, w: 3.45, h: 0.44,
-                    fontSize: 8.2, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 12.5,
-                    margin: 0
+                const cy = 1.95 + idx * 0.78;
+                s5.addText([
+                    { text: `${c.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
+                    { text: c.desc, options: { fontSize: 8.5, color: C.textSub } }
+                ], {
+                    x: 5.70, y: cy, w: 3.50, h: 0.72,
+                    margin: 0, lineSpacing: 13.5, valign: 'top'
                 });
             });
 
             // 결제 수단 스위치 팁
             s5.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 5.70, y: 4.36, w: 3.50, h: 0.55,
+                x: 5.70, y: 4.38, w: 3.50, h: 0.52,
                 fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 0.8 },
                 rectRadius: 0.06
             });
-            s5.addText('💳 결제 수단 간편 스위치: 상단 [법인카드 / 개인카드] 토글 스위치로 결제 방식을 선택하면 회사 지원금과 개인 정산금이 100% 자동 분리 계산됩니다.', {
-                x: 5.80, y: 4.40, w: 3.30, h: 0.46,
-                fontSize: 8.0, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12,
+            s5.addText('💳 결제 수단 스위치: [법인카드 / 개인카드] 토글 선택 시 회사 지원금과 개인 정산금이 100% 자동 분리 계산됩니다.', {
+                x: 5.80, y: 4.40, w: 3.30, h: 0.48,
+                fontSize: 8.2, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12, valign: 'middle',
                 margin: 0
             });
         }
@@ -529,7 +501,7 @@ const path = require('path');
         {
             const s6 = createBaseSlide(
                 'Step 4. 실시간 자동 정산 결과 & 규정 100% 검증',
-                '계산기나 수기 검토 없이, 4구간 자부담 공식과 잔여 예산 대조가 실시간으로 완벽하게 처리됩니다.'
+                '수기 계산 없이 4구간 자부담 공식과 잔여 예산 대조가 실시간으로 완벽하게 처리됩니다.'
             );
 
             // 좌측 실제 스크린샷
@@ -548,20 +520,20 @@ const path = require('path');
             });
             s6.addText('📊 3M 사내 동아리 4구간 지원 기준표 (규정 공식)', {
                 x: 3.7, y: 1.50, w: 5.5, h: 0.26,
-                fontSize: 11, fontFace: FONT_TITLE, color: C.primary, bold: true,
+                fontSize: 11.5, fontFace: FONT_TITLE, color: C.primary, bold: true,
                 margin: 0
             });
 
             const tiers = [
-                { tier: '가 구간 (≤ 30,000원)', rate: '자부담 0% (전액 지원)', formula: '지원금 = 비용 전액' },
-                { tier: '나 구간 (≤ 60,000원)', rate: '자부담 20%', formula: '지원금 = 비용 × 80%' },
-                { tier: '다 구간 (≤ 120,000원)', rate: '6만원 초과분 40%', formula: '자부담 = 6만×20% + 초과분×40%' },
-                { tier: '라 구간 (> 120,000원)', rate: '인당 최대 85,000원 캡', formula: '지원금 = 85,000원 고정 (초과 전액 자부담)' }
+                { tier: '• 가 구간 (≤ 30,000원)', rate: '전액 지원 (자부담 0%)', formula: '지원금 = 비용 전액' },
+                { tier: '• 나 구간 (≤ 60,000원)', rate: '일반 지원 (자부담 20%)', formula: '지원금 = 비용 × 80%' },
+                { tier: '• 다 구간 (≤ 120,000원)', rate: '초과 누진 (초과분 40%)', formula: '자부담 = 6만×20% + 초과분×40%' },
+                { tier: '• 라 구간 (> 120,000원)', rate: '한도 초과 (최대 85,000원 캡)', formula: '지원금 = 85,000원 고정 (초과 자부담)' }
             ];
 
             tiers.forEach((t, idx) => {
                 const ty = 1.80 + idx * 0.28;
-                s6.addText(`• ${t.tier}`, {
+                s6.addText(t.tier, {
                     x: 3.7, y: ty, w: 2.2, h: 0.24,
                     fontSize: 8.8, fontFace: FONT_TITLE, color: C.textMain, bold: true,
                     margin: 0
@@ -586,28 +558,25 @@ const path = require('path');
             });
             s6.addText('⚡ 실전 화면 결과 보는 법 (100% 자동 산출)', {
                 x: 3.7, y: 3.28, w: 5.5, h: 0.26,
-                fontSize: 11, fontFace: FONT_TITLE, color: C.emerald, bold: true,
+                fontSize: 11.5, fontFace: FONT_TITLE, color: C.emerald, bold: true,
                 margin: 0
             });
 
             const resultPoints = [
-                { name: '최종 지원금 (법인카드)', desc: '규정 한도 내에서 회사가 지급할 법인카드 총액 (실화면: 360,000원)' },
-                { name: '인당 자부담 비용', desc: '참석자 1인당 계좌 입금 또는 현장 결제할 1인 금액 (실화면: 10,000원)' },
-                { name: '클럽 잔여 예산 실시간 차감', desc: '이전 잔여 예산(423,200원) ➔ 이번 지원 후 잔여(63,200원) 즉시 확인' },
-                { name: '[정산 완료] 원클릭 마감', desc: '버튼 클릭 시 Firebase 공유 DB에 저장 + 전사원 카운트 동기화 완료' }
+                { name: '최종 지원금 (법인카드)', desc: '규정 한도 내에서 회사가 지급할 법인카드 총액' },
+                { name: '인당 자부담 비용', desc: '참석자 1인당 계좌 입금 또는 현장 결제할 개인 부담금' },
+                { name: '클럽 잔여 예산 실시간 차감', desc: '이번 지원금 반영 후 남은 클럽 잔여 예산 즉시 확인' },
+                { name: '[정산 완료] 원클릭 마감', desc: '클릭 시 Firebase 공유 DB 저장 및 공식 엑셀 생성' }
             ];
 
             resultPoints.forEach((r, idx) => {
-                const ry = 3.54 + idx * 0.35;
-                s6.addText(`✓ ${r.name}:`, {
-                    x: 3.7, y: ry, w: 2.1, h: 0.26,
-                    fontSize: 8.8, fontFace: FONT_TITLE, color: C.primaryDark, bold: true,
-                    margin: 0
-                });
-                s6.addText(r.desc, {
-                    x: 5.8, y: ry, w: 3.5, h: 0.26,
-                    fontSize: 8.5, fontFace: FONT_BODY, color: '334155',
-                    margin: 0
+                const ry = 3.56 + idx * 0.34;
+                s6.addText([
+                    { text: `✓ ${r.name}:  `, options: { bold: true, fontSize: 8.8, color: C.primaryDark } },
+                    { text: r.desc, options: { fontSize: 8.5, color: '334155' } }
+                ], {
+                    x: 3.7, y: ry, w: 5.5, h: 0.28,
+                    margin: 0, valign: 'middle'
                 });
             });
         }
@@ -637,41 +606,38 @@ const path = require('path');
             });
 
             s7.addText('📑 정산 이력 & 엑셀 다운로드', {
-                x: 6.2, y: 1.55, w: 3.0, h: 0.32,
-                fontSize: 12.5, fontFace: FONT_TITLE, color: C.emerald, bold: true,
+                x: 6.2, y: 1.55, w: 3.0, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.emerald, bold: true,
                 margin: 0
             });
 
             const guides7 = [
-                { no: '①', title: '클럽 예산 실시간 요약 대시보드', text: '총 예산(154만원), 잔여 예산(42.3만원), 총 참석 인원(53명), 상품비 누적액이 상단 배너에 즉시 집계됩니다.' },
-                { no: '②', title: '행사 날짜별 상세 내역 조회', text: '행사일, 참석 인원, 행사비, 시설비, 상품비, 회사 지원금, 자부담 비용이 한눈에 표 형태로 정리됩니다.' },
-                { no: '③', title: '공식 엑셀 품의서 즉시 다운로드', text: "우측 초록색 [엑셀] 버튼을 누르면 회사 공식 템플릿(template.xlsx)에 모든 셀 좌표가 완벽 매핑된 .xlsx 파일이 생성됩니다." },
-                { no: '④', title: '투명한 이력 공유 및 보관', text: '일반 회원은 본인 작성 내역을 확인하고, 관리자는 전사 클럽 집행 현황을 검토할 수 있습니다.' }
+                { title: '① 클럽 예산 실시간 대시보드', text: '총 예산, 잔여 예산, 참석 인원, 상품비 누적액 상단 집계' },
+                { title: '② 행사 날짜별 상세 내역 조회', text: '행사일, 참석 인원, 항목별 비용, 회사 지원금, 자부담 일목요연 정리' },
+                { title: '③ 공식 품의 엑셀 즉시 다운로드', text: "초록색 [엑셀] 클릭 시 회사 공식 서식에 100% 매핑된 엑셀 파일 출력" },
+                { title: '④ 투명한 이력 공유 및 보관', text: '일반 회원은 본인 작성 내역 확인, 관리자는 전사 집행 현황 검토' }
             ];
 
             guides7.forEach((g, idx) => {
-                const gy = 1.86 + idx * 0.62;
-                s7.addText(`${g.no} ${g.title}`, {
-                    x: 6.2, y: gy, w: 3.0, h: 0.22,
-                    fontSize: 9.8, fontFace: FONT_TITLE, color: C.textMain, bold: true,
-                    margin: 0
-                });
-                s7.addText(g.text, {
-                    x: 6.22, y: gy + 0.22, w: 3.0, h: 0.36,
-                    fontSize: 8.4, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 13,
-                    margin: 0
+                const gy = 1.90 + idx * 0.60;
+                s7.addText([
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                ], {
+                    x: 6.2, y: gy, w: 3.0, h: 0.55,
+                    margin: 0, lineSpacing: 13, valign: 'top'
                 });
             });
 
             // 엑셀 서식 안내 팁
             s7.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 6.2, y: 4.46, w: 3.0, h: 0.46,
+                x: 6.2, y: 4.42, w: 3.0, h: 0.48,
                 fill: { color: C.emeraldLight }, line: { color: '#A7F3D0', width: 0.8 },
                 rectRadius: 0.06
             });
             s7.addText('✓ 엑셀 다운로드 시 K4~K30, L12~L25 등 회사 회계 제출용 좌표가 100% 자동 매핑됩니다.', {
-                x: 6.3, y: 4.50, w: 2.8, h: 0.38,
-                fontSize: 8.0, fontFace: FONT_BODY, color: '#065F46', lineSpacing: 12,
+                x: 6.3, y: 4.45, w: 2.8, h: 0.42,
+                fontSize: 8.0, fontFace: FONT_BODY, color: '#065F46', lineSpacing: 12, valign: 'middle',
                 margin: 0
             });
         }
@@ -701,42 +667,39 @@ const path = require('path');
                 rectRadius: 0.12
             });
 
-            s8.addText('👑 관리자 전용 대시보드 핵심', {
-                x: 6.1, y: 1.55, w: 3.1, h: 0.32,
-                fontSize: 12.5, fontFace: FONT_TITLE, color: C.amber, bold: true,
+            s8.addText('👑 관리자 대시보드 핵심', {
+                x: 6.1, y: 1.55, w: 3.1, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.amber, bold: true,
                 margin: 0
             });
 
             const guides8 = [
-                { no: '①', title: '전사 총괄 4대 KPI 실시간 타일', text: '총 등록 가입자, 전체 누적 지출액, 회사 지원금, 임직원 자부담이 상단에 실시간 통합 집계됩니다.' },
-                { no: '②', title: '2열 독립 컬럼 레이아웃 (NEW)', text: '좌측(클럽·예산 관리)과 우측(정산 기준·데이터 관리) 2열 분할로 대화면을 최적화하며 카드 접기/펼침을 지원합니다.' },
-                { no: '③', title: '정산 구간 및 비율 전사 설정', text: '지원 규정 변경 시 가/나/다/라 구간 한도액(3만/6만/12만)과 비율(20%/40%)을 수정하면 전 사용자에게 실시간 반영됩니다.' },
-                { no: '④', title: '전체 작업 로그 정예화 (v1.6.346)', text: '임시 작성 로그를 제외하고 최종 정산 확정/수정 및 관리자의 추가·수정·삭제 등 실제 데이터 변경만 투명하게 기록합니다.' }
+                { title: '① 전사 총괄 4대 KPI 실시간 타일', text: '등록 회원 수, 전체 누적 지출액, 회사 지원금, 임직원 자부담 종합 집계' },
+                { title: '② 2열 독립 레이아웃 & 카드 접기 (NEW)', text: '좌측(클럽·예산) / 우측(정산 기준·데이터 관리) 2열 분할로 대화면 최적화' },
+                { title: '③ 정산 구간 및 비율 전사 설정', text: '가/나/다/라 한도 및 비율 변경 시 전 사용자 화면에 실시간 동기화' },
+                { title: '④ 전체 작업 로그 최적화 (v1.6.346)', text: '임시 로그는 제외하고 정산 확정·수정 및 데이터 변경만 투명하게 기록' }
             ];
 
             guides8.forEach((g, idx) => {
-                const gy = 1.86 + idx * 0.62;
-                s8.addText(`${g.no} ${g.title}`, {
-                    x: 6.1, y: gy, w: 3.1, h: 0.22,
-                    fontSize: 9.8, fontFace: FONT_TITLE, color: C.textMain, bold: true,
-                    margin: 0
-                });
-                s8.addText(g.text, {
-                    x: 6.12, y: gy + 0.22, w: 3.1, h: 0.36,
-                    fontSize: 8.4, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 13,
-                    margin: 0
+                const gy = 1.90 + idx * 0.60;
+                s8.addText([
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                ], {
+                    x: 6.1, y: gy, w: 3.1, h: 0.55,
+                    margin: 0, lineSpacing: 13, valign: 'top'
                 });
             });
 
             // 관리자 팁
             s8.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 6.1, y: 4.46, w: 3.1, h: 0.46,
+                x: 6.1, y: 4.42, w: 3.1, h: 0.48,
                 fill: { color: C.amberLight }, line: { color: '#FDE68A', width: 0.8 },
                 rectRadius: 0.06
             });
             s8.addText('⚠️ 관리자 설정값은 모든 클럽 사용자에게 즉시 적용되며 Firebase 단일 기준으로 안전하게 동기화됩니다.', {
-                x: 6.2, y: 4.50, w: 2.9, h: 0.38,
-                fontSize: 8.0, fontFace: FONT_BODY, color: '#92400E', lineSpacing: 12,
+                x: 6.2, y: 4.45, w: 2.9, h: 0.42,
+                fontSize: 8.0, fontFace: FONT_BODY, color: '#92400E', lineSpacing: 12, valign: 'middle',
                 margin: 0
             });
         }
@@ -759,7 +722,7 @@ const path = require('path');
                 });
             }
 
-            // 우측: 상세 가이드 (넓고 쾌적한 줄간격 및 여백)
+            // 우측: 상세 가이드
             s9.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
                 x: 6.0, y: 1.40, w: 3.4, h: 3.65,
                 fill: { color: C.cardBg }, line: { color: C.cardBorder, width: 1 },
@@ -767,40 +730,37 @@ const path = require('path');
             });
 
             s9.addText('🔍 클럽별 이력 관리 핵심', {
-                x: 6.2, y: 1.55, w: 3.0, h: 0.32,
-                fontSize: 12.5, fontFace: FONT_TITLE, color: C.primary, bold: true,
+                x: 6.2, y: 1.55, w: 3.0, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.primary, bold: true,
                 margin: 0
             });
 
             const guides9 = [
-                { no: '①', title: '2x2 와이드 4분할 그리드 뷰 (NEW)', text: "'전체 클럽' 모드에서 4분할 와이드 그리드로 여러 클럽의 집행 현황을 한 화면에서 동시 모니터링합니다." },
-                { no: '②', title: '특정 클럽 단독 와이드 뷰', text: "상단 드롭다운에서 특정 클럽을 선택하면 전체 폭(100%)을 활용하여 해당 클럽의 모든 행사 내역을 집중 조회합니다." },
-                { no: '③', title: '정산인(작성자) 스마트 필터링', text: '정산인이 2명 이상인 클럽은 자동 드롭다운이 노출되어 담당자별로 교차 검토가 가능합니다.' },
-                { no: '④', title: '모바일 요약 & 무결성 보장 삭제', text: '모바일 전용 요일별 압축 요약 뷰를 제공하며, 오등록 삭제 시 전사 이력과 명부 카운트가 완벽히 동시 롤백됩니다.' }
+                { title: '① 2x2 와이드 4분할 그리드 뷰 (NEW)', text: "'전체 클럽' 모드에서 4분할 와이드 그리드로 여러 클럽 현황 동시 모니터링" },
+                { title: '② 특정 클럽 단독 와이드 뷰', text: "상단 드롭다운에서 특정 클럽 선택 시 전체 폭(100%)으로 행사 내역 집중 조회" },
+                { title: '③ 정산인(작성자) 스마트 필터링', text: '정산인이 2명 이상인 클럽은 자동 드롭다운이 노출되어 교차 검토 지원' },
+                { title: '④ 모바일 요약 & 안전한 롤백', text: '모바일 전용 요일별 압축 요약 뷰 제공 및 삭제 시 전사 이력·카운트 완벽 롤백' }
             ];
 
             guides9.forEach((g, idx) => {
-                const gy = 1.86 + idx * 0.62;
-                s9.addText(`${g.no} ${g.title}`, {
-                    x: 6.2, y: gy, w: 3.0, h: 0.22,
-                    fontSize: 9.8, fontFace: FONT_TITLE, color: C.textMain, bold: true,
-                    margin: 0
-                });
-                s9.addText(g.text, {
-                    x: 6.42, y: gy + 0.22, w: 2.80, h: 0.36,
-                    fontSize: 8.4, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 13,
-                    margin: 0
+                const gy = 1.90 + idx * 0.60;
+                s9.addText([
+                    { text: `${g.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
+                    { text: g.text, options: { fontSize: 8.5, color: C.textSub } }
+                ], {
+                    x: 6.2, y: gy, w: 3.0, h: 0.55,
+                    margin: 0, lineSpacing: 13, valign: 'top'
                 });
             });
 
             s9.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 6.2, y: 4.46, w: 3.0, h: 0.46,
+                x: 6.2, y: 4.42, w: 3.0, h: 0.48,
                 fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 0.8 },
                 rectRadius: 0.06
             });
             s9.addText('✓ 모든 이력 데이터는 Firebase 공유 DB에 실시간 동기화되어 데이터 분실 위험이 전혀 없습니다.', {
-                x: 6.3, y: 4.50, w: 2.8, h: 0.38,
-                fontSize: 8.0, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12,
+                x: 6.3, y: 4.45, w: 2.8, h: 0.42,
+                fontSize: 8.0, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 12, valign: 'middle',
                 margin: 0
             });
         }
@@ -831,41 +791,38 @@ const path = require('path');
             });
 
             s10.addText('📊 7대 실시간 분석 차트', {
-                x: 6.2, y: 1.55, w: 3.0, h: 0.32,
-                fontSize: 12.5, fontFace: FONT_TITLE, color: C.primary, bold: true,
+                x: 6.2, y: 1.55, w: 3.0, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.primary, bold: true,
                 margin: 0
             });
 
             const chartsList = [
-                { name: '① 월별 지출 현황 (1~12월)', desc: '클럽별 월간 지출액 추이를 멀티 컬러 바 차트로 비교 분석' },
-                { name: '② 클럽별 예산 소진율 (위험도 경고)', desc: '클럽 고유 색상 매핑 및 소진 위험도에 따른 스마트 경고 표시' },
-                { name: '③ 3대 카테고리별 비용 비중', desc: '행사비, 시설·장비, 상품비 구성비를 도넛 차트로 실시간 분석' },
-                { name: '④ 클럽별 고유 참석자 분석 (중복 제거)', desc: '사번 기준 중복을 완벽 제거하여 실제 순수 활동 인원수 집계' },
-                { name: '⑤ 클럽별 정산 횟수 & 자부담 추이', desc: '동아리별 정기 모임 활성화 수준과 임직원 자부담 변동성 모니터링' }
+                { title: '① 월별 지출 현황 (1~12월)', desc: '클럽별 월간 지출액 추이를 멀티 컬러 바 차트로 비교 분석' },
+                { title: '② 클럽별 예산 소진율 (위험도 경고)', desc: '클럽 고유 색상 매핑 및 소진율 위험도별 스마트 경고 표시' },
+                { title: '③ 3대 비용 구성 비중 도넛 차트', desc: '행사비, 시설·장비, 상품비 구성비를 도넛 차트로 실시간 분석' },
+                { title: '④ 클럽별 순수 참석자 분석 (중복 제거)', desc: '사번 기준 중복을 완벽 제거하여 실제 순수 활동 인원수 집계' },
+                { title: '⑤ 정산 횟수 & 자부담 추이 분석', desc: '동아리별 정기 모임 활성화 수준과 임직원 자부담 변동성 모니터링' }
             ];
 
             chartsList.forEach((ch, idx) => {
-                const cy = 1.86 + idx * 0.49;
-                s10.addText(ch.name, {
-                    x: 6.2, y: cy, w: 3.0, h: 0.20,
-                    fontSize: 9.2, fontFace: FONT_TITLE, color: C.textMain, bold: true,
-                    margin: 0
-                });
-                s10.addText(ch.desc, {
-                    x: 6.35, y: cy + 0.18, w: 2.90, h: 0.28,
-                    fontSize: 8.0, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 12,
-                    margin: 0
+                const cy = 1.90 + idx * 0.49;
+                s10.addText([
+                    { text: `${ch.title}\n`, options: { bold: true, fontSize: 9.5, color: C.textMain } },
+                    { text: ch.desc, options: { fontSize: 8.0, color: C.textSub } }
+                ], {
+                    x: 6.2, y: cy, w: 3.0, h: 0.45,
+                    margin: 0, lineSpacing: 12, valign: 'top'
                 });
             });
 
             s10.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 6.2, y: 4.46, w: 3.0, h: 0.46,
+                x: 6.2, y: 4.42, w: 3.0, h: 0.48,
                 fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 0.8 },
                 rectRadius: 0.06
             });
             s10.addText('✓ 클럽 필터 칩으로 특정 클럽만 선택하여 비교하거나 [전체 선택]으로 전사 총괄 비교가 가능합니다.', {
-                x: 6.3, y: 4.50, w: 2.8, h: 0.38,
-                fontSize: 7.8, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 11,
+                x: 6.3, y: 4.45, w: 2.8, h: 0.42,
+                fontSize: 7.8, fontFace: FONT_BODY, color: C.primaryDark, lineSpacing: 11, valign: 'middle',
                 margin: 0
             });
         }
@@ -896,48 +853,45 @@ const path = require('path');
             });
 
             s11.addText('🚀 연간 결산 PPT 자동화 3대 핵심 강점', {
-                x: 3.8, y: 1.55, w: 5.4, h: 0.32,
-                fontSize: 12.5, fontFace: FONT_TITLE, color: C.amber, bold: true,
+                x: 3.8, y: 1.55, w: 5.4, h: 0.30,
+                fontSize: 12.0, fontFace: FONT_TITLE, color: C.amber, bold: true,
                 margin: 0
             });
 
             const pptSpecs = [
                 {
                     title: '① 경영진 보고용 16:9 와이드 디자인 자동 적용',
-                    desc: '표지, 전사 총괄 KPI 요약, 재원·용도 2대 도넛 차트, 클럽별 소진율 바 차트, 10개 클럽 종합 비교표, 상세 활동 내역까지 풀 패키지 슬라이드 자동 생성'
+                    desc: '표지, 전사 총괄 KPI 요약, 재원·용도 2대 도넛 차트, 소진율 바 차트, 10개 클럽 종합 비교표까지 풀 패키지 슬라이드 자동 생성'
                 },
                 {
                     title: '② 데이터 100% 실시간 동기화 및 오차 제로',
                     desc: '총 집행액, 연간 예산, 회사 지원금 비율, 임직원 자부담, 상품비 등 당일 최신 확정 데이터가 오차 없이 즉시 차트화'
                 },
                 {
-                    title: '③ 즉시 편집 가능한 네이티브 PPTX 파일 다운로드',
-                    desc: '단순 캡처 이미지가 아니라 파워포인트 도형, 표, 차트 객체로 생성되므로 다운로드 후 발표자가 폰트, 색상, 코멘트를 자유롭게 추가 편집 가능'
+                    title: '③ 즉시 편집 가능한 파워포인트 네이티브 파일',
+                    desc: '단순 캡처 이미지가 아니라 파워포인트 도형, 표, 차트 객체로 생성되므로 다운로드 후 발표자가 자유롭게 추가 편집 가능'
                 }
             ];
 
             pptSpecs.forEach((p, idx) => {
-                const py = 1.88 + idx * 0.78;
-                s11.addText(p.title, {
-                    x: 3.8, y: py, w: 5.4, h: 0.24,
-                    fontSize: 10.5, fontFace: FONT_TITLE, color: C.textMain, bold: true,
-                    margin: 0
-                });
-                s11.addText(p.desc, {
-                    x: 3.85, y: py + 0.24, w: 5.35, h: 0.45,
-                    fontSize: 8.8, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 13.5,
-                    margin: 0
+                const py = 1.95 + idx * 0.76;
+                s11.addText([
+                    { text: `${p.title}\n`, options: { bold: true, fontSize: 10, color: C.textMain } },
+                    { text: p.desc, options: { fontSize: 8.5, color: C.textSub } }
+                ], {
+                    x: 3.8, y: py, w: 5.4, h: 0.70,
+                    margin: 0, lineSpacing: 13, valign: 'top'
                 });
             });
 
             // 다운로드 안내 배너
             s11.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 3.8, y: 4.36, w: 5.4, h: 0.55,
+                x: 3.8, y: 4.38, w: 5.4, h: 0.52,
                 fill: { color: C.amberLight }, line: { color: '#FDE68A', width: 1 },
                 rectRadius: 0.08
             });
             s11.addText('📥 [PPTX 다운로드] 클릭 ➔ 3초 만에 파일 다운로드 완료! 연말 감사 및 예산 심의 보고 완벽 대응!', {
-                x: 3.9, y: 4.40, w: 5.2, h: 0.46,
+                x: 3.9, y: 4.40, w: 5.2, h: 0.48,
                 fontSize: 9.0, fontFace: FONT_TITLE, color: '#92400E', bold: true, align: 'center', valign: 'middle',
                 margin: 0
             });
@@ -965,26 +919,26 @@ const path = require('path');
             });
             s12.addText('정산 시스템 사용 중 궁금한 점과 특수 상황 처리 방법입니다.', {
                 x: 0.6, y: 0.82, w: 8.8, h: 0.26,
-                fontSize: 10, fontFace: FONT_BODY, color: C.textSub,
+                fontSize: 10.5, fontFace: FONT_BODY, color: C.textSub,
                 margin: 0
             });
 
             const faqs = [
                 {
-                    q: 'Q1. 인당 지원 한도(85,000원)를 초과하는 특별 행사는 어떻게 하나요?',
-                    a: 'A: 임원진 사전 승인을 득한 특별 행사는 관리자(회장단)가 클럽 관리 메뉴에서 해당 클럽의 [1회성 초과 지원 승인] 토글을 활성화하여 잔여 예산 내에서 최대치로 정산할 수 있습니다 (정산 확정 시 1회 사용 후 자동 리셋).'
+                    q: 'Q1. 인당 지원 한도(85,000원)를 초과하는 특별 행사는?',
+                    a: 'A: 관리자가 클럽 관리 메뉴에서 [1회성 초과 지원 승인] 토글을 활성화하면 잔여 예산 내에서 최대치 정산이 가능합니다 (정산 확정 시 1회 사용 후 자동 리셋).'
                 },
                 {
                     q: 'Q2. 실제 영수증 상황에 맞춰 자부담 금액을 수동 수정할 수 있나요?',
-                    a: 'A: 네! 결과 카드의 [총 자부담 금액 (수정 가능)] 입력창에서 원하는 금액을 직접 입력하시면 수동 입력값이 최우선 반영되어 최종 지원금이 자동 재조정됩니다.'
+                    a: 'A: 네! 결과 카드의 [총 자부담 금액 (수정 가능)] 입력창에 원하는 금액을 입력하시면 수동 입력값이 최우선 반영되어 최종 지원금이 자동 재조정됩니다.'
                 },
                 {
                     q: 'Q3. 모바일 스마트폰에서도 컴퓨터와 똑같이 사용할 수 있나요?',
-                    a: 'A: 100% 동일합니다. 반응형 모바일 PWA로 개발되어 스마트폰 화면에서도 터치 키패드, 명부 검색, 영수증 사진 업로드, 엑셀 다운로드가 원활하게 동작합니다.'
+                    a: 'A: 100% 동일합니다. 반응형 모바일 PWA로 개발되어 스마트폰 화면에서도 터치 키패드, 명부 검색, 엑셀 다운로드가 원활하게 동작합니다.'
                 },
                 {
                     q: 'Q4. 새해가 되면 전사원 명부의 참석 횟수는 삭제되나요?',
-                    a: 'A: 삭제되지 않습니다! 매년 1월 1일 첫 로그인 시 직전 연도 카운트는 연도별 히스토리로 안전하게 영구 아카이빙된 후 새해 카운트만 0회로 자동 리셋됩니다.'
+                    a: 'A: 삭제되지 않습니다! 매년 1월 1일 직전 연도 카운트는 연도별 히스토리로 안전하게 영구 보관된 후 새해 카운트만 0회로 자동 리셋됩니다.'
                 }
             ];
 
@@ -996,15 +950,12 @@ const path = require('path');
                     fill: { color: C.cardBg }, line: { color: C.cardBorder, width: 1 },
                     rectRadius: 0.1
                 });
-                s12.addText(f.q, {
-                    x: fx + 0.18, y: fy + 0.14, w: 3.94, h: 0.30,
-                    fontSize: 9.8, fontFace: FONT_TITLE, color: C.primary, bold: true,
-                    margin: 0
-                });
-                s12.addText(f.a, {
-                    x: fx + 0.18, y: fy + 0.44, w: 3.94, h: 0.88,
-                    fontSize: 8.5, fontFace: FONT_BODY, color: '334155', lineSpacing: 13.5,
-                    margin: 0
+                s12.addText([
+                    { text: `${f.q}\n`, options: { bold: true, fontSize: 9.8, color: C.primary } },
+                    { text: f.a, options: { fontSize: 8.5, color: '334155' } }
+                ], {
+                    x: fx + 0.18, y: fy + 0.14, w: 3.94, h: 1.18,
+                    margin: 0, lineSpacing: 13.5, valign: 'top'
                 });
             });
 
