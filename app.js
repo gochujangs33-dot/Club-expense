@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.356';
+const APP_VERSION      = '1.6.357';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -2044,6 +2044,24 @@ const AppState = {
         }
     },
 
+    getMaxDirectoryAttendanceCount() {
+        if (!this.directory) return 0;
+        let maxCount = 0;
+        Object.keys(this.directory).forEach(name => {
+            const entry = this.directory[name];
+            if (typeof entry === 'object' && entry.counts) {
+                Object.values(entry.counts).forEach(c => {
+                    const cnt = Number(c) || 0;
+                    if (cnt > maxCount) maxCount = cnt;
+                });
+            } else if (typeof entry === 'object' && entry.count) {
+                const cnt = Number(entry.count) || 0;
+                if (cnt > maxCount) maxCount = cnt;
+            }
+        });
+        return maxCount;
+    },
+
     addDirectoryEntry(name, employeeId) {
         const previousName = this.editingDirName;
         const previousId = this.editingDirId;
@@ -2620,15 +2638,29 @@ const AppState = {
                     </div>
                 `;
             } else {
+                const maxAttendanceCount = this.getMaxDirectoryAttendanceCount();
                 this.attendees.forEach(att => {
                     const row = document.createElement('div');
                     row.className = 'expense-row';
                     row.style.cursor = 'pointer';
+
+                    const attEntry = this.directory[att.name];
+                    const attCount = (attEntry && typeof attEntry === 'object' && attEntry.counts && att.employeeId)
+                        ? (attEntry.counts[att.employeeId] || 0)
+                        : 0;
+                    const isAttTopRank = maxAttendanceCount > 0 && attCount === maxAttendanceCount;
+                    const attCrownHtml = isAttTopRank
+                        ? `<span class="crown-badge" title="올해 최다 참석 1위 왕관 (${attCount}회)" style="font-size: 1rem; line-height: 1; margin-right: 0.25rem; filter: drop-shadow(0 1px 2px rgba(234, 179, 8, 0.5));">👑</span>`
+                        : '';
+
                     row.innerHTML = `
                         <div class="expense-row-left">
-                            <span class="expense-row-title">${this.escapeHtml(att.name)}</span>
+                            <span class="expense-row-title" style="display:inline-flex; align-items:center;">
+                                ${attCrownHtml}<strong>${this.escapeHtml(att.name)}</strong>
+                            </span>
                             <div class="expense-row-meta">
                                 <span class="expense-category-badge">사번: ${this.escapeHtml(att.employeeId)}</span>
+                                ${isAttTopRank ? `<span style="font-size: 0.72rem; color: #b45309; font-weight: 700; margin-left: 0.3rem;">(👑 최다 참석 1위: ${attCount}회)</span>` : ''}
                             </div>
                         </div>
                         <div class="expense-row-right">
@@ -2702,17 +2734,27 @@ const AppState = {
                 });
                 directoryCount.textContent = dirRows.length;
 
+                // 최다 참석 횟수 (1회 이상 참석자 중에서 1위 판정, 공동 1등 포함)
+                const maxAttendanceCount = (dirRows.length > 0 && dirRows[0].count > 0) ? dirRows[0].count : 0;
+
                 const canDeleteDir = (this.userName === '관리자' || this.currentPin === '002531');
                 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
                 const nowTime = Date.now();
 
                 dirRows.forEach(({ name, id, count: countValue }) => {
+                    const isTopRank = maxAttendanceCount > 0 && countValue === maxAttendanceCount;
+
                     const row = document.createElement('div');
-                    row.className = 'expense-row';
+                    row.className = 'expense-row' + (isTopRank ? ' top-attendee-row' : '');
                     row.dataset.dirName = name;
                     row.dataset.dirId = id;
                     row.style.padding = '0.5rem 0.75rem';
                     row.style.cursor = 'pointer';
+                    if (isTopRank) {
+                        row.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.09), rgba(251, 191, 36, 0.04))';
+                        row.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+                        row.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.15)';
+                    }
 
                     const entry = this.directory[name];
                     let regTime = (typeof entry === 'object' && entry.createdAts) ? (entry.createdAts[id] || 0) : 0;
@@ -2734,15 +2776,20 @@ const AppState = {
                         ? `<button class="btn-delete-from-directory btn-delete btn-text-danger" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" style="padding: 0.5rem; font-size: 1.1rem; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(239, 68, 68, 0.1); margin-left: 0.5rem;" title="명부에서 삭제">&times;</button>`
                         : '';
 
+                    const crownHtml = isTopRank
+                        ? `<span class="crown-badge" title="👑 올해 최다 참석 1위 왕관 (${countValue}회)" style="display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem; line-height: 1; margin-right: 0.25rem; filter: drop-shadow(0 1px 2px rgba(234, 179, 8, 0.6)); vertical-align: middle;">👑</span>`
+                        : '';
+
                     row.innerHTML = `
                         <div class="expense-row-left">
-                            <span class="expense-row-title" style="font-size: 0.88rem;">
-                                ${this.escapeHtml(name)}
-                                <span style="font-size: 0.72rem; color: var(--color-secondary); font-weight: 600; margin-left: 0.3rem;">(올해 누적: ${this.userName === '관리자' ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0" style="width:34px; padding:0 2px; font-size:0.72rem; font-weight:700; color:var(--color-secondary); background:transparent; border:none; border-bottom:1px dashed var(--color-secondary); outline:none; text-align:center; -moz-appearance:textfield; appearance:textfield;">` : countValue}회)</span>
+                            <span class="expense-row-title" style="font-size: 0.88rem; display: inline-flex; align-items: center;">
+                                ${crownHtml}<strong>${this.escapeHtml(name)}</strong>
+                                <span style="font-size: 0.72rem; color: ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; font-weight: 700; margin-left: 0.3rem;">(올해 누적: ${this.userName === '관리자' ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0" style="width:34px; padding:0 2px; font-size:0.72rem; font-weight:700; color:${isTopRank ? '#d97706' : 'var(--color-secondary)'}; background:transparent; border:none; border-bottom:1px dashed ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; outline:none; text-align:center; -moz-appearance:textfield; appearance:textfield;">` : countValue}회)</span>
                             </span>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">EMP ID: ${this.escapeHtml(id)}</span>
                         </div>
                         <div class="expense-row-right" style="gap: 0.4rem; align-items: center;">
+                            ${isTopRank ? `<span class="badge-top-rank" style="padding: 0.18rem 0.45rem; font-size: 0.68rem; font-weight: 800; color: #b45309; background: rgba(245, 158, 11, 0.16); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 6px; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 0.2rem;">👑 1위</span>` : ''}
                             ${newBadgeHtml}
                             ${deleteDirBtnHtml}
                         </div>
@@ -2778,6 +2825,7 @@ const AppState = {
                                 summary: `전사원 명부 '${dirName} (${dirId || '-'})' 누적 참석 횟수 수정: ${previousCount}회 → ${newCount}회`,
                                 details: { 이전횟수: previousCount, 변경횟수: newCount }
                             });
+                            this.render();
                         }
                     });
                 });
@@ -7902,6 +7950,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.357', date: '2026.11.10', items: ['전사원 명부 및 참석자 목록 최다 참석 1위 사원 왕관(👑) 표기 및 하이라이트 추가: 최다 참석자 이름 앞 왕관 배지, 👑 1위 배지 및 골드빛 카드 강조 효과 적용 (공동 1등 모두 지원)'] },
         { ver: '1.6.356', date: '2026.11.10', items: ['전체 작업 로그에서 "현재 정산 내용 초기화" 기록 제외: 정산 화면 초기화 시 감사 로그 저장 중단 및 기존 저장된 정산 초기화 로그 목록 숨김 필터링 적용'] },
         { ver: '1.6.355', date: '2026.11.10', items: ['비용 항목 재클릭 시 수정 모드 입력값 보존 버그 해결: 기존에 사용자가 직접 수정한 법인카드/개인카드 및 1인당 자부담 분할값이 기본 자동계산값으로 덮어씌워지던 문제 수정 및 저장값 완전 보존'] },
         { ver: '1.6.354', date: '2026.11.10', items: ['스크립트 런타임 구문 정상화 및 로그인 PIN 키패드 입력 동작 복원'] },
