@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.360';
+const APP_VERSION      = '1.6.361';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -7993,6 +7993,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.361', date: '2026.11.10', items: ['실무 설명회 발표자료(PPTX) 및 정산 기준·사용법 모달 최신화 완료: 전사원 명부 👑 최다 참석 1위 왕관 배지, 실시간 동기화 & 사번 기반 일원화, 정산 결과창 총 자부담 수정불가 전환 및 비용 항목별 직접 입력 일원화, 사규 최소 기준 미달 방지 안내, 전체 작업 로그 최적화 내역 전면 반영 및 최신 PPTX 재생성'] },
         { ver: '1.6.360', date: '2026.11.10', items: ['사원 등록 폼에서 동명이인 부서명 기입 안내 문구("동일한 이름이 존재합니다. 이름뒤에 (부서명)을 적어주세요.") 전면 제거: 사번(EMP ID) 기반 동명이인 구분 시스템 일원화'] },
         { ver: '1.6.359', date: '2026.11.10', items: ['전사원 명부 실시간(Realtime) 양방향 동기화 리스너 도입: 관리자 또는 사용자가 신규 사원(예: 김민준 02256781)을 등록/수정/삭제 시 다른 모든 접속자 화면에서 새로고침 없이 즉시 실시간 검색 및 자동완성 반영'] },
         { ver: '1.6.358', date: '2026.11.10', items: ['전사원 명부 관리자/사용자 페이지 인원수 및 명부 불일치 전면 해결: 일반 사용자 로그인 시 관리자(000000) 명부를 공통 기준으로 일원화 동기화, 사원 등록/삭제 시 관리자 명부 실시간 원자적(atomic) 동기화 반영, 기존 계정 명부 데이터 1,315명 통일 마이그레이션'] },
@@ -12436,6 +12437,14 @@ function renderRulesGuideModalContent() {
                 <div class="rules-extra-title">🏢 기타 비용 규정 안내</div>
                 <div>• <strong>시설 및 장비 이용료:</strong> 인당 최대 ${formatAmount(facilityLimit)}원 flat 지원 (임원진 사전 승인 필요, 초과분 자부담)</div>
                 <div>• <strong>상품비:</strong> 클럽당 연간 최대 ${formatAmount(prizeLimit)}원 한도 (정회원 10명 이상 행사 시 집행 가능)</div>
+            </div>
+
+            <!-- 시스템 최신 사용법 & 팁 안내 -->
+            <div class="rules-extra-box" style="border-color:rgba(99,102,241,0.35); background:rgba(99,102,241,0.06);">
+                <div class="rules-extra-title" style="color:var(--primary, #6366f1);">✨ 최신 사용법 & 편리한 기능 안내</div>
+                <div>• <strong>자부담 금액 조정:</strong> [비용 항목 추가/수정] 폼에서 <strong>개인카드</strong> 금액이나 <strong>1인당 자부담</strong>을 원하는 금액으로 직접 입력할 수 있습니다. (사규 최소 자부담 기준 미달 시 자동 방지 및 안내)</div>
+                <div>• <strong>전사원 명부 👑 왕관 배지:</strong> 올해 누적 참석 횟수 1위(공동 1등 포함) 사원에게 황금 왕관(👑)이 자동으로 부여됩니다.</div>
+                <div>• <strong>사원 등록 & 실시간 동기화:</strong> 이름과 사번만 입력하면 전사원 명부가 모든 접속자에게 실시간 자동 반영됩니다.</div>
             </div>
         </div>
     `;
