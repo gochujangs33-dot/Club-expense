@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.358';
+const APP_VERSION      = '1.6.359';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1036,29 +1036,31 @@ const AppState = {
                             : '최근 접속: 첫 번째 로그인';
                     }
                 }).catch(() => {});
-                fetch('./lib/employee_directory.json?_=' + Date.now(), { cache: 'no-store' })
-                    .then(res => res.json())
-                    .then(list => this.bulkImportDirectory(list))
-                    .catch(err => console.error("전사원 명부 자동 등록 실패:", err))
-                    .finally(() => {
-                        // 관리자: globalHistory 전체 기준으로 카운트 계산 (모든 사용자 정산 반영)
-                        this.recalculateDirectoryCountsFromGlobal()
-                            .then(() => {
-                                this.save();
-                                this.cleanupExpiredHistoryMedia().then(result => {
-                                    if (result.cleanedGlobal || result.cleanedPersonal) {
-                                        console.log(`만료 첨부 자동 정리 완료: 공유 ${result.cleanedGlobal}건, 개인 ${result.cleanedPersonal}건`);
-                                    }
+                this.loadDirectoryShared().finally(() => {
+                    fetch('./lib/employee_directory.json?_=' + Date.now(), { cache: 'no-store' })
+                        .then(res => res.json())
+                        .then(list => this.bulkImportDirectory(list))
+                        .catch(err => console.error("전사원 명부 자동 등록 실패:", err))
+                        .finally(() => {
+                            // 관리자: globalHistory 전체 기준으로 카운트 계산 (모든 사용자 정산 반영)
+                            this.recalculateDirectoryCountsFromGlobal()
+                                .then(() => {
+                                    this.save();
+                                    this.cleanupExpiredHistoryMedia().then(result => {
+                                        if (result.cleanedGlobal || result.cleanedPersonal) {
+                                            console.log(`만료 첨부 자동 정리 완료: 공유 ${result.cleanedGlobal}건, 개인 ${result.cleanedPersonal}건`);
+                                        }
+                                    });
+                                    resolve(true);
+                                })
+                                .catch(() => {
+                                    this.recalculateDirectoryCounts();
+                                    this.save();
+                                    this.cleanupExpiredHistoryMedia();
+                                    resolve(true);
                                 });
-                                resolve(true);
-                            })
-                            .catch(() => {
-                                this.recalculateDirectoryCounts();
-                                this.save();
-                                this.cleanupExpiredHistoryMedia();
-                                resolve(true);
-                            });
-                    });
+                        });
+                });
                 return;
             }
 
@@ -1087,7 +1089,7 @@ const AppState = {
                                 } else if (data.memberCount !== undefined) {
                                     this.memberCount = data.memberCount;
                                 }
-                                if (data.directory) this.directory = data.directory;
+                                // directory → 0번 원칙 준수: 관리자(000000) 설정값 기준 실시간 리스너로 공유 (data.directory 무시)
                                 // rules → globalSettings/rules 실시간 리스너 기준 (관리자 설정값 우선)
                                 // annualBudget → clubRegistry.budget 기준 (관리자 설정값 우선)
                                 // usedBudget → getClubUsedBudget() 으로 동적 계산
@@ -1125,17 +1127,8 @@ const AppState = {
                             this.isLoggedIn = true;
                             this.currentPin = pin;
 
-                            // 0번 원칙 준수: 전사원 명부는 관리자(000000) 설정값을 공통 기준으로 로드
-                            const loadAdminDirPromise = this.firebaseDb.ref('settlements/000000/directory').once('value')
-                                .then(adminDirSnap => {
-                                    const adminDir = adminDirSnap.val();
-                                    if (adminDir && typeof adminDir === 'object') {
-                                        this.directory = adminDir;
-                                    }
-                                })
-                                .catch(err => console.warn("관리자 명부 로드 폴백:", err));
-
-                            loadAdminDirPromise.finally(() => {
+                            // 0번 원칙 준수: 전사원 명부는 관리자(000000) 설정값을 실시간 공유 기준으로 로드
+                            this.loadDirectoryShared().finally(() => {
                                 // 번들된 전사원 데이터 중 누락된 사람을 클라우드 명부에도 병합
                                 fetch('./lib/employee_directory.json?_=' + Date.now(), { cache: 'no-store' })
                                     .then(res => res.json())
@@ -1159,6 +1152,27 @@ const AppState = {
                         .catch(err => reject(err));
                 })
                 .catch(err => reject(err));
+        });
+    },
+
+    // 0번 데이터 원칙: 전사원 명부는 관리자(000000) 명부를 유일한 기준으로 실시간 공유
+    loadDirectoryShared() {
+        if (!this.firebaseDb) return Promise.resolve();
+        return new Promise((resolve) => {
+            this.firebaseDb.ref('settlements/000000/directory').off('value');
+            this.firebaseDb.ref('settlements/000000/directory').on('value', snapshot => {
+                const adminDir = snapshot.val();
+                if (adminDir && typeof adminDir === 'object') {
+                    this.directory = adminDir;
+                    if (this.isLoggedIn) {
+                        this.render();
+                    }
+                }
+                resolve();
+            }, (err) => {
+                console.warn("전사원 명부 실시간 동기화 오류:", err);
+                resolve();
+            });
         });
     },
 
@@ -7985,6 +7999,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.359', date: '2026.11.10', items: ['전사원 명부 실시간(Realtime) 양방향 동기화 리스너 도입: 관리자 또는 사용자가 신규 사원(예: 김민준 02256781)을 등록/수정/삭제 시 다른 모든 접속자 화면에서 새로고침 없이 즉시 실시간 검색 및 자동완성 반영'] },
         { ver: '1.6.358', date: '2026.11.10', items: ['전사원 명부 관리자/사용자 페이지 인원수 및 명부 불일치 전면 해결: 일반 사용자 로그인 시 관리자(000000) 명부를 공통 기준으로 일원화 동기화, 사원 등록/삭제 시 관리자 명부 실시간 원자적(atomic) 동기화 반영, 기존 계정 명부 데이터 1,315명 통일 마이그레이션'] },
         { ver: '1.6.357', date: '2026.11.10', items: ['전사원 명부 및 참석자 목록 최다 참석 1위 사원 왕관(👑) 표기 및 하이라이트 추가: 최다 참석자 이름 앞 왕관 배지, 👑 1위 배지 및 골드빛 카드 강조 효과 적용 (공동 1등 모두 지원)'] },
         { ver: '1.6.356', date: '2026.11.10', items: ['전체 작업 로그에서 "현재 정산 내용 초기화" 기록 제외: 정산 화면 초기화 시 감사 로그 저장 중단 및 기존 저장된 정산 초기화 로그 목록 숨김 필터링 적용'] },
