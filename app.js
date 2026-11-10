@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.6.359';
+const APP_VERSION      = '1.6.360';
 const APP_VERSION_DATE = '2026.11.10';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6517,7 +6517,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const dirExistingIdHint = document.getElementById('dir-existing-id-hint');
-    const dirSamePersonWarning = document.getElementById('dir-same-person-warning');
 
     function getExistingIds(name) {
         const entry = AppState.directory[name];
@@ -6536,13 +6535,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!currentId) dirIdInput.value = existingIds[0];
             dirExistingIdHint.textContent = `등록된 EMP ID: ${existingIds[0]}`;
             dirExistingIdHint.classList.remove('hidden');
-            const showWarning = AppState.editingDirName === null && dirIdInput.value !== '' && !existingIds.includes(dirIdInput.value);
-            dirSamePersonWarning.classList.toggle('hidden', !showWarning);
         } else if (existingIds.length > 1) {
             // 동명이인 → 팝업으로 사번 선택 (EMP ID 빈 경우)
             dirExistingIdHint.textContent = `동명이인 ${existingIds.length}명 (EMP ID: ${existingIds.join(', ')})`;
             dirExistingIdHint.classList.remove('hidden');
-            dirSamePersonWarning.classList.add('hidden');
             if (!currentId) {
                 showEmpIdPickerPopup(name, existingIds.map(id => ({ name, id })), (entry) => {
                     dirIdInput.value = entry.id;
@@ -6551,7 +6547,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             dirExistingIdHint.classList.add('hidden');
-            dirSamePersonWarning.classList.add('hidden');
         }
     }
 
@@ -6568,7 +6563,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         AppState.addDirectoryEntry(name, id);
-        dirSamePersonWarning.classList.add('hidden');
         dirExistingIdHint.classList.add('hidden');
     }
 
@@ -7999,6 +7993,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.6.360', date: '2026.11.10', items: ['사원 등록 폼에서 동명이인 부서명 기입 안내 문구("동일한 이름이 존재합니다. 이름뒤에 (부서명)을 적어주세요.") 전면 제거: 사번(EMP ID) 기반 동명이인 구분 시스템 일원화'] },
         { ver: '1.6.359', date: '2026.11.10', items: ['전사원 명부 실시간(Realtime) 양방향 동기화 리스너 도입: 관리자 또는 사용자가 신규 사원(예: 김민준 02256781)을 등록/수정/삭제 시 다른 모든 접속자 화면에서 새로고침 없이 즉시 실시간 검색 및 자동완성 반영'] },
         { ver: '1.6.358', date: '2026.11.10', items: ['전사원 명부 관리자/사용자 페이지 인원수 및 명부 불일치 전면 해결: 일반 사용자 로그인 시 관리자(000000) 명부를 공통 기준으로 일원화 동기화, 사원 등록/삭제 시 관리자 명부 실시간 원자적(atomic) 동기화 반영, 기존 계정 명부 데이터 1,315명 통일 마이그레이션'] },
         { ver: '1.6.357', date: '2026.11.10', items: ['전사원 명부 및 참석자 목록 최다 참석 1위 사원 왕관(👑) 표기 및 하이라이트 추가: 최다 참석자 이름 앞 왕관 배지, 👑 1위 배지 및 골드빛 카드 강조 효과 적용 (공동 1등 모두 지원)'] },
