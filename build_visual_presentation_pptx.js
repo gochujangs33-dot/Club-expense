@@ -115,7 +115,7 @@ const path = require('path');
                 x: 0.6, y: 5.25, w: 8.8, h: 0,
                 line: { color: 'E2E8F0', width: 0.8 }
             });
-            slide.addText('3M 사내 동아리·클럽 비용 정산기 (v1.6.361) | 실무 사용자 설명회', {
+            slide.addText('3M 사내 동아리·클럽 비용 정산기 (v1.7.0) | 실무 사용자 설명회', {
                 x: 0.6, y: 5.28, w: 6.0, h: 0.25,
                 fontSize: 8, fontFace: FONT_BODY, color: C.textMuted, valign: 'middle',
                 margin: 0
@@ -196,7 +196,7 @@ const path = require('path');
             });
 
             // 하단 메타정보
-            s1.addText('발표일: 2026. 11. 09  |  발표자: 김종필 (시스템 개발자)  |  시스템 버전: v1.6.347 (최신 정식 배포판)', {
+            s1.addText('발표일: 2026. 11. 11  |  발표자: 김종필 (시스템 개발자)  |  시스템 버전: v1.7.0 (최신 정식 배포판)', {
                 x: 1.0, y: 4.88, w: 8.0, h: 0.35,
                 fontSize: 9.2, fontFace: FONT_BODY, color: C.textMuted,
                 margin: 0

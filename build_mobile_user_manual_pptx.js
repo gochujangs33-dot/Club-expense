@@ -120,7 +120,7 @@ const path = require('path');
                 fill: { color: '1E293B' }, line: { color: '38BDF8', width: 1.5 },
                 rectRadius: 0.1
             });
-            s1.addText('📱 3M 사내 클럽 비용 정산기 (v1.6.361)', {
+            s1.addText('📱 3M 사내 클럽 비용 정산기 (v1.7.0)', {
                 x: 0.8, y: 1.1, w: 3.2, h: 0.42,
                 fontSize: 11, fontFace: FONT_TITLE, color: '38BDF8', bold: true, align: 'center', valign: 'middle'
             });
@@ -664,3 +664,4 @@ const path = require('path');
     fs.writeFileSync(outFile, pptxBuffer);
     console.log(`SUCCESS! Created Mobile User Manual PPTX at: ${outFile} (${(pptxBuffer.length / 1024).toFixed(1)} KB)`);
 })();
+
