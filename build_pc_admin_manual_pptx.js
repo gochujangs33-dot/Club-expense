@@ -98,64 +98,70 @@ const path = require('path');
         }
 
         // ==========================================
-        // SLIDE 1: 표지 (Cover)
+        // SLIDE 1: 표지 (Cover - Light Theme)
         // ==========================================
         {
             const s1 = pptx.addSlide();
             s1.addShape(pptx.shapes.RECTANGLE, {
                 x: 0, y: 0, w: 10, h: 5.625,
-                fill: { color: '0F172A' }
+                fill: { color: C.bg }, line: { color: C.bg }
             });
             s1.addShape(pptx.shapes.RECTANGLE, {
                 x: 0, y: 0, w: 10, h: 0.12,
-                fill: { color: 'F59E0B' }
+                fill: { color: C.amber }, line: { color: C.amber }
             });
 
             s1.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 0.8, y: 1.1, w: 3.5, h: 0.42,
-                fill: { color: '1E293B' }, line: { color: 'F59E0B', width: 1.5 },
-                rectRadius: 0.1
+                x: 0.8, y: 0.85, w: 3.5, h: 0.40,
+                fill: { color: C.amberLight }, line: { color: '#FDE68A', width: 1.2 },
+                rectRadius: 0.08
             });
             s1.addText('👑 3M 사내 클럽 비용 정산기 (v1.7.0)', {
-                x: 0.8, y: 1.1, w: 3.5, h: 0.42,
-                fontSize: 11, fontFace: FONT_TITLE, color: 'F59E0B', bold: true, align: 'center', valign: 'middle'
+                x: 0.8, y: 0.85, w: 3.5, h: 0.40,
+                fontSize: 10.5, fontFace: FONT_TITLE, color: '#92400E', bold: true, align: 'center', valign: 'middle'
             });
 
             s1.addText('시스템 관리자 운영 매뉴얼 (PC 버전)', {
-                x: 0.8, y: 1.7, w: 8.4, h: 0.9,
-                fontSize: 31, fontFace: FONT_TITLE, color: 'FFFFFF', bold: true
+                x: 0.8, y: 1.45, w: 8.4, h: 0.85,
+                fontSize: 31, fontFace: FONT_TITLE, color: C.textMain, bold: true
             });
 
             s1.addText('동아리 연합 회장단 & 시스템 총괄 관리자(PIN: 000000)를 위한 전사 운영·감사 가이드', {
-                x: 0.8, y: 2.7, w: 8.4, h: 0.4,
-                fontSize: 13, fontFace: FONT_BODY, color: '94A3B8'
+                x: 0.8, y: 2.38, w: 8.4, h: 0.38,
+                fontSize: 12.5, fontFace: FONT_BODY, color: C.textSub
             });
 
             const adminCards = [
-                { icon: '🖥️', title: '2열 와이드 대시보드', desc: '1440/1920 PC 화면에 최적화된 좌우 2열 분할 및 4대 KPI 집계' },
-                { icon: '🔍', title: '2x2 전사 정산 이력', desc: '10개 클럽 집행 내역 4분할 동시 비교 및 정산인 스마트 필터' },
-                { icon: '📊', title: '7대 시각화 & 결산 PPT', desc: '소진율 위험 경고 차트 및 클릭 1번에 16:9 경영진 보고서 생성' }
+                { icon: '🖥️', title: '2열 와이드 대시보드', desc: '1440/1920 PC 화면에 최적화된 좌우 2열 분할 및 4대 KPI 집계', color: C.primary },
+                { icon: '🔍', title: '2x2 전사 정산 이력', desc: '10개 클럽 집행 내역 4분할 동시 비교 및 정산인 스마트 필터', color: C.emerald },
+                { icon: '📊', title: '7대 시각화 & 결산 PPT', desc: '소진율 위험 경고 차트 및 클릭 1번에 16:9 경영진 보고서 생성', color: C.amber }
             ];
 
             adminCards.forEach((c, idx) => {
                 const cx = 0.8 + idx * 2.85;
                 s1.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                    x: cx, y: 3.4, w: 2.65, h: 1.4,
-                    fill: { color: '1E293B' }, line: { color: '334155', width: 1 },
+                    x: cx, y: 3.05, w: 2.65, h: 1.45,
+                    fill: { color: C.cardBg }, line: { color: C.cardBorder, width: 1 },
                     rectRadius: 0.1
                 });
                 s1.addText(c.icon, {
-                    x: cx + 0.2, y: 3.55, w: 0.5, h: 0.4,
-                    fontSize: 20, align: 'left'
+                    x: cx + 0.2, y: 3.18, w: 0.5, h: 0.38,
+                    fontSize: 18, align: 'left'
                 });
                 s1.addText(c.title, {
-                    x: cx + 0.2, y: 3.95, w: 2.25, h: 0.28,
-                    fontSize: 11, fontFace: FONT_TITLE, color: 'FFFFFF', bold: true
+                    x: cx + 0.2, y: 3.58, w: 2.25, h: 0.28,
+                    fontSize: 11, fontFace: FONT_TITLE, color: c.color, bold: true
                 });
                 s1.addText(c.desc, {
-                    x: cx + 0.2, y: 4.25, w: 2.25, h: 0.45,
-                    fontSize: 8.5, fontFace: FONT_BODY, color: '94A3B8', lineSpacing: 12
+                    x: cx + 0.2, y: 3.90, w: 2.25, h: 0.48,
+                    fontSize: 8.8, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 13
                 });
+            });
+
+            // 하단 메타정보
+            s1.addText('배포일: 2026. 11. 11  |  시스템 총괄 관리자 전용 (PC)  |  시스템 버전: v1.7.0 (최신 정식 배포판)', {
+                x: 0.8, y: 4.88, w: 8.4, h: 0.35,
+                fontSize: 9.2, fontFace: FONT_BODY, color: C.textMuted
             });
         }
 

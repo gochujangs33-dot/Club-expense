@@ -100,69 +100,75 @@ const path = require('path');
         }
 
         // ==========================================
-        // SLIDE 1: 표지 (Cover)
+        // SLIDE 1: 표지 (Cover - Light Theme)
         // ==========================================
         {
             const s1 = pptx.addSlide();
             s1.addShape(pptx.shapes.RECTANGLE, {
                 x: 0, y: 0, w: 10, h: 5.625,
-                fill: { color: '0A192F' }
+                fill: { color: C.bg }, line: { color: C.bg }
             });
             // 상단 장식 바
             s1.addShape(pptx.shapes.RECTANGLE, {
                 x: 0, y: 0, w: 10, h: 0.12,
-                fill: { color: '38BDF8' }
+                fill: { color: C.primary }, line: { color: C.primary }
             });
 
             // 메인 뱃지
             s1.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                x: 0.8, y: 1.1, w: 3.2, h: 0.42,
-                fill: { color: '1E293B' }, line: { color: '38BDF8', width: 1.5 },
-                rectRadius: 0.1
+                x: 0.8, y: 0.85, w: 3.3, h: 0.40,
+                fill: { color: C.primaryLight }, line: { color: 'BFDBFE', width: 1.2 },
+                rectRadius: 0.08
             });
             s1.addText('📱 3M 사내 클럽 비용 정산기 (v1.7.0)', {
-                x: 0.8, y: 1.1, w: 3.2, h: 0.42,
-                fontSize: 11, fontFace: FONT_TITLE, color: '38BDF8', bold: true, align: 'center', valign: 'middle'
+                x: 0.8, y: 0.85, w: 3.3, h: 0.40,
+                fontSize: 10.5, fontFace: FONT_TITLE, color: C.primaryDark, bold: true, align: 'center', valign: 'middle'
             });
 
             // 타이틀
             s1.addText('모바일 사용자 실무 매뉴얼', {
-                x: 0.8, y: 1.7, w: 8.4, h: 0.9,
-                fontSize: 32, fontFace: FONT_TITLE, color: 'FFFFFF', bold: true
+                x: 0.8, y: 1.45, w: 8.4, h: 0.85,
+                fontSize: 32, fontFace: FONT_TITLE, color: C.textMain, bold: true
             });
 
             // 부제목
             s1.addText('스마트폰 화면 하나로 3초 로그인부터 실시간 영수증 정산, 공식 엑셀 출력까지!', {
-                x: 0.8, y: 2.7, w: 8.4, h: 0.4,
-                fontSize: 13, fontFace: FONT_BODY, color: '94A3B8'
+                x: 0.8, y: 2.38, w: 8.4, h: 0.38,
+                fontSize: 12.5, fontFace: FONT_BODY, color: C.textSub
             });
 
-            // 3대 핵심 특징 카드
+            // 3대 핵심 특징 카드 (라이트 카드)
             const features = [
-                { icon: '⚡', title: '설치 없는 모바일 웹앱', desc: '스마트폰 브라우저로 즉시 접속, 홈 화면 추가로 앱처럼 사용' },
-                { icon: '👥', title: '1,316명 명부 & 👑 왕관', desc: '동명이인 사번 자동 구분 및 연간 최다 참석자 왕관 배지' },
-                { icon: '📊', title: '4구간 자동 계산 & 엑셀', desc: '개인/법인카드 분할 및 회사 공식 품의 엑셀 원클릭 다운로드' }
+                { icon: '⚡', title: '설치 없는 모바일 웹앱', desc: '스마트폰 브라우저로 즉시 접속, 홈 화면 추가로 앱처럼 사용', color: C.primary },
+                { icon: '👥', title: '1,316명 명부 & 👑 왕관', desc: '동명이인 사번 자동 구분 및 연간 최다 참석자 왕관 배지', color: C.purple },
+                { icon: '📊', title: '4구간 자동 계산 & 엑셀', desc: '개인/법인카드 분할 및 회사 공식 품의 엑셀 원클릭 다운로드', color: C.emerald }
             ];
 
             features.forEach((f, idx) => {
                 const fx = 0.8 + idx * 2.85;
                 s1.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-                    x: fx, y: 3.4, w: 2.65, h: 1.4,
-                    fill: { color: '1E293B' }, line: { color: '334155', width: 1 },
+                    x: fx, y: 3.05, w: 2.65, h: 1.45,
+                    fill: { color: C.cardBg }, line: { color: C.cardBorder, width: 1 },
                     rectRadius: 0.1
                 });
                 s1.addText(f.icon, {
-                    x: fx + 0.2, y: 3.55, w: 0.5, h: 0.4,
-                    fontSize: 20, align: 'left'
+                    x: fx + 0.2, y: 3.18, w: 0.5, h: 0.38,
+                    fontSize: 18, align: 'left'
                 });
                 s1.addText(f.title, {
-                    x: fx + 0.2, y: 3.95, w: 2.25, h: 0.28,
-                    fontSize: 11, fontFace: FONT_TITLE, color: 'FFFFFF', bold: true
+                    x: fx + 0.2, y: 3.58, w: 2.25, h: 0.28,
+                    fontSize: 11, fontFace: FONT_TITLE, color: f.color, bold: true
                 });
                 s1.addText(f.desc, {
-                    x: fx + 0.2, y: 4.25, w: 2.25, h: 0.45,
-                    fontSize: 8.5, fontFace: FONT_BODY, color: '94A3B8', lineSpacing: 12
+                    x: fx + 0.2, y: 3.90, w: 2.25, h: 0.48,
+                    fontSize: 8.8, fontFace: FONT_BODY, color: C.textSub, lineSpacing: 13
                 });
+            });
+
+            // 하단 메타정보
+            s1.addText('배포일: 2026. 11. 11  |  모바일 실무 사용자 전용  |  시스템 버전: v1.7.0 (최신 정식 배포판)', {
+                x: 0.8, y: 4.88, w: 8.4, h: 0.35,
+                fontSize: 9.2, fontFace: FONT_BODY, color: C.textMuted
             });
         }
 
