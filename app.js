@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.0';
-const APP_VERSION_DATE = '2026.11.11';
+const APP_VERSION      = '1.7.1';
+const APP_VERSION_DATE = '2026.11.12';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
 let _selectedQueryYear = String(new Date().getFullYear());
@@ -368,15 +368,47 @@ const AppState = {
     // 로그인 상태 관련
     isLoggedIn: false,
     currentPin: null,
+    userRole: 'member',       // 'president' | 'developer' | 'admin' | 'member'
+    hasAdminAccess: false,    // 관리자 페이지 접속 권한 보유 여부
+    isAdminMode: false,       // 현재 관리자 페이지 화면 모드 여부
+    _userRoleRef: null,
     firebaseDb: firebaseDb,
     firebaseAuth: firebaseAuth,
+
+    normalizeUserRole(userData, pin) {
+        const p = String(pin || '');
+        if (userData && typeof userData.role === 'string' && ['president', 'developer', 'admin', 'member'].includes(userData.role)) {
+            if (userData.role === 'member' && !userData.roleUpdatedAt) {
+                if (p === '002531') return 'developer';
+                if (p === '003645') return 'president';
+            }
+            return userData.role;
+        }
+        if (userData && userData.isAdmin === true) return 'admin';
+        // 초기 기본 권한 (002531=김종필 개발자, 003645=이현준 회장)
+        if (p === '002531') return 'developer';
+        if (p === '003645') return 'president';
+        return 'member';
+    },
+
+    checkHasAdminAccess(userData, pin) {
+        const role = this.normalizeUserRole(userData, pin);
+        return Boolean((userData && userData.isAdmin === true) || role === 'president' || role === 'developer' || role === 'admin');
+    },
+
+    getRoleLabel(role, isAdmin = false) {
+        if (role === 'president') return '회장';
+        if (role === 'developer') return '개발자';
+        if (role === 'admin') return '관리자';
+        return isAdmin ? '관리자' : '일반 회원';
+    },
 
     // 감사 로그는 공유 데이터 변경의 원인 추적용이며 auditLogs/{pushKey}에 추가 전용으로 기록한다.
     // 사진·영수증 원문이나 비밀값은 저장하지 않고, 화면에서 식별 가능한 요약과 숫자 변경값만 남긴다.
     getAuditActor(actorOverride = null) {
         const pin = String(actorOverride?.pin || this.currentPin || 'offline');
-        const name = String(actorOverride?.name || this.userName || (pin === '000000' ? '관리자' : '오프라인 사용자'));
-        const role = actorOverride?.role || (pin === '000000' ? '관리자' : (pin === '002531' ? '개발자' : (pin === 'offline' ? '오프라인' : '일반 회원')));
+        const name = String(actorOverride?.name || this.userName || '오프라인 사용자');
+        const role = actorOverride?.role || (pin === 'offline' ? '오프라인' : this.getRoleLabel(this.userRole, this.hasAdminAccess));
         return { pin, name, role };
     },
 
@@ -965,7 +997,7 @@ const AppState = {
 
         try {
             const personalPins = new Set([String(this.currentPin)]);
-            if (this.currentPin === '000000') {
+            if (this.hasAdminAccess) {
                 const [historySnapshot, deletedSnapshot] = await Promise.all([
                     this.firebaseDb.ref('globalHistory').once('value'),
                     this.firebaseDb.ref('deletedHistoryIds').once('value')
@@ -1013,6 +1045,37 @@ const AppState = {
         }
     },
 
+    _unbindUserRoleListener() {
+        if (this._userRoleRef) {
+            this._userRoleRef.off('value');
+            this._userRoleRef = null;
+        }
+    },
+
+    _bindUserRoleListener(pin) {
+        this._unbindUserRoleListener();
+        if (!this.firebaseDb || !pin || pin === '000000') return;
+        const ref = this.firebaseDb.ref(`users/${pin}`);
+        this._userRoleRef = ref;
+        ref.on('value', snap => {
+            if (!this.isLoggedIn || String(this.currentPin) !== String(pin)) return;
+            const userData = snap.val();
+            if (!userData) return;
+            const nextRole = this.normalizeUserRole(userData, pin);
+            const nextAdminAccess = this.checkHasAdminAccess(userData, pin);
+            const prevAdminAccess = this.hasAdminAccess;
+            this.userRole = nextRole;
+            this.hasAdminAccess = nextAdminAccess;
+            if (userData.name) this.userName = userData.name;
+            if (typeof window._syncHeaderAdminButton === 'function') {
+                window._syncHeaderAdminButton();
+            }
+            if (prevAdminAccess && !nextAdminAccess && this.isAdminMode && typeof window._forceUserModeOnRevoke === 'function') {
+                window._forceUserModeOnRevoke();
+            }
+        });
+    },
+
     // Firebase로부터 데이터 가져오기
     loadFromFirebase(pin) {
         return new Promise((resolve, reject) => {
@@ -1022,45 +1085,7 @@ const AppState = {
             }
 
             if (pin === "000000") {
-                this.isLoggedIn = true;
-                this.currentPin = pin;
-                this.userName = "관리자";
-                // 관리자 최근 접속 시각 읽기 후 갱신
-                this.firebaseDb.ref('users/000000/lastLoginAt').once('value').then(snap => {
-                    this.prevLastLoginAt = snap.val() || null;
-                    this.firebaseDb.ref('users/000000/lastLoginAt').set(Date.now()).catch(() => {});
-                    const el = document.getElementById('last-login-info');
-                    if (el && el.style.display === 'block') {
-                        el.textContent = this.prevLastLoginAt
-                            ? `최근 접속: ${new Date(this.prevLastLoginAt).toLocaleString('ko-KR')}`
-                            : '최근 접속: 첫 번째 로그인';
-                    }
-                }).catch(() => {});
-                this.loadDirectoryShared().finally(() => {
-                    fetch('./lib/employee_directory.json?_=' + Date.now(), { cache: 'no-store' })
-                        .then(res => res.json())
-                        .then(list => this.bulkImportDirectory(list))
-                        .catch(err => console.error("전사원 명부 자동 등록 실패:", err))
-                        .finally(() => {
-                            // 관리자: globalHistory 전체 기준으로 카운트 계산 (모든 사용자 정산 반영)
-                            this.recalculateDirectoryCountsFromGlobal()
-                                .then(() => {
-                                    this.save();
-                                    this.cleanupExpiredHistoryMedia().then(result => {
-                                        if (result.cleanedGlobal || result.cleanedPersonal) {
-                                            console.log(`만료 첨부 자동 정리 완료: 공유 ${result.cleanedGlobal}건, 개인 ${result.cleanedPersonal}건`);
-                                        }
-                                    });
-                                    resolve(true);
-                                })
-                                .catch(() => {
-                                    this.recalculateDirectoryCounts();
-                                    this.save();
-                                    this.cleanupExpiredHistoryMedia();
-                                    resolve(true);
-                                });
-                        });
-                });
+                reject(new Error("관리자 전용 비밀번호(000000) 접속은 폐지되었습니다. 본인 PIN 번호로 로그인해 주세요."));
                 return;
             }
 
@@ -1072,10 +1097,23 @@ const AppState = {
                         return;
                     }
                     this.userName = userData.name;
+                    this.userRole = this.normalizeUserRole(userData, pin);
+                    this.hasAdminAccess = this.checkHasAdminAccess(userData, pin);
                     this.prevLastLoginAt = userData.lastLoginAt || null;
-                    // 현재 접속 시각 기록
-                    this.firebaseDb.ref(`users/${pin}/lastLoginAt`).set(Date.now())
-                        .catch(() => {});
+
+                    // 현재 접속 시각 및 기본 역할(개발자/회장 초기값) 동기화, 레거시 000000 계정 정리
+                    const userMetaUpdates = {
+                        [`users/${pin}/lastLoginAt`]: Date.now()
+                    };
+                    if (userData.role !== this.userRole || userData.isAdmin !== this.hasAdminAccess) {
+                        userMetaUpdates[`users/${pin}/role`] = this.userRole;
+                        userMetaUpdates[`users/${pin}/isAdmin`] = this.hasAdminAccess;
+                    }
+                    if (this.hasAdminAccess) {
+                        userMetaUpdates['users/000000'] = null;
+                    }
+                    this.firebaseDb.ref().update(userMetaUpdates).catch(() => {});
+                    this._bindUserRoleListener(pin);
 
                     this.firebaseDb.ref(`settlements/${pin}`).once('value')
                         .then(snapshot => {
@@ -1089,7 +1127,7 @@ const AppState = {
                                 } else if (data.memberCount !== undefined) {
                                     this.memberCount = data.memberCount;
                                 }
-                                // directory → 0번 원칙 준수: 관리자(000000) 설정값 기준 실시간 리스너로 공유 (data.directory 무시)
+                                // directory → 0번 원칙 준수: 공유 명부(settlements/000000/directory) 실시간 리스너로 공유
                                 // rules → globalSettings/rules 실시간 리스너 기준 (관리자 설정값 우선)
                                 // annualBudget → clubRegistry.budget 기준 (관리자 설정값 우선)
                                 // usedBudget → getClubUsedBudget() 으로 동적 계산
@@ -1104,9 +1142,7 @@ const AppState = {
                                 } else if (data.eventPhoto) {
                                     this.eventPhotos = [data.eventPhoto];
                                 }
-                                console.log(`Firebase data loaded successfully for PIN: ${pin} (${this.userName})`);
-
-                                // globalHistory backfill 제거 — 관리자가 삭제한 항목을 로그인할 때마다 되살리는 원인
+                                console.log(`Firebase data loaded successfully for PIN: ${pin} (${this.userName}, role: ${this.userRole})`);
                             } else {
                                 // Firebase에 데이터가 없을 경우(신규 계정) - 이 기기에 남아있던
                                 // 이전 계정의 로컬 데이터를 그대로 올리지 않도록 정산 관련 상태를 초기화
@@ -1127,7 +1163,7 @@ const AppState = {
                             this.isLoggedIn = true;
                             this.currentPin = pin;
 
-                            // 0번 원칙 준수: 전사원 명부는 관리자(000000) 설정값을 실시간 공유 기준으로 로드
+                            // 0번 원칙 준수: 전사원 명부는 공유 명부(settlements/000000/directory)를 실시간 공유 기준으로 로드
                             this.loadDirectoryShared().finally(() => {
                                 // 번들된 전사원 데이터 중 누락된 사람을 클라우드 명부에도 병합
                                 fetch('./lib/employee_directory.json?_=' + Date.now(), { cache: 'no-store' })
@@ -1139,11 +1175,17 @@ const AppState = {
                                         this.recalculateDirectoryCountsFromGlobal()
                                             .then(() => {
                                                 this.save();
+                                                if (this.hasAdminAccess) {
+                                                    this.cleanupExpiredHistoryMedia().catch(() => {});
+                                                }
                                                 resolve(true);
                                             })
                                             .catch(() => {
                                                 this.recalculateDirectoryCounts();
                                                 this.save();
+                                                if (this.hasAdminAccess) {
+                                                    this.cleanupExpiredHistoryMedia().catch(() => {});
+                                                }
                                                 resolve(true);
                                             });
                                     });
@@ -1186,8 +1228,8 @@ const AppState = {
             this.firebaseDb.ref('clubRegistry').off('value');
             this.firebaseDb.ref('clubRegistry').on('value', snapshot => {
                 this.clubRegistry = snapshot.val() || {};
-                // 이름 중복 자동 정리: 관리자 세션에서만 Firebase에서 즉시 제거
-                if (this.currentPin === '000000') this._autoDeduplicateClubs();
+                // 이름 중복 자동 정리: 관리자 권한 보유자 세션에서만 Firebase에서 즉시 제거
+                if (this.hasAdminAccess) this._autoDeduplicateClubs();
                 // 클럽 레지스트리 로드/갱신 시 previousPrizeTotal을 항상 club.prizeUsed 기준으로 동기화
                 if (this.clubId && this.clubRegistry[this.clubId]) {
                     this.previousPrizeTotal = this.clubRegistry[this.clubId].prizeUsed || 0;
@@ -2041,7 +2083,7 @@ const AppState = {
     },
 
     deleteFromDirectory(name, id) {
-        if (this.userName !== '관리자' && this.currentPin !== '002531') {
+        if (!this.hasAdminAccess) {
             alert(t('alert.directory_delete_restricted'));
             return;
         }
@@ -2174,7 +2216,7 @@ const AppState = {
     },
 
     startEditDirectory(name, id) {
-        if (this.userName !== '관리자') {
+        if (!this.hasAdminAccess) {
             alert(t('alert.edit_restricted_admin_only'));
             return;
         }
@@ -2779,7 +2821,7 @@ const AppState = {
                 // 최다 참석 횟수 (1회 이상 참석자 중에서 1위 판정, 공동 1등 포함)
                 const maxAttendanceCount = (dirRows.length > 0 && dirRows[0].count > 0) ? dirRows[0].count : 0;
 
-                const canDeleteDir = (this.userName === '관리자' || this.currentPin === '002531');
+                const canDeleteDir = Boolean(this.hasAdminAccess);
                 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
                 const nowTime = Date.now();
 
@@ -2826,7 +2868,7 @@ const AppState = {
                         <div class="expense-row-left">
                             <span class="expense-row-title" style="font-size: 0.88rem; display: inline-flex; align-items: center;">
                                 ${crownHtml}<strong>${this.escapeHtml(name)}</strong>
-                                <span style="font-size: 0.72rem; color: ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; font-weight: 700; margin-left: 0.3rem;">(올해 누적: ${this.userName === '관리자' ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0" style="width:34px; padding:0 2px; font-size:0.72rem; font-weight:700; color:${isTopRank ? '#d97706' : 'var(--color-secondary)'}; background:transparent; border:none; border-bottom:1px dashed ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; outline:none; text-align:center; -moz-appearance:textfield; appearance:textfield;">` : countValue}회)</span>
+                                <span style="font-size: 0.72rem; color: ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; font-weight: 700; margin-left: 0.3rem;">(올해 누적: ${this.hasAdminAccess ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0" style="width:34px; padding:0 2px; font-size:0.72rem; font-weight:700; color:${isTopRank ? '#d97706' : 'var(--color-secondary)'}; background:transparent; border:none; border-bottom:1px dashed ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; outline:none; text-align:center; -moz-appearance:textfield; appearance:textfield;">` : countValue}회)</span>
                             </span>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">EMP ID: ${this.escapeHtml(id)}</span>
                         </div>
@@ -3894,7 +3936,7 @@ const AppState = {
         try {
             if (this.firebaseDb) {
                 // 관리자는 개인 이력이 아닌 전체 공유 이력을 기준으로 명부 누적 횟수를 계산한다.
-                if (this.currentPin === '000000') {
+                if (this.hasAdminAccess) {
                     const [historySnapshot, deletedSnapshot] = await Promise.all([
                         this.firebaseDb.ref('globalHistory').once('value'),
                         this.firebaseDb.ref('deletedHistoryIds').once('value')
@@ -3946,6 +3988,9 @@ const AppState = {
                 }
                 if (nextDirectory && this.currentPin) {
                     firebaseUpdates[`settlements/${this.currentPin}/directory`] = nextDirectory;
+                    if (this.hasAdminAccess) {
+                        firebaseUpdates['settlements/000000/directory'] = nextDirectory;
+                    }
                 }
                 if (creatorHistory && creatorPin) {
                     firebaseUpdates[`settlements/${creatorPin}/settlementHistory`] = this.buildPersonalHistoryForSync(creatorHistory);
@@ -4877,7 +4922,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadAuditLogs({ reset = false } = {}) {
-        if (AppState.currentPin !== '000000' || !firebaseDb || auditLogLoading) return;
+        if (!AppState.hasAdminAccess || !firebaseDb || auditLogLoading) return;
         const statusEl = document.getElementById('audit-log-load-status');
         const loadMoreBtn = document.getElementById('audit-log-load-more-btn');
         auditLogLoading = true;
@@ -4918,7 +4963,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     function openAuditLogModal() {
-        if (AppState.currentPin !== '000000') return;
+        if (!AppState.hasAdminAccess) return;
         const modal = document.getElementById('audit-log-modal');
         if (!modal) return;
         modal.classList.remove('hidden');
@@ -6086,7 +6131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function openYearEndPptModal() {
-        if (AppState.currentPin !== '000000') return;
+        if (!AppState.hasAdminAccess) return;
         const modal = document.getElementById('year-end-ppt-modal');
         if (!modal) return;
 
@@ -6259,7 +6304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('audit-log-refresh-btn')?.addEventListener('click', () => loadAuditLogs({ reset: true }));
     document.getElementById('audit-log-clear-btn')?.addEventListener('click', async () => {
-        if (AppState.currentPin !== '000000' || !firebaseDb) return;
+        if (!AppState.hasAdminAccess || !firebaseDb) return;
         if (!confirm('저장된 전체 작업 로그를 모두 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다.)')) return;
         try {
             await firebaseDb.ref('auditLogs').remove();
@@ -7783,7 +7828,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     AppState.loadFromFirebase(pin).then(() => {
                         pinModal.classList.add('hidden');
                         statusBadge.className = 'badge-online';
-                        statusBadge.innerHTML = `${t('status.online')} (${AppState.userName || t('status.unknown') || '?'} / PIN: ${pin})`;
+                        const roleBadgeText = AppState.userRole === 'president' ? ' 👑회장' : (AppState.userRole === 'developer' ? ' 💻개발자' : (AppState.hasAdminAccess ? ' 🛡️관리자' : ''));
+                        statusBadge.innerHTML = `${t('status.online')} (${AppState.userName || t('status.unknown') || '?'}${roleBadgeText} / PIN: ${pin})`;
                         logoutBtn.style.display = 'inline-block';
                         loginBtn.style.display = 'none';
                         resetPinInput();
@@ -7795,8 +7841,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             lastLoginEl.style.display = 'block';
                         }
 
-                        // Admin tab check
-                        setAdminMode(pin === "000000");
+                        // 로그인 직후에는 항상 사용자 페이지(비용 정산 화면)로 진입하며,
+                        // 관리자 권한 보유자(회장/개발자/추가 관리자)에게는 상단에 [👑 관리자 페이지] 전환 버튼을 표시한다.
+                        setAdminMode(false);
+                        syncHeaderAdminButton();
 
                         // 클럽 레지스트리를 먼저 받은 뒤 해당 클럽 이력을 로드해야
                         // 과거 상품비 누적 복구값이 구형 레지스트리 값(0원)에 다시 덮이지 않는다.
@@ -7833,7 +7881,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 관리자(PIN 000000) 모드 전용 탭 전환
     // 관리자 대시보드 카드 접기/펼치기 (설정은 localStorage에 저장되어 유지됨)
     document.querySelectorAll('.card-collapse-btn').forEach(btn => {
         const cardId = btn.getAttribute('data-card');
@@ -7850,32 +7897,80 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const headerAdminModeBtn = document.getElementById('header-admin-mode-btn');
+
+    function syncHeaderAdminButton() {
+        if (!headerAdminModeBtn) return;
+        if (AppState.isLoggedIn && AppState.hasAdminAccess) {
+            headerAdminModeBtn.classList.remove('hidden');
+            headerAdminModeBtn.style.display = 'inline-flex';
+            if (AppState.isAdminMode) {
+                headerAdminModeBtn.innerHTML = '👤 사용자 페이지';
+                headerAdminModeBtn.title = '사용자 비용 정산 페이지로 돌아가기';
+                headerAdminModeBtn.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.14))';
+                headerAdminModeBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+                headerAdminModeBtn.style.color = '#059669';
+            } else {
+                headerAdminModeBtn.innerHTML = '👑 관리자 페이지';
+                headerAdminModeBtn.title = '관리자 대시보드 페이지로 이동';
+                headerAdminModeBtn.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.12))';
+                headerAdminModeBtn.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+                headerAdminModeBtn.style.color = '#d97706';
+            }
+        } else {
+            headerAdminModeBtn.classList.add('hidden');
+            headerAdminModeBtn.style.display = 'none';
+        }
+        if (AppState.isLoggedIn && statusBadge && AppState.currentPin) {
+            const roleBadgeText = AppState.userRole === 'president' ? ' 👑회장' : (AppState.userRole === 'developer' ? ' 💻개발자' : (AppState.hasAdminAccess ? ' 🛡️관리자' : ''));
+            statusBadge.innerHTML = `${t('status.online')} (${AppState.userName || t('status.unknown') || '?'}${roleBadgeText} / PIN: ${AppState.currentPin})`;
+        }
+    }
+    window._syncHeaderAdminButton = syncHeaderAdminButton;
+    window._forceUserModeOnRevoke = () => {
+        setAdminMode(false);
+        syncHeaderAdminButton();
+    };
+
+    if (headerAdminModeBtn) {
+        headerAdminModeBtn.addEventListener('click', () => {
+            if (!AppState.isLoggedIn || !AppState.hasAdminAccess) return;
+            setAdminMode(!AppState.isAdminMode);
+        });
+    }
+
     function setAdminMode(isAdmin) {
+        const allowAdmin = Boolean(isAdmin && AppState.isLoggedIn && AppState.hasAdminAccess);
+        AppState.isAdminMode = allowAdmin;
+
         // 관리자 모드: 헤더 문구 변경 및 클럽 선택 영역 숨김
         const headerTitleEl = document.querySelector('.logo-area h1');
-        if (headerTitleEl) headerTitleEl.textContent = isAdmin ? '총 클럽 비용 관리' : '클럽 비용 정산';
+        if (headerTitleEl) headerTitleEl.textContent = allowAdmin ? '총 클럽 비용 관리' : '클럽 비용 정산';
         const clubNameWrapperEl = document.querySelector('.club-name-wrapper');
-        if (clubNameWrapperEl) clubNameWrapperEl.classList.toggle('hidden', isAdmin);
+        if (clubNameWrapperEl) clubNameWrapperEl.classList.toggle('hidden', allowAdmin);
 
         const adminOnlyIds = ['admin-tab-btn', 'club-history-tab-btn', 'charts-tab-btn', 'admin-audit-log-btn', 'admin-export-ppt-btn', 'history-export-ppt-btn'];
         const memberOnlyIds = ['settlement-tab-btn', 'attendees-tab-btn', 'history-tab-btn'];
         adminOnlyIds.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.classList.toggle('hidden', !isAdmin);
+            if (el) el.classList.toggle('hidden', !allowAdmin);
         });
         memberOnlyIds.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.classList.toggle('hidden', isAdmin);
+            if (el) el.classList.toggle('hidden', allowAdmin);
         });
 
-        // 일반 회원: 요청사항 보내기 버튼만 표시 / 관리자: 요청사항 리스트 버튼만 표시
+        // 일반 회원 모드: 요청사항 보내기 버튼 표시 / 관리자 모드: 요청사항 리스트 버튼 표시
         const feedbackOpenBtnEl = document.getElementById('feedback-open-btn');
         const feedbackListOpenBtnEl = document.getElementById('feedback-list-open-btn');
-        if (feedbackOpenBtnEl) feedbackOpenBtnEl.classList.toggle('hidden', isAdmin);
-        if (feedbackListOpenBtnEl && !isAdmin) feedbackListOpenBtnEl.classList.add('hidden');
+        if (feedbackOpenBtnEl) feedbackOpenBtnEl.classList.toggle('hidden', allowAdmin);
+        if (feedbackListOpenBtnEl && !allowAdmin) feedbackListOpenBtnEl.classList.add('hidden');
+
+        syncHeaderAdminButton();
 
         // 관리자 모드에서는 새 요청사항이 도착하면 알림 팝업을 띄우고, 리스트 버튼을 표시
-        if (isAdmin && firebaseDb) {
+        if (allowAdmin && firebaseDb) {
+            firebaseDb.ref('requests').off('value');
             firebaseDb.ref('requests').on('value', snapshot => {
                 const requestsData = snapshot.val() || {};
                 const requestList = Object.keys(requestsData)
@@ -7907,25 +8002,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     feedbackListOpenBtnEl.classList.remove('hidden');
                 }
             });
-        } else if (!isAdmin && firebaseDb) {
+        } else if (!allowAdmin && firebaseDb) {
             firebaseDb.ref('requests').off('value');
         }
 
         // 활성 탭이 더 이상 보이지 않으면 기본 탭으로 전환
         const activeBtn = document.querySelector('.tab-nav .tab-btn.active');
         if (!activeBtn || activeBtn.classList.contains('hidden')) {
-            const fallbackId = isAdmin ? 'tab-admin' : 'tab-settlement';
+            const fallbackId = allowAdmin ? 'tab-admin' : 'tab-settlement';
             document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
             const fallbackBtn = document.querySelector(`[data-tab="${fallbackId}"]`);
             if (fallbackBtn) fallbackBtn.classList.add('active');
             const fallbackPane = document.getElementById(fallbackId);
             if (fallbackPane) fallbackPane.classList.remove('hidden');
-            if (isAdmin && typeof renderAdminDashboard === 'function') renderAdminDashboard();
+            if (allowAdmin && typeof renderAdminDashboard === 'function') {
+                renderAdminDashboard();
+            } else if (!allowAdmin) {
+                AppState.render();
+            }
         }
     }
 
     function switchToOfflineMode() {
+        AppState._unbindUserRoleListener();
+        AppState.userRole = 'member';
+        AppState.hasAdminAccess = false;
+        AppState.isAdminMode = false;
         pinModal.classList.add('hidden');
         statusBadge.className = 'badge-offline';
         statusBadge.textContent = t('header.offline');
@@ -7933,6 +8036,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.style.display = 'inline-block';
         document.getElementById('admin-tab-btn').classList.add('hidden');
         setAdminMode(false);
+        syncHeaderAdminButton();
 
         // If we were on admin tab, switch back to settlement
         if (document.getElementById('admin-tab-btn').classList.contains('active')) {
@@ -7993,6 +8097,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.1', date: '2026.11.12', items: ['관리자 전용 비밀번호(000000) 접속 폐지 및 역할 기반(회장·개발자·추가 관리자) 권한 체계 도입: 본인 PIN으로 로그인 시 사용자 페이지로 우선 접속되며, 관리자 권한 보유자에게만 상단 [👑 관리자 페이지] ↔ [👤 사용자 페이지] 전환 버튼 표시', '초기 관리자 권한 지정(회장: 이현준 003645, 개발자: 김종필 002531) 및 관리자 페이지 [가입 회원 관리]에서 회장/개발자 변경 및 추가 관리자 권한 실시간 부여·해제 기능 탑재'] },
         { ver: '1.7.0', date: '2026.11.11', items: ['3M 사내 클럽 비용 정산기 v1.7.0 정식 최종 배포: 모바일 전용 사용자 매뉴얼 & PC 전용 관리자 매뉴얼 분리 완성, 전사원 명부 실시간(Realtime) 동기화 & 👑 최다 참석 1위 왕관 배지, 정산 결과 총 자부담 자동 일원화 및 사규 최소 기준 미달 방지, 전체 작업 로그 최적화 등 모든 핵심 기능 안정화 및 정식 릴리즈'] },
         { ver: '1.6.362', date: '2026.11.10', items: ['사용자 매뉴얼과 관리자 매뉴얼 분리 발간: 100% 모바일 스마트폰 전용 화면으로 구성된 "사용자 매뉴얼(모바일).pptx"와 100% PC 와이드 대화면으로 구성된 "관리자 매뉴얼(PC).pptx" 2종 개별 파워포인트 빌드 및 제공'] },
         { ver: '1.6.361', date: '2026.11.10', items: ['실무 설명회 발표자료(PPTX) 및 정산 기준·사용법 모달 최신화 완료: 전사원 명부 👑 최다 참석 1위 왕관 배지, 실시간 동기화 & 사번 기반 일원화, 정산 결과창 총 자부담 수정불가 전환 및 비용 항목별 직접 입력 일원화, 사규 최소 기준 미달 방지 안내, 전체 작업 로그 최적화 내역 전면 반영 및 최신 PPTX 재생성'] },
@@ -8347,8 +8452,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Register User
                 const registeredAt = Date.now();
+                const initialRole = AppState.normalizeUserRole(null, pin);
+                const initialAdmin = AppState.checkHasAdminAccess(null, pin);
                 const registrationUpdates = {
-                    [`users/${pin}`]: { name, registeredAt }
+                    [`users/${pin}`]: { name, registeredAt, role: initialRole, isAdmin: initialAdmin }
                 };
                 AppState.appendAuditUpdate(registrationUpdates, {
                     action: 'CREATE',
@@ -8356,8 +8463,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     targetId: pin,
                     targetLabel: `${name} (${pin})`,
                     summary: `신규 회원 '${name} (${pin})' 가입 등록`,
-                    details: { 이름: name, PIN: pin }
-                }, { pin, name, role: '일반 회원' });
+                    details: { 이름: name, PIN: pin, 권한: AppState.getRoleLabel(initialRole, initialAdmin) }
+                }, { pin, name, role: AppState.getRoleLabel(initialRole, initialAdmin) });
                 firebaseDb.ref().update(registrationUpdates).then(() => {
                     alert(`${name}${t('alert.register_success')}`);
                     
@@ -8365,11 +8472,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     AppState.isLoggedIn = true;
                     AppState.currentPin = pin;
                     AppState.userName = name;
+                    AppState.userRole = initialRole;
+                    AppState.hasAdminAccess = initialAdmin;
+                    AppState._bindUserRoleListener(pin);
                     
                     setAdminMode(false);
+                    syncHeaderAdminButton();
                     pinModal.classList.add('hidden');
                     statusBadge.className = 'badge-online';
-                    statusBadge.innerHTML = `${t('status.online')} (${name} / PIN: ${pin})`;
+                    const roleBadgeText = AppState.userRole === 'president' ? ' 👑회장' : (AppState.userRole === 'developer' ? ' 💻개발자' : (AppState.hasAdminAccess ? ' 🛡️관리자' : ''));
+                    statusBadge.innerHTML = `${t('status.online')} (${name}${roleBadgeText} / PIN: ${pin})`;
                     logoutBtn.style.display = 'inline-block';
                     loginBtn.style.display = 'none';
                     
@@ -8424,18 +8536,106 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── 가입 회원 - 이름/PIN 수정 및 삭제 ────────────────────────────────
-    function editAdminUser(oldPin, currentName) {
-        const overlay   = document.getElementById('edit-user-modal-overlay');
-        const nameInput = document.getElementById('edit-user-name-input');
-        const pinInput  = document.getElementById('edit-user-pin-input');
-        const errEl     = document.getElementById('edit-user-error');
-        const okBtn     = document.getElementById('edit-user-modal-ok');
-        const cancelBtn = document.getElementById('edit-user-modal-cancel');
+    // ── 가입 회원 - 이름/PIN/권한 수정 및 삭제 ────────────────────────────────
+    function getRoleBadgeHtml(role) {
+        if (role === 'president') {
+            return `<span style="display:inline-flex; align-items:center; gap:0.2rem; padding:0.15rem 0.45rem; font-size:0.72rem; font-weight:700; color:#b45309; background:rgba(245,158,11,0.16); border:1px solid rgba(245,158,11,0.4); border-radius:6px; margin-left:0.35rem;">👑 회장</span>`;
+        }
+        if (role === 'developer') {
+            return `<span style="display:inline-flex; align-items:center; gap:0.2rem; padding:0.15rem 0.45rem; font-size:0.72rem; font-weight:700; color:#0284c7; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.38); border-radius:6px; margin-left:0.35rem;">💻 개발자</span>`;
+        }
+        if (role === 'admin') {
+            return `<span style="display:inline-flex; align-items:center; gap:0.2rem; padding:0.15rem 0.45rem; font-size:0.72rem; font-weight:700; color:#059669; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.38); border-radius:6px; margin-left:0.35rem;">🛡️ 관리자</span>`;
+        }
+        return '';
+    }
+
+    function changeAdminUserRole(targetPin, targetName, newRole, selectEl) {
+        if (!firebaseDb || !AppState.hasAdminAccess) return;
+        const normalizedRole = ['president', 'developer', 'admin', 'member'].includes(newRole) ? newRole : 'member';
+        const nextIsAdmin = normalizedRole !== 'member';
+
+        firebaseDb.ref('users').once('value').then(snap => {
+            const allUsers = snap.val() || {};
+            const targetUser = allUsers[targetPin] || { name: targetName };
+            const prevRole = AppState.normalizeUserRole(targetUser, targetPin);
+            const prevIsAdmin = AppState.checkHasAdminAccess(targetUser, targetPin);
+
+            if (prevRole === normalizedRole && prevIsAdmin === nextIsAdmin) return;
+
+            if (prevIsAdmin && !nextIsAdmin) {
+                const remainingAdmins = Object.keys(allUsers).filter(p => {
+                    if (p === '000000' || p === targetPin) return false;
+                    return AppState.checkHasAdminAccess(allUsers[p], p);
+                });
+                if (remainingAdmins.length === 0) {
+                    alert('최소 1명 이상의 관리자(회장/개발자/추가 관리자)가 유지되어야 합니다.\n다른 회원에게 먼저 관리자 권한을 부여한 뒤 변경해 주세요.');
+                    if (selectEl) selectEl.value = prevRole;
+                    return;
+                }
+            }
+
+            const nowTs = Date.now();
+            const updates = {
+                [`users/${targetPin}/role`]: normalizedRole,
+                [`users/${targetPin}/isAdmin`]: nextIsAdmin,
+                [`users/${targetPin}/roleUpdatedAt`]: nowTs
+            };
+
+            const prevLabel = AppState.getRoleLabel(prevRole, prevIsAdmin);
+            const nextLabel = AppState.getRoleLabel(normalizedRole, nextIsAdmin);
+            let displacedNote = '';
+
+            if (normalizedRole === 'president' || normalizedRole === 'developer') {
+                Object.keys(allUsers).forEach(otherPin => {
+                    if (otherPin === '000000' || otherPin === targetPin) return;
+                    const otherRole = AppState.normalizeUserRole(allUsers[otherPin], otherPin);
+                    if (otherRole === normalizedRole) {
+                        updates[`users/${otherPin}/role`] = 'admin';
+                        updates[`users/${otherPin}/isAdmin`] = true;
+                        updates[`users/${otherPin}/roleUpdatedAt`] = nowTs;
+                        displacedNote = ` (기존 ${nextLabel} '${allUsers[otherPin]?.name || otherPin}'님은 '추가 관리자'로 자동 전환)`;
+                    }
+                });
+            }
+
+            AppState.appendAuditUpdate(updates, {
+                action: 'UPDATE',
+                targetType: '회원 정보 수정',
+                targetId: targetPin,
+                targetLabel: `${targetName} (${targetPin})`,
+                summary: `회원 권한 변경: '${targetName} (${targetPin})' [${prevLabel} → ${nextLabel}]${displacedNote}`,
+                details: {
+                    대상회원: `${targetName} (${targetPin})`,
+                    이전권한: prevLabel,
+                    변경권한: nextLabel,
+                    관리자접속가능: nextIsAdmin ? '가능 (상단 관리자 버튼 활성화)' : '불가 (일반 사용자)'
+                }
+            });
+
+            return firebaseDb.ref().update(updates).then(() => {
+                renderAdminDashboard();
+            });
+        }).catch(err => {
+            console.error('권한 변경 실패:', err);
+            alert('권한 변경 중 오류가 발생했습니다.');
+            renderAdminDashboard();
+        });
+    }
+
+    function editAdminUser(oldPin, currentName, currentRole = 'member') {
+        const overlay    = document.getElementById('edit-user-modal-overlay');
+        const nameInput  = document.getElementById('edit-user-name-input');
+        const pinInput   = document.getElementById('edit-user-pin-input');
+        const roleSelect = document.getElementById('edit-user-role-select');
+        const errEl      = document.getElementById('edit-user-error');
+        const okBtn      = document.getElementById('edit-user-modal-ok');
+        const cancelBtn  = document.getElementById('edit-user-modal-cancel');
         if (!overlay) return;
 
         nameInput.value = currentName;
         pinInput.value  = oldPin;
+        if (roleSelect) roleSelect.value = ['president', 'developer', 'admin', 'member'].includes(currentRole) ? currentRole : 'member';
         errEl.style.display = 'none';
         overlay.style.display = 'flex';
         nameInput.focus();
@@ -8444,42 +8644,113 @@ document.addEventListener('DOMContentLoaded', () => {
         const handleOk = () => {
             const newName = nameInput.value.trim();
             const newPin  = pinInput.value.trim();
+            const newRole = roleSelect ? roleSelect.value : currentRole;
+            const nextIsAdmin = newRole !== 'member';
             if (!newName) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
             if (!/^\d{6}$/.test(newPin)) { errEl.textContent = t('alert.pin_digit_required'); errEl.style.display = 'block'; return; }
-            close();
-            const auditEvent = {
-                action: 'UPDATE',
-                targetType: '회원 정보 수정',
-                targetId: newPin,
-                targetLabel: `${newName} (${newPin})`,
-                summary: `회원 정보 수정: '${currentName} (${oldPin})' → '${newName} (${newPin})'`,
-                details: { 이전이름: currentName, 변경이름: newName, 이전PIN: oldPin, 변경PIN: newPin }
-            };
-            firebaseDb.ref(`users/${oldPin}`).once('value').then(snap => {
-                const userData = snap.val() || {};
+            if (newPin === '000000') { errEl.textContent = '000000은 사용할 수 없는 PIN 번호입니다.'; errEl.style.display = 'block'; return; }
+
+            firebaseDb.ref('users').once('value').then(allSnap => {
+                const allUsers = allSnap.val() || {};
+                const userData = { ...(allUsers[oldPin] || {}) };
+                const prevRole = AppState.normalizeUserRole(userData, oldPin);
+                const prevIsAdmin = AppState.checkHasAdminAccess(userData, oldPin);
+
+                if (prevIsAdmin && !nextIsAdmin) {
+                    const remainingAdmins = Object.keys(allUsers).filter(p => {
+                        if (p === '000000' || p === oldPin) return false;
+                        return AppState.checkHasAdminAccess(allUsers[p], p);
+                    });
+                    if (remainingAdmins.length === 0) {
+                        errEl.textContent = '최소 1명 이상의 관리자가 유지되어야 합니다.';
+                        errEl.style.display = 'block';
+                        return Promise.reject(new Error('last-admin'));
+                    }
+                }
+
+                close();
+                const nowTs = Date.now();
                 userData.name = newName;
+                userData.role = newRole;
+                userData.isAdmin = nextIsAdmin;
+                userData.roleUpdatedAt = nowTs;
+
+                const prevRoleLabel = AppState.getRoleLabel(prevRole, prevIsAdmin);
+                const nextRoleLabel = AppState.getRoleLabel(newRole, nextIsAdmin);
+                const auditEvent = {
+                    action: 'UPDATE',
+                    targetType: '회원 정보 수정',
+                    targetId: newPin,
+                    targetLabel: `${newName} (${newPin})`,
+                    summary: `회원 정보 수정: '${currentName} (${oldPin}, ${prevRoleLabel})' → '${newName} (${newPin}, ${nextRoleLabel})'`,
+                    details: {
+                        이전이름: currentName,
+                        변경이름: newName,
+                        이전PIN: oldPin,
+                        변경PIN: newPin,
+                        이전권한: prevRoleLabel,
+                        변경권한: nextRoleLabel
+                    }
+                };
+
+                const applyRoleDisplacement = (updatesObj) => {
+                    if (newRole === 'president' || newRole === 'developer') {
+                        Object.keys(allUsers).forEach(otherPin => {
+                            if (otherPin === '000000' || otherPin === oldPin || otherPin === newPin) return;
+                            const otherRole = AppState.normalizeUserRole(allUsers[otherPin], otherPin);
+                            if (otherRole === newRole) {
+                                updatesObj[`users/${otherPin}/role`] = 'admin';
+                                updatesObj[`users/${otherPin}/isAdmin`] = true;
+                                updatesObj[`users/${otherPin}/roleUpdatedAt`] = nowTs;
+                            }
+                        });
+                    }
+                };
+
                 if (newPin === oldPin) {
-                    const updates = { [`users/${oldPin}/name`]: userData.name };
+                    const updates = {
+                        [`users/${oldPin}/name`]: userData.name,
+                        [`users/${oldPin}/role`]: userData.role,
+                        [`users/${oldPin}/isAdmin`]: userData.isAdmin,
+                        [`users/${oldPin}/roleUpdatedAt`]: nowTs
+                    };
+                    applyRoleDisplacement(updates);
                     AppState.appendAuditUpdate(updates, auditEvent);
                     return firebaseDb.ref().update(updates);
                 }
-                return firebaseDb.ref(`users/${newPin}`).once('value').then(existing => {
-                    if (existing.exists()) { alert(t('alert.pin_already_used')); return Promise.reject(new Error('duplicate-pin')); }
-                    return firebaseDb.ref(`settlements/${oldPin}`).once('value').then(settlementSnap => {
-                        const updates = {
-                            [`users/${newPin}`]: userData,
-                            [`users/${oldPin}`]: null
-                        };
-                        if (settlementSnap.exists()) {
-                            updates[`settlements/${newPin}`] = settlementSnap.val();
-                            updates[`settlements/${oldPin}`] = null;
+                if (allUsers[newPin]) {
+                    alert(t('alert.pin_already_used'));
+                    return Promise.reject(new Error('duplicate-pin'));
+                }
+                return firebaseDb.ref(`settlements/${oldPin}`).once('value').then(settlementSnap => {
+                    const updates = {
+                        [`users/${newPin}`]: userData,
+                        [`users/${oldPin}`]: null
+                    };
+                    applyRoleDisplacement(updates);
+                    if (settlementSnap.exists()) {
+                        updates[`settlements/${newPin}`] = settlementSnap.val();
+                        updates[`settlements/${oldPin}`] = null;
+                    }
+                    AppState.appendAuditUpdate(updates, auditEvent);
+                    return firebaseDb.ref().update(updates).then(() => {
+                        if (String(AppState.currentPin) === String(oldPin)) {
+                            AppState.currentPin = newPin;
+                            AppState.userName = newName;
+                            AppState.userRole = newRole;
+                            AppState.hasAdminAccess = nextIsAdmin;
+                            AppState._bindUserRoleListener(newPin);
+                            syncHeaderAdminButton();
                         }
-                        AppState.appendAuditUpdate(updates, auditEvent);
-                        return firebaseDb.ref().update(updates);
                     });
                 });
             }).then(() => renderAdminDashboard())
-              .catch(err => { if (err && err.message !== 'duplicate-pin') { console.error('회원 정보 수정 실패:', err); alert(t('alert.edit_user_failed')); } });
+              .catch(err => {
+                  if (err && err.message !== 'duplicate-pin' && err.message !== 'last-admin') {
+                      console.error('회원 정보 수정 실패:', err);
+                      alert(t('alert.edit_user_failed'));
+                  }
+              });
         };
         const handleCancel = () => close();
         const handleKey = (e) => { if (e.key === 'Enter') handleOk(); if (e.key === 'Escape') handleCancel(); };
@@ -8494,29 +8765,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deleteAdminUser(pin, name) {
-        showConfirmModal(
-            `'${name}' (${pin}) 회원을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
-            () => {
-                const updates = {
-                    [`users/${pin}`]: null,
-                    [`settlements/${pin}`]: null
-                };
-                AppState.appendAuditUpdate(updates, {
-                    action: 'DELETE',
-                    targetType: '회원 삭제',
-                    targetId: pin,
-                    targetLabel: `${name} (${pin})`,
-                    summary: `회원 삭제: '${name} (${pin})' 계정 및 정산 데이터 삭제`,
-                    details: { 이름: name, PIN: pin }
+        firebaseDb.ref('users').once('value').then(snap => {
+            const allUsers = snap.val() || {};
+            const targetUser = allUsers[pin];
+            if (targetUser && AppState.checkHasAdminAccess(targetUser, pin)) {
+                const remainingAdmins = Object.keys(allUsers).filter(p => {
+                    if (p === '000000' || p === pin) return false;
+                    return AppState.checkHasAdminAccess(allUsers[p], p);
                 });
-                firebaseDb.ref().update(updates).then(() => {
-                    renderAdminDashboard();
-                }).catch(err => {
-                    console.error('회원 삭제 실패:', err);
-                    alert(t('alert.delete_user_failed'));
-                });
+                if (remainingAdmins.length === 0) {
+                    alert('최소 1명 이상의 관리자 계정이 유지되어야 하므로 삭제할 수 없습니다.');
+                    return;
+                }
             }
-        );
+            showConfirmModal(
+                `'${name}' (${pin}) 회원을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
+                () => {
+                    const updates = {
+                        [`users/${pin}`]: null,
+                        [`settlements/${pin}`]: null
+                    };
+                    AppState.appendAuditUpdate(updates, {
+                        action: 'DELETE',
+                        targetType: '회원 삭제',
+                        targetId: pin,
+                        targetLabel: `${name} (${pin})`,
+                        summary: `회원 삭제: '${name} (${pin})' 계정 및 정산 데이터 삭제`,
+                        details: { 이름: name, PIN: pin }
+                    });
+                    firebaseDb.ref().update(updates).then(() => {
+                        renderAdminDashboard();
+                    }).catch(err => {
+                        console.error('회원 삭제 실패:', err);
+                        alert(t('alert.delete_user_failed'));
+                    });
+                }
+            );
+        });
     }
 
     // 요청사항 목록을 모달에 렌더링하고, 리스트 버튼 배지를 갱신
@@ -8634,23 +8919,73 @@ document.addEventListener('DOMContentLoaded', () => {
             const users = snapshot.val() || {};
             const tbody = document.getElementById('admin-users-list');
             tbody.innerHTML = '';
-            
-            let userCount = 0;
+
+            // 레거시 000000 계정이 남아있다면 자동 정리 및 초기 회장/개발자 DB 필드 보장
+            const dbCleanupUpdates = {};
+            if (users['000000']) {
+                dbCleanupUpdates['users/000000'] = null;
+                delete users['000000'];
+            }
             Object.keys(users).forEach(pin => {
-                userCount++;
+                const u = users[pin];
+                if (!u) return;
+                const normRole = AppState.normalizeUserRole(u, pin);
+                const normAdmin = AppState.checkHasAdminAccess(u, pin);
+                if (u.role !== normRole || u.isAdmin !== normAdmin) {
+                    dbCleanupUpdates[`users/${pin}/role`] = normRole;
+                    dbCleanupUpdates[`users/${pin}/isAdmin`] = normAdmin;
+                    u.role = normRole;
+                    u.isAdmin = normAdmin;
+                }
+            });
+            if (Object.keys(dbCleanupUpdates).length > 0) {
+                firebaseDb.ref().update(dbCleanupUpdates).catch(() => {});
+            }
+
+            // 정렬: 회장 -> 개발자 -> 추가 관리자 -> 일반 회원 순, 그 다음 이름순
+            const rolePriority = { president: 1, developer: 2, admin: 3, member: 4 };
+            const sortedPins = Object.keys(users).sort((a, b) => {
+                const rA = rolePriority[AppState.normalizeUserRole(users[a], a)] || 9;
+                const rB = rolePriority[AppState.normalizeUserRole(users[b], b)] || 9;
+                if (rA !== rB) return rA - rB;
+                return String(users[a]?.name || '').localeCompare(String(users[b]?.name || ''), 'ko');
+            });
+
+            let userCount = 0;
+            sortedPins.forEach(pin => {
                 const user = users[pin];
+                if (!user) return;
+                userCount++;
+                const role = AppState.normalizeUserRole(user, pin);
+                const isAdminUser = AppState.checkHasAdminAccess(user, pin);
                 const dateStr = user.registeredAt ? new Date(user.registeredAt).toLocaleDateString() : '-';
                 const lastLoginStr = user.lastLoginAt
                     ? new Date(user.lastLoginAt).toLocaleString('ko-KR', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
                     : '-';
                 const tr = document.createElement('tr');
+                if (isAdminUser) {
+                    tr.style.background = 'rgba(245, 158, 11, 0.04)';
+                }
                 tr.innerHTML = `
-                    <td><strong>${AppState.escapeHtml(user.name)}</strong></td>
+                    <td>
+                        <div style="display:inline-flex; align-items:center; flex-wrap:wrap;">
+                            <strong>${AppState.escapeHtml(user.name)}</strong>
+                            ${getRoleBadgeHtml(role)}
+                        </div>
+                    </td>
                     <td><code>${AppState.escapeHtml(pin)}</code></td>
+                    <td>
+                        <select class="user-role-select" data-pin="${AppState.escapeHtml(pin)}" data-name="${AppState.escapeHtml(user.name)}" style="padding:0.26rem 0.5rem; font-size:0.78rem; font-weight:${isAdminUser ? '700' : '500'}; border-radius:6px; border:1px solid ${isAdminUser ? 'rgba(245,158,11,0.45)' : 'var(--card-border)'}; background:var(--input-bg, transparent); color:${role === 'president' ? '#d97706' : (role === 'developer' ? '#0284c7' : (role === 'admin' ? '#059669' : 'var(--text-primary)'))}; cursor:pointer;">
+                            <option value="member" ${role === 'member' ? 'selected' : ''}>👤 일반 회원</option>
+                            <option value="president" ${role === 'president' ? 'selected' : ''}>👑 회장 (관리자)</option>
+                            <option value="developer" ${role === 'developer' ? 'selected' : ''}>💻 개발자 (관리자)</option>
+                            <option value="admin" ${role === 'admin' ? 'selected' : ''}>🛡️ 추가 관리자</option>
+                        </select>
+                    </td>
                     <td><span style="font-size:0.8rem; color:var(--text-muted);">${dateStr}</span></td>
                     <td><span style="font-size:0.78rem; color:var(--text-muted);">${lastLoginStr}</span></td>
                     <td style="white-space:nowrap;">
-                        <button class="btn-edit-user btn-secondary" data-pin="${AppState.escapeHtml(pin)}" data-name="${AppState.escapeHtml(user.name)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">수정</button>
+                        <button class="btn-edit-user btn-secondary" data-pin="${AppState.escapeHtml(pin)}" data-name="${AppState.escapeHtml(user.name)}" data-role="${AppState.escapeHtml(role)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">수정</button>
                         <button class="btn-delete-user btn-text-danger" data-pin="${AppState.escapeHtml(pin)}" data-name="${AppState.escapeHtml(user.name)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">삭제</button>
                     </td>
                 `;
@@ -8658,9 +8993,23 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             document.getElementById('admin-total-users').textContent = `${userCount}명`;
 
+            tbody.querySelectorAll('.user-role-select').forEach(selectEl => {
+                selectEl.addEventListener('change', () => {
+                    changeAdminUserRole(
+                        selectEl.getAttribute('data-pin'),
+                        selectEl.getAttribute('data-name'),
+                        selectEl.value,
+                        selectEl
+                    );
+                });
+            });
             tbody.querySelectorAll('.btn-edit-user').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    editAdminUser(btn.getAttribute('data-pin'), btn.getAttribute('data-name'));
+                    editAdminUser(
+                        btn.getAttribute('data-pin'),
+                        btn.getAttribute('data-name'),
+                        btn.getAttribute('data-role') || 'member'
+                    );
                 });
             });
             tbody.querySelectorAll('.btn-delete-user').forEach(btn => {
@@ -8840,7 +9189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 관리자 전용 이력 삭제: 공유 이력·작성자 개인 이력·참석 누적·클럽 누적액을 함께 갱신한다.
     function deleteAdminHistoryEntry(entry, triggerButton) {
-        if (AppState.currentPin !== '000000' || !entry || !entry.id) return;
+        if (!AppState.hasAdminAccess || !entry || !entry.id) return;
         showConfirmModal(
             `이 정산 기록을 삭제하시겠습니까?\n참석자 ${entry.memberCount}명의 누적 참석 횟수도 함께 차감됩니다.`,
             async () => {

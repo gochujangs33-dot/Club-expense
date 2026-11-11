@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko" data-app-theme="dark">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>클럽 비용 정산기 - 실시간 모바일 최적화 정산 시스템</title>
     <meta name="description" content="동아리/클럽 행사 비용의 실시간 정산 및 회비 규정 자동 계산, 한도액 검증 및 자동 경고 알림 서비스">
 
@@ -18,55 +20,139 @@
     <script>
         try {
             document.documentElement.dataset.appTheme = localStorage.getItem('club_expense_admin_theme') === 'light' ? 'light' : 'dark';
-        } catch (_) {}
+        } catch (_) { }
     </script>
 
     <!-- Premium Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- Vanilla CSS stylesheet -->
     <link rel="stylesheet" href="style.css?v=1.7.0">
     <script src="./lib/i18n.js"></script>
     <style>
-    .settle-date-btn {
-        width:100%; box-sizing:border-box; padding:0.45rem 0.7rem;
-        background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
-        color:var(--text-primary); border-radius:0.5rem; font-size:0.9rem;
-        text-align:left; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
-    }
-    .settle-date-btn:hover { background:rgba(255,255,255,0.09); }
-    .settle-date-arrow { font-size:0.7rem; opacity:0.5; }
-    .custom-calendar {
-        position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:9999;
-        background:#1e293b; border:1px solid rgba(255,255,255,0.15);
-        border-radius:0.75rem; padding:0.75rem; box-shadow:0 8px 32px rgba(0,0,0,0.5);
-    }
-    .cal-nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; gap:0.25rem; }
-    .cal-nav-btn {
-        background:rgba(255,255,255,0.08); border:none; color:var(--text-primary);
-        border-radius:0.4rem; padding:0.3rem 0.7rem; cursor:pointer; font-size:0.9rem;
-        flex-shrink:0;
-    }
-    .cal-nav-btn:hover { background:rgba(255,255,255,0.15); }
-    .cal-nav-label { font-weight:600; font-size:0.95rem; color:var(--text-primary); flex:1; text-align:center; min-width:0; }
-    .cal-weekdays {
-        display:grid; grid-template-columns:repeat(7,1fr); text-align:center;
-        font-size:0.7rem; color:rgba(255,255,255,0.4); margin-bottom:0.3rem; gap:2px;
-    }
-    .cal-days-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
-    .cal-day {
-        text-align:center; padding:0.38rem 0; border-radius:0.4rem;
-        font-size:0.82rem; cursor:pointer; color:var(--text-primary);
-    }
-    .cal-day:not(.cal-empty):hover { background:rgba(255,255,255,0.1); }
-    .cal-day.cal-today { color:#818cf8; font-weight:700; }
-    .cal-day.cal-selected { background:#6d28d9; color:#fff; }
-    .cal-day.cal-selected:hover { background:#7c3aed; }
-    .cal-empty { cursor:default; }
+        .settle-date-btn {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.45rem 0.7rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .settle-date-btn:hover {
+            background: rgba(255, 255, 255, 0.09);
+        }
+
+        .settle-date-arrow {
+            font-size: 0.7rem;
+            opacity: 0.5;
+        }
+
+        .custom-calendar {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .cal-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            gap: 0.25rem;
+        }
+
+        .cal-nav-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: var(--text-primary);
+            border-radius: 0.4rem;
+            padding: 0.3rem 0.7rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .cal-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .cal-nav-label {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            flex: 1;
+            text-align: center;
+            min-width: 0;
+        }
+
+        .cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 0.3rem;
+            gap: 2px;
+        }
+
+        .cal-days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .cal-day {
+            text-align: center;
+            padding: 0.38rem 0;
+            border-radius: 0.4rem;
+            font-size: 0.82rem;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .cal-day:not(.cal-empty):hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .cal-day.cal-today {
+            color: #818cf8;
+            font-weight: 700;
+        }
+
+        .cal-day.cal-selected {
+            background: #6d28d9;
+            color: #fff;
+        }
+
+        .cal-day.cal-selected:hover {
+            background: #7c3aed;
+        }
+
+        .cal-empty {
+            cursor: default;
+        }
     </style>
 </head>
+
 <body>
     <!-- 업데이트 알림 배너 -->
     <div id="update-banner" class="update-banner hidden">
@@ -79,12 +165,14 @@
         <div class="blur-circle circle-1"></div>
         <div class="blur-circle circle-2"></div>
     </div>
-    
+
     <main class="app-container">
         <!-- 관리자 전용: 요청사항 리스트 버튼 (우측 상단 고정) -->
-        <button id="feedback-list-open-btn" class="hidden" style="position:fixed; top:10px; right:10px; z-index:500; background:linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); color:#fff; border:none; border-radius:20px; padding:0.35rem 0.7rem; font-size:0.75rem; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.4); display:flex; align-items:center; gap:0.3rem; white-space:nowrap;">
+        <button id="feedback-list-open-btn" class="hidden"
+            style="position:fixed; top:10px; right:10px; z-index:500; background:linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); color:#fff; border:none; border-radius:20px; padding:0.35rem 0.7rem; font-size:0.75rem; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.4); display:flex; align-items:center; gap:0.3rem; white-space:nowrap;">
             🔔 알림
-            <span id="feedback-list-badge" class="hidden" style="background:#fff; color:var(--color-primary); border-radius:10px; padding:0.05rem 0.4rem; font-size:0.72rem;">0</span>
+            <span id="feedback-list-badge" class="hidden"
+                style="background:#fff; color:var(--color-primary); border-radius:10px; padding:0.05rem 0.4rem; font-size:0.72rem;">0</span>
         </button>
         <!-- App Header -->
         <header class="app-header">
@@ -92,16 +180,20 @@
             <div class="header-year-control-row">
                 <div class="header-year-selector">
                     <span class="header-year-label">📅 조회 연도</span>
-                    <button type="button" id="global-year-picker-btn" class="global-year-picker-btn" onclick="openYearPickerModal()" aria-haspopup="dialog" aria-expanded="false" title="조회 연도 선택">
+                    <button type="button" id="global-year-picker-btn" class="global-year-picker-btn"
+                        onclick="openYearPickerModal()" aria-haspopup="dialog" aria-expanded="false" title="조회 연도 선택">
                         <span id="global-year-picker-label">2026</span>
                         <span class="global-year-picker-caret">▾</span>
                     </button>
                 </div>
             </div>
             <div class="logo-area" style="flex-wrap:nowrap;">
-                <span class="logo-icon" style="color:#ef4444; font-weight:800; font-style:normal; font-size:1.4rem; white-space:nowrap;">3M</span>
+                <span class="logo-icon"
+                    style="color:#ef4444; font-weight:800; font-style:normal; font-size:1.4rem; white-space:nowrap;">3M</span>
                 <h1 data-i18n="header.title" style="white-space:nowrap;">클럽 비용 정산</h1>
-                <button id="feedback-open-btn" data-i18n="header.request" style="font-size:0.72rem; padding:0.3rem 0.65rem; border-radius:20px; background:linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); color:#fff; border:none; font-weight:700; cursor:pointer; white-space:nowrap; margin-left:0.4rem;">📝 요청</button>
+                <button id="feedback-open-btn" data-i18n="header.request"
+                    style="font-size:0.72rem; padding:0.3rem 0.65rem; border-radius:20px; background:linear-gradient(135deg, var(--color-primary), var(--color-primary-light)); color:#fff; border:none; font-weight:700; cursor:pointer; white-space:nowrap; margin-left:0.4rem;">📝
+                    요청</button>
             </div>
             <div class="club-name-wrapper">
                 <select id="club-name-select" class="club-name-input">
@@ -109,40 +201,65 @@
                     <option value="__new__" data-i18n="header.club_new">+ 새 클럽 직접 등록</option>
                 </select>
                 <div id="new-club-input-row" class="new-club-input-row hidden">
-                    <input type="text" id="new-club-name-input" data-i18n-ph="ph.new_club_name" placeholder="클럽명 입력" autocomplete="off">
-                    <button type="button" id="register-new-club-btn" class="btn-secondary" data-i18n="header.club_register">등록</button>
+                    <input type="text" id="new-club-name-input" data-i18n-ph="ph.new_club_name" placeholder="클럽명 입력"
+                        autocomplete="off">
+                    <button type="button" id="register-new-club-btn" class="btn-secondary"
+                        data-i18n="header.club_register">등록</button>
                 </div>
             </div>
-            <div class="login-status-wrapper" id="login-status-wrapper" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+            <div class="login-status-wrapper" id="login-status-wrapper"
+                style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
                 <span id="login-status-badge" class="badge-offline">📴 오프라인 모드 (기기 저장)</span>
-                <button id="header-logout-btn" class="btn-text" data-i18n="header.logout" style="font-size: 0.78rem; display: none; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(255, 255, 255, 0.05);">로그아웃</button>
-                <button id="header-login-btn" class="btn-text" data-i18n="header.login" style="font-size: 0.78rem; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(255, 255, 255, 0.05);">로그인</button>
+                <button id="header-admin-mode-btn" type="button" class="btn-admin-mode-toggle hidden"
+                    style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 999px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: 1px solid rgba(245, 158, 11, 0.5); cursor: pointer; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25); display: none; align-items: center; gap: 0.3rem; white-space: nowrap;">👑 관리자 페이지</button>
+                <button id="header-logout-btn" class="btn-text" data-i18n="header.logout"
+                    style="font-size: 0.78rem; display: none; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(255, 255, 255, 0.05);">로그아웃</button>
+                <button id="header-login-btn" class="btn-text" data-i18n="header.login"
+                    style="font-size: 0.78rem; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(255, 255, 255, 0.05);">로그인</button>
                 <div class="admin-theme-control header-theme-control" role="group" aria-label="화면 테마 설정">
-                    <button type="button" class="admin-theme-btn active" data-admin-theme-value="dark" aria-pressed="true" title="다크 테마">Dark</button>
-                    <button type="button" class="admin-theme-btn" data-admin-theme-value="light" aria-pressed="false" title="라이트 테마">Light</button>
+                    <button type="button" class="admin-theme-btn active" data-admin-theme-value="dark"
+                        aria-pressed="true" title="다크 테마">Dark</button>
+                    <button type="button" class="admin-theme-btn" data-admin-theme-value="light" aria-pressed="false"
+                        title="라이트 테마">Light</button>
                 </div>
             </div>
-            <div id="last-login-info" style="display:none; text-align:center; color:var(--text-muted); font-size:0.7rem; margin-top:0.25rem;"></div>
+            <div id="last-login-info"
+                style="display:none; text-align:center; color:var(--text-muted); font-size:0.7rem; margin-top:0.25rem;">
+            </div>
         </header>
         <!-- Tab Navigation -->
         <nav class="tab-nav">
-            <button id="settlement-tab-btn" class="tab-btn active" data-tab="tab-settlement" data-i18n="tab.settlement">📊 비용 정산</button>
-            <button id="attendees-tab-btn" class="tab-btn" data-tab="tab-attendees">👥 현재 참석자 (<span id="attendee-badge-count">0</span>명)</button>
-            <button id="directory-tab-btn" class="tab-btn" data-tab="tab-directory">🗂️ 전사원 명부 (<span id="directory-badge-count">0</span>명)</button>
-            <button id="history-tab-btn" class="tab-btn" data-tab="tab-history" data-i18n="tab.history">📋 정산 이력</button>
-            <button id="club-history-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-club-history" data-i18n="tab.club_history">📋 클럽별 정산이력</button>
-            <button id="charts-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-charts" data-i18n="tab.charts">📈 차트</button>
-            <button id="admin-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-admin" data-i18n="tab.admin">👑 대시보드 관리</button>
+            <button id="settlement-tab-btn" class="tab-btn active" data-tab="tab-settlement"
+                data-i18n="tab.settlement">📊 비용 정산</button>
+            <button id="attendees-tab-btn" class="tab-btn" data-tab="tab-attendees">👥 현재 참석자 (<span
+                    id="attendee-badge-count">0</span>명)</button>
+            <button id="directory-tab-btn" class="tab-btn" data-tab="tab-directory">🗂️ 전사원 명부 (<span
+                    id="directory-badge-count">0</span>명)</button>
+            <button id="history-tab-btn" class="tab-btn" data-tab="tab-history" data-i18n="tab.history">📋 정산
+                이력</button>
+            <button id="club-history-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-club-history"
+                data-i18n="tab.club_history">📋 클럽별 정산이력</button>
+            <button id="charts-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-charts"
+                data-i18n="tab.charts">📈 차트</button>
+            <button id="admin-tab-btn" class="tab-btn tab-btn-accent hidden" data-tab="tab-admin"
+                data-i18n="tab.admin">👑 대시보드 관리</button>
         </nav>
         <!-- Tab Content 1: Settlement Calculator -->
         <div id="tab-settlement" class="tab-pane active">
-            <div id="calc-validation-error-banner" class="hidden" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.6); border-radius:0.5rem; padding:0.55rem 1rem; margin-bottom:0.6rem; font-size:0.82rem; color:#f87171; font-weight:600;"></div>
+            <div id="calc-validation-error-banner" class="hidden"
+                style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.6); border-radius:0.5rem; padding:0.55rem 1rem; margin-bottom:0.6rem; font-size:0.82rem; color:#f87171; font-weight:600;">
+            </div>
             <!-- 수정 모드 배너 -->
-            <div id="edit-mode-banner" class="hidden" style="background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.15)); border:1px solid rgba(245,158,11,0.5); border-radius:0.5rem; padding:0.6rem 1rem; margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
-                <span style="font-size:0.88rem; color:#fbbf24;">✏️ <strong data-i18n="label.edit_mode">수정 모드</strong> — <span id="edit-mode-date"></span> <span data-i18n="label.editing_in_progress">정산 수정 중</span></span>
+            <div id="edit-mode-banner" class="hidden"
+                style="background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.15)); border:1px solid rgba(245,158,11,0.5); border-radius:0.5rem; padding:0.6rem 1rem; margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+                <span style="font-size:0.88rem; color:#fbbf24;">✏️ <strong data-i18n="label.edit_mode">수정 모드</strong> —
+                    <span id="edit-mode-date"></span> <span data-i18n="label.editing_in_progress">정산 수정 중</span></span>
                 <div style="display:flex; gap:0.4rem; flex-shrink:0;">
-                    <button id="edit-mode-done-btn" style="font-size:0.78rem; padding:0.25rem 0.7rem; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.5); color:#4ade80; border-radius:0.3rem; cursor:pointer; white-space:nowrap;">✅ 수정 완료</button>
-                    <button id="edit-mode-cancel-btn" data-i18n="btn.cancel" style="font-size:0.78rem; padding:0.25rem 0.7rem; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:0.3rem; cursor:pointer;">취소</button>
+                    <button id="edit-mode-done-btn"
+                        style="font-size:0.78rem; padding:0.25rem 0.7rem; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.5); color:#4ade80; border-radius:0.3rem; cursor:pointer; white-space:nowrap;">✅
+                        수정 완료</button>
+                    <button id="edit-mode-cancel-btn" data-i18n="btn.cancel"
+                        style="font-size:0.78rem; padding:0.25rem 0.7rem; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:0.3rem; cursor:pointer;">취소</button>
                 </div>
             </div>
             <div class="layout-grid">
@@ -156,18 +273,25 @@
                                     <span class="card-icon">👥</span>
                                     <h2 data-i18n="section.attendance">참석자 및 기존 누적 정보</h2>
                                 </div>
-                                <label for="event-photo-input" class="btn-secondary" style="cursor:pointer; padding:0.35rem 0.7rem; font-size:0.8rem; border-radius:8px; display:inline-flex; align-items:center; gap:0.3rem; flex-shrink:0; white-space:nowrap;">📷 행사 사진</label>
+                                <label for="event-photo-input" class="btn-secondary"
+                                    style="cursor:pointer; padding:0.35rem 0.7rem; font-size:0.8rem; border-radius:8px; display:inline-flex; align-items:center; gap:0.3rem; flex-shrink:0; white-space:nowrap;">📷
+                                    행사 사진</label>
                             </div>
                             <input type="file" id="event-photo-input" accept="image/*" multiple style="display:none;">
                         </div>
-                        <div id="event-photo-preview" class="hidden" style="margin-bottom:0.75rem; padding:0.4rem; border-radius:12px; background:rgba(15,23,42,0.6); display:flex; flex-wrap:wrap; gap:0.25rem; align-items:flex-start; overflow-x:auto;">
+                        <div id="event-photo-preview" class="hidden"
+                            style="margin-bottom:0.75rem; padding:0.4rem; border-radius:12px; background:rgba(15,23,42,0.6); display:flex; flex-wrap:wrap; gap:0.25rem; align-items:flex-start; overflow-x:auto;">
                         </div>
-                        <small id="event-photo-status" class="input-hint" style="display:block; margin:-0.45rem 1rem 0.6rem; font-size:0.72rem; color:var(--text-muted);">사진은 저용량으로 변환해 서버에 임시 저장됩니다.</small>
+                        <small id="event-photo-status" class="input-hint"
+                            style="display:block; margin:-0.45rem 1rem 0.6rem; font-size:0.72rem; color:var(--text-muted);">사진은
+                            저용량으로 변환해 서버에 임시 저장됩니다.</small>
                         <div class="card-body">
                             <div class="input-group">
                                 <label for="member-count-input" data-i18n="label.member_count">정회원 참석자 수 (명)</label>
-                                <input type="number" id="member-count-input" min="0" placeholder="예: 20" value="0" readonly class="readonly-input">
-                                <small class="input-hint" data-i18n="hint.member_count">💡 '참석자 명부' 탭에서 인원을 관리하면 자동 반영됩니다.</small>
+                                <input type="number" id="member-count-input" min="0" placeholder="예: 20" value="0"
+                                    readonly class="readonly-input">
+                                <small class="input-hint" data-i18n="hint.member_count">💡 '참석자 명부' 탭에서 인원을 관리하면 자동
+                                    반영됩니다.</small>
                             </div>
                             <div class="input-group">
                                 <label for="prev-prize-input" data-i18n="label.prize_remaining">올해 상품비 잔여 한도 (원)</label>
@@ -179,7 +303,8 @@
 
                     <!-- 2. Add Expense Item Card -->
                     <div class="card" id="add-expense-card">
-                        <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                        <div class="card-header"
+                            style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
                             <div style="display:flex; align-items:center; gap:0.5rem;">
                                 <span class="card-icon">➕</span>
                                 <h2 data-i18n="section.add_expense">비용 항목 추가</h2>
@@ -201,20 +326,27 @@
                             <form id="expense-form" onsubmit="return false;" autocomplete="off">
                                 <div class="input-group">
                                     <label for="expense-desc-input" data-i18n="label.expense_desc">내역 (항목명)</label>
-                                    <input type="text" id="expense-desc-input" data-i18n-ph="ph.expense_desc" placeholder="예: 저녁 식대, 대관료 등" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                                    <input type="text" id="expense-desc-input" data-i18n-ph="ph.expense_desc"
+                                        placeholder="예: 저녁 식대, 대관료 등" required autocomplete="off" autocorrect="off"
+                                        autocapitalize="off" spellcheck="false">
                                 </div>
                                 <div class="input-row">
                                     <div class="input-group flex-2">
-                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:0.4rem; margin-bottom:0.25rem;">
-                                            <label for="expense-amount-input" data-i18n="label.expense_amount" style="margin-bottom:0;">금액 (원)</label>
-                                            <button type="button" id="expense-rules-guide-btn" class="rules-guide-btn" title="구간별 지원 및 자부담 기준 안내">
+                                        <div
+                                            style="display:flex; align-items:center; justify-content:space-between; gap:0.4rem; margin-bottom:0.25rem;">
+                                            <label for="expense-amount-input" data-i18n="label.expense_amount"
+                                                style="margin-bottom:0;">금액 (원)</label>
+                                            <button type="button" id="expense-rules-guide-btn" class="rules-guide-btn"
+                                                title="구간별 지원 및 자부담 기준 안내">
                                                 <span class="guide-icon">❓</span> <span class="guide-text">정산 기준</span>
                                             </button>
                                         </div>
-                                        <input type="text" inputmode="numeric" id="expense-amount-input" placeholder="예: 150,000" required autocomplete="off">
+                                        <input type="text" inputmode="numeric" id="expense-amount-input"
+                                            placeholder="예: 150,000" required autocomplete="off">
                                     </div>
                                     <div class="input-group flex-3">
-                                        <label for="expense-category-select" data-i18n="label.expense_cat">구분 (카테고리)</label>
+                                        <label for="expense-category-select" data-i18n="label.expense_cat">구분
+                                            (카테고리)</label>
                                         <select id="expense-category-select">
                                             <option value="EVENT">행사비</option>
                                             <option value="FACILITY">시설 및 장비 이용료</option>
@@ -225,38 +357,57 @@
                                 <div class="input-row" id="card-inputs-row">
                                     <div class="input-group flex-1 hidden" id="corp-amount-group">
                                         <div class="card-amount-row">
-                                            <label for="expense-corporate-amount-input" data-i18n="label.corp_card">법인카드</label>
-                                            <input type="text" inputmode="numeric" id="expense-corporate-amount-input" placeholder="법인카드 결제 금액" class="card-amount-input" autocomplete="off">
+                                            <label for="expense-corporate-amount-input"
+                                                data-i18n="label.corp_card">법인카드</label>
+                                            <input type="text" inputmode="numeric" id="expense-corporate-amount-input"
+                                                placeholder="법인카드 결제 금액" class="card-amount-input" autocomplete="off">
                                             <div id="corp-receipt-group" class="receipt-action-group">
-                                                <label for="expense-receipt-corp-input" class="btn-secondary" data-i18n="btn.receipt">영수증</label>
-                                                <input type="file" id="expense-receipt-corp-input" accept="image/*" style="display:none;">
-                                                <small id="receipt-corp-status" class="input-hint hidden" data-i18n="hint.receipt_ready">✓ 영수증 대기 완료</small>
-                                                <button type="button" id="delete-receipt-corp-btn" class="btn-text-danger hidden" data-i18n="btn.delete_receipt">× 영수증 삭제</button>
+                                                <label for="expense-receipt-corp-input" class="btn-secondary"
+                                                    data-i18n="btn.receipt">영수증</label>
+                                                <input type="file" id="expense-receipt-corp-input" accept="image/*"
+                                                    style="display:none;">
+                                                <small id="receipt-corp-status" class="input-hint hidden"
+                                                    data-i18n="hint.receipt_ready">✓ 영수증 대기 완료</small>
+                                                <button type="button" id="delete-receipt-corp-btn"
+                                                    class="btn-text-danger hidden" data-i18n="btn.delete_receipt">× 영수증
+                                                    삭제</button>
                                             </div>
                                         </div>
-                                        <div id="corp-extra-hint" style="display:none; font-size:0.8rem; color:#4ade80; margin-top:0.3rem; padding:0.25rem 0.1rem;">
+                                        <div id="corp-extra-hint"
+                                            style="display:none; font-size:0.8rem; color:#4ade80; margin-top:0.3rem; padding:0.25rem 0.1rem;">
                                         </div>
                                     </div>
                                     <div class="input-group flex-1 hidden" id="personal-amount-group">
                                         <div class="card-amount-row">
-                                            <label for="expense-personal-amount-input" data-i18n="label.personal_card">개인카드</label>
-                                            <input type="text" inputmode="numeric" id="expense-personal-amount-input" placeholder="개인카드 결제 금액" class="card-amount-input" autocomplete="off">
+                                            <label for="expense-personal-amount-input"
+                                                data-i18n="label.personal_card">개인카드</label>
+                                            <input type="text" inputmode="numeric" id="expense-personal-amount-input"
+                                                placeholder="개인카드 결제 금액" class="card-amount-input" autocomplete="off">
                                             <div id="personal-receipt-group" class="receipt-action-group">
-                                                <label for="expense-receipt-personal-input" class="btn-secondary" data-i18n="btn.receipt">영수증</label>
-                                                <input type="file" id="expense-receipt-personal-input" accept="image/*" style="display:none;">
-                                                <small id="receipt-personal-status" class="input-hint hidden" data-i18n="hint.receipt_ready">✓ 영수증 대기 완료</small>
-                                                <button type="button" id="delete-receipt-personal-btn" class="btn-text-danger hidden" data-i18n="btn.delete_receipt">× 영수증 삭제</button>
+                                                <label for="expense-receipt-personal-input" class="btn-secondary"
+                                                    data-i18n="btn.receipt">영수증</label>
+                                                <input type="file" id="expense-receipt-personal-input" accept="image/*"
+                                                    style="display:none;">
+                                                <small id="receipt-personal-status" class="input-hint hidden"
+                                                    data-i18n="hint.receipt_ready">✓ 영수증 대기 완료</small>
+                                                <button type="button" id="delete-receipt-personal-btn"
+                                                    class="btn-text-danger hidden" data-i18n="btn.delete_receipt">× 영수증
+                                                    삭제</button>
                                             </div>
                                         </div>
-                                        <small class="input-hint" id="split-auto-hint" data-i18n="hint.split_auto" style="display:none;">총금액 - 법인카드 금액으로 자동 계산됨</small>
-                                        <div id="pending-self-pay-preview" class="pending-self-pay-preview hidden" role="status" aria-live="polite"></div>
+                                        <small class="input-hint" id="split-auto-hint" data-i18n="hint.split_auto"
+                                            style="display:none;">총금액 - 법인카드 금액으로 자동 계산됨</small>
+                                        <div id="pending-self-pay-preview" class="pending-self-pay-preview hidden"
+                                            role="status" aria-live="polite"></div>
                                     </div>
                                 </div>
                                 <div class="form-actions">
-                                    <button type="submit" id="add-expense-btn" class="btn-primary" data-i18n="btn.add_expense">
+                                    <button type="submit" id="add-expense-btn" class="btn-primary"
+                                        data-i18n="btn.add_expense">
                                         ✨ 항목 추가
                                     </button>
-                                    <button type="button" id="cancel-edit-btn" class="btn-secondary hidden" data-i18n="btn.cancel_edit">
+                                    <button type="button" id="cancel-edit-btn" class="btn-secondary hidden"
+                                        data-i18n="btn.cancel_edit">
                                         수정 취소
                                     </button>
                                 </div>
@@ -275,7 +426,8 @@
                                     <span class="card-icon">📋</span>
                                     <h2 data-i18n="section.expense_list">비용 목록</h2>
                                 </div>
-                                <button id="reset-session-btn" class="btn-text-danger" data-i18n="btn.reset_session">🔄 정산 초기화</button>
+                                <button id="reset-session-btn" class="btn-text-danger" data-i18n="btn.reset_session">🔄
+                                    정산 초기화</button>
                             </div>
                         </div>
                         <div class="card-body scroll-y">
@@ -300,14 +452,15 @@
                                 <button id="toggle-settings-btn" class="btn-icon-only" title="정산 및 발송 설정">⚙️</button>
                             </div>
                         </div>
-                        
+
                         <!-- Collapsible Settings Panel -->
                         <div id="settings-panel" class="settings-panel hidden">
                             <h3 class="settings-title">⚙️ 정산 및 발송 설정</h3>
                             <div class="settings-grid">
                                 <div class="input-group">
                                     <label for="setting-report-email">회사 이메일 주소 (받는 사람)</label>
-                                    <input type="email" id="setting-report-email" placeholder="예: user@company.com" autocomplete="email">
+                                    <input type="email" id="setting-report-email" placeholder="예: user@company.com"
+                                        autocomplete="email">
                                     <small class="input-hint">💡 정산 완료 시 정산 보고서를 수신할 본인 회사 이메일 주소를 입력하세요.</small>
                                 </div>
                                 <div class="input-group" style="padding-top: 0.2rem;">
@@ -315,7 +468,8 @@
                                         <input type="checkbox" id="setting-save-device-check" checked>
                                         <span>작성 디바이스에 엑셀파일 저장하시겠습니까?</span>
                                     </label>
-                                    <small class="input-hint" style="margin-top: 0.25rem;">💡 체크 시 디바이스에 엑셀이 저장되고, 체크 해제 시 파일 저장 없이 이메일만 발송합니다.</small>
+                                    <small class="input-hint" style="margin-top: 0.25rem;">💡 체크 시 디바이스에 엑셀이 저장되고, 체크 해제
+                                        시 파일 저장 없이 이메일만 발송합니다.</small>
                                 </div>
                             </div>
                             <div class="settings-actions">
@@ -325,7 +479,9 @@
                         </div>
                         <div class="card-body">
                             <div style="margin-bottom:0.75rem; position:relative;">
-                                <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:0.3rem;">📅 정산 날짜 (변경 가능)</label>
+                                <label
+                                    style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:0.3rem;">📅
+                                    정산 날짜 (변경 가능)</label>
                                 <input type="date" id="settlement-date-input" style="display:none;">
                                 <button type="button" id="settlement-date-display-btn" class="settle-date-btn">
                                     <span id="settlement-date-display-text"></span>
@@ -338,7 +494,13 @@
                                         <button type="button" class="cal-nav-btn" id="cal-next-month">▶</button>
                                     </div>
                                     <div class="cal-weekdays">
-                                        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+                                        <div>일</div>
+                                        <div>월</div>
+                                        <div>화</div>
+                                        <div>수</div>
+                                        <div>목</div>
+                                        <div>금</div>
+                                        <div>토</div>
                                     </div>
                                     <div id="cal-days-grid" class="cal-days-grid"></div>
                                 </div>
@@ -350,14 +512,21 @@
                                 </div>
                                 <div class="summary-item">
                                     <span class="summary-label">총 자부담 금액</span>
-                                    <span class="summary-value" id="result-total-self-pay" style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">0원</span>
+                                    <span class="summary-value" id="result-total-self-pay"
+                                        style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">0원</span>
                                     <input type="hidden" id="result-total-self-pay-input" />
                                 </div>
-                                <div class="summary-item" id="result-per-person-box" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(249, 115, 22, 0.12)); border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 12px; padding: 0.65rem 0.9rem; margin: 0.3rem 0; box-shadow: 0 0 14px rgba(239, 68, 68, 0.25);">
-                                    <span class="summary-label" style="font-weight:800; color:#f87171; font-size:1rem;"><span id="result-per-person-icon">🔥</span> <span data-i18n="label.per_person_self_pay">인당 자부담 비용</span></span>
+                                <div class="summary-item" id="result-per-person-box"
+                                    style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(249, 115, 22, 0.12)); border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 12px; padding: 0.65rem 0.9rem; margin: 0.3rem 0; box-shadow: 0 0 14px rgba(239, 68, 68, 0.25);">
+                                    <span class="summary-label"
+                                        style="font-weight:800; color:#f87171; font-size:1rem;"><span
+                                            id="result-per-person-icon">🔥</span> <span
+                                            data-i18n="label.per_person_self_pay">인당 자부담 비용</span></span>
                                     <div style="text-align:right;">
-                                        <span class="summary-value highlight" id="result-per-person-self-pay" style="font-size:1.4rem; background: linear-gradient(135deg, #ef4444, #f97316); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">0원</span>
-                                        <span id="result-per-person-policy-note" class="hidden" style="display:block; font-size:0.72rem; color:#fca5a5; margin-top:0.15rem; font-weight:600;"></span>
+                                        <span class="summary-value highlight" id="result-per-person-self-pay"
+                                            style="font-size:1.4rem; background: linear-gradient(135deg, #ef4444, #f97316); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">0원</span>
+                                        <span id="result-per-person-policy-note" class="hidden"
+                                            style="display:block; font-size:0.72rem; color:#fca5a5; margin-top:0.15rem; font-weight:600;"></span>
                                     </div>
                                 </div>
                                 <div class="summary-item">
@@ -365,7 +534,7 @@
                                     <span class="summary-value" id="result-self-pay-ratio">0.0%</span>
                                 </div>
                             </div>
-                            
+
                             <div class="divider"></div>
 
                             <div class="result-details">
@@ -424,13 +593,15 @@
                                         <span id="club-progress-total" class="club-progress-total">배정 0원</span>
                                     </div>
                                     <div class="club-progress-subtext">
-                                        사용 금액: <strong id="club-progress-used">0원</strong> (잔여 <strong id="club-progress-remaining">0원</strong>)
+                                        사용 금액: <strong id="club-progress-used">0원</strong> (잔여 <strong
+                                            id="club-progress-remaining">0원</strong>)
                                     </div>
                                 </div>
                             </div>
 
                             <div class="divider"></div>
-                            <button id="send-email-btn" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">💾 정산 완료</button>
+                            <button id="send-email-btn" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">💾
+                                정산 완료</button>
                         </div>
                     </div>
 
@@ -465,20 +636,25 @@
                                 <div class="input-group" style="position:relative;">
                                     <div class="attendee-label-row">
                                         <label for="attendee-name-input" data-i18n="label.name">이름</label>
-                                        <span id="attendee-duplicate-hint" class="attendee-duplicate-hint hidden" role="alert"></span>
+                                        <span id="attendee-duplicate-hint" class="attendee-duplicate-hint hidden"
+                                            role="alert"></span>
                                     </div>
-                                    <input type="text" id="attendee-name-input" data-i18n-ph="ph.name" placeholder="예: 홍길동" required autocomplete="off">
+                                    <input type="text" id="attendee-name-input" data-i18n-ph="ph.name"
+                                        placeholder="예: 홍길동" required autocomplete="off">
                                     <div id="attendee-name-dropdown" class="hidden attendee-dropdown"></div>
                                 </div>
                                 <div class="input-group">
                                     <label for="attendee-id-input" data-i18n="label.emp_id">사번</label>
-                                    <input type="text" id="attendee-id-input" data-i18n-ph="ph.emp_id" placeholder="예: 12345" required>
+                                    <input type="text" id="attendee-id-input" data-i18n-ph="ph.emp_id"
+                                        placeholder="예: 12345" required>
                                 </div>
                                 <div class="form-actions">
-                                    <button type="submit" id="add-attendee-btn" class="btn-primary" data-i18n="btn.add_attendee_full" style="flex: 1;">
+                                    <button type="submit" id="add-attendee-btn" class="btn-primary"
+                                        data-i18n="btn.add_attendee_full" style="flex: 1;">
                                         👥 참석 추가
                                     </button>
-                                    <button type="button" id="cancel-edit-attendee-btn" class="btn-secondary hidden" data-i18n="btn.cancel_edit" style="flex: 1;">
+                                    <button type="button" id="cancel-edit-attendee-btn" class="btn-secondary hidden"
+                                        data-i18n="btn.cancel_edit" style="flex: 1;">
                                         수정 취소
                                     </button>
                                 </div>
@@ -495,9 +671,12 @@
                             <div class="header-split">
                                 <div class="header-left">
                                     <span class="card-icon">👥</span>
-                                    <h2><span data-i18n="section.current_attendees">현재 참석자 명단</span> (<span id="attendee-list-count">0</span><span data-i18n="unit.person">명</span>)</h2>
+                                    <h2><span data-i18n="section.current_attendees">현재 참석자 명단</span> (<span
+                                            id="attendee-list-count">0</span><span data-i18n="unit.person">명</span>)
+                                    </h2>
                                 </div>
-                                <button id="clear-attendees-btn" class="btn-text-danger" data-i18n="btn.clear_attendees">전체 비우기</button>
+                                <button id="clear-attendees-btn" class="btn-text-danger"
+                                    data-i18n="btn.clear_attendees">전체 비우기</button>
                             </div>
                         </div>
                         <div class="card-body scroll-y" style="max-height: 400px;">
@@ -528,18 +707,22 @@
                             <form id="dir-form" onsubmit="return false;">
                                 <div class="input-group">
                                     <label for="dir-name-input" data-i18n="label.name">이름</label>
-                                    <input type="text" id="dir-name-input" data-i18n-ph="ph.name" placeholder="예: 홍길동" required autocomplete="off">
+                                    <input type="text" id="dir-name-input" data-i18n-ph="ph.name" placeholder="예: 홍길동"
+                                        required autocomplete="off">
                                     <small id="dir-existing-id-hint" class="input-hint hidden"></small>
                                 </div>
                                 <div class="input-group">
                                     <label for="dir-id-input" data-i18n="label.dir_id">EMP ID</label>
-                                    <input type="text" id="dir-id-input" data-i18n-ph="ph.emp_id" placeholder="예: 1234" required>
+                                    <input type="text" id="dir-id-input" data-i18n-ph="ph.emp_id" placeholder="예: 1234"
+                                        required>
                                 </div>
                                 <div class="form-actions">
-                                    <button type="submit" id="add-dir-btn" class="btn-primary" data-i18n="btn.dir_register" style="flex: 1;">
+                                    <button type="submit" id="add-dir-btn" class="btn-primary"
+                                        data-i18n="btn.dir_register" style="flex: 1;">
                                         🗂️ 사원 등록
                                     </button>
-                                    <button type="button" id="cancel-edit-dir-btn" class="btn-secondary hidden" data-i18n="btn.cancel_edit" style="flex: 1;">
+                                    <button type="button" id="cancel-edit-dir-btn" class="btn-secondary hidden"
+                                        data-i18n="btn.cancel_edit" style="flex: 1;">
                                         수정 취소
                                     </button>
                                 </div>
@@ -556,13 +739,16 @@
                             <div class="header-split">
                                 <div class="header-left">
                                     <span class="card-icon">🗂️</span>
-                                    <h2><span data-i18n="section.dir_list">전사원 명부</span> (<span id="directory-count">0</span><span data-i18n="unit.person">명</span>)</h2>
+                                    <h2><span data-i18n="section.dir_list">전사원 명부</span> (<span
+                                            id="directory-count">0</span><span data-i18n="unit.person">명</span>)</h2>
                                 </div>
                                 <div class="header-right">
                                     <div class="dir-search-wrap">
                                         <span class="dir-search-icon">🔍</span>
-                                        <input type="text" id="dir-search-input" placeholder="이름 또는 사번 검색..." autocomplete="off" spellcheck="false">
-                                        <button type="button" id="dir-search-clear-btn" class="dir-search-clear hidden" title="검색어 지우기">&times;</button>
+                                        <input type="text" id="dir-search-input" placeholder="이름 또는 사번 검색..."
+                                            autocomplete="off" spellcheck="false">
+                                        <button type="button" id="dir-search-clear-btn" class="dir-search-clear hidden"
+                                            title="검색어 지우기">&times;</button>
                                     </div>
                                 </div>
                             </div>
@@ -583,7 +769,8 @@
         <!-- Tab Content 4: Settlement History -->
         <div id="tab-history" class="tab-pane hidden">
             <div class="card">
-                <div class="card-header" style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.4rem;">
+                <div class="card-header"
+                    style="justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.4rem;">
                     <div style="display:flex; align-items:center; gap:0.4rem;">
                         <span class="card-icon">📋</span>
                         <h2 data-i18n="tab.history_title">정산 이력</h2>
@@ -591,7 +778,9 @@
                     <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
                         <!-- 상단 글로벌 조회 연도와 연동되는 숨김 상태 -->
                         <input type="hidden" id="user-history-year-select" value="2026">
-                        <span style="font-size:0.75rem; color:var(--text-muted); text-align:right; line-height:1.4; word-break:keep-all;">💡 행사 날짜: 수정 · 참석 인원: 명단 확인<br>엑셀: 해당 행사 행에서 다시 받기</span>
+                        <span
+                            style="font-size:0.75rem; color:var(--text-muted); text-align:right; line-height:1.4; word-break:keep-all;">💡
+                            행사 날짜: 수정 · 참석 인원: 명단 확인<br>엑셀: 해당 행사 행에서 다시 받기</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -603,35 +792,54 @@
         <!-- Tab Content 5: 클럽별 정산이력 (관리자 전용) -->
         <div id="tab-club-history" class="tab-pane hidden">
             <div class="card">
-                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                <div class="card-header"
+                    style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
                     <div>
                         <span class="card-icon">📋</span>
-                        <h2 data-i18n="tab.club_history_title" style="display:inline-block; margin-bottom:0.25rem;">클럽별 정산 이력</h2>
-                        <p class="club-history-guide" style="margin:0;">행사 날짜를 누르면 수정할 수 있으며, 참석 인원을 누르면 명단 확인·복사가 가능합니다.</p>
+                        <h2 data-i18n="tab.club_history_title" style="display:inline-block; margin-bottom:0.25rem;">클럽별
+                            정산 이력</h2>
+                        <p class="club-history-guide" style="margin:0;">행사 날짜를 누르면 수정할 수 있으며, 참석 인원을 누르면 명단 확인·복사가
+                            가능합니다.</p>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
                         <!-- 상단 글로벌 조회 연도와 연동되는 숨김 상태 -->
                         <input type="hidden" id="admin-history-year-select" value="2026">
-                        <button type="button" id="history-export-ppt-btn" class="btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12); color:#fbbf24; border-radius:8px; cursor:pointer;">📊 연간 결산 PPT</button>
+                        <button type="button" id="history-export-ppt-btn" class="btn-secondary"
+                            style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12); color:#fbbf24; border-radius:8px; cursor:pointer;">📊
+                            연간 결산 PPT</button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div id="admin-history-filters-bar" style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom: 1.15rem; align-items:flex-end;">
-                        <div class="input-group" id="admin-club-select-group" style="flex:1; min-width: 170px; margin-bottom:0;">
-                            <label for="admin-club-select" style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">클럽 선택</label>
-                            <select id="admin-club-select" style="width:100%; padding:0.5rem 0.75rem; border-radius:8px;">
+                    <div id="admin-history-filters-bar"
+                        style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom: 1.15rem; align-items:flex-end;">
+                        <div class="input-group" id="admin-club-select-group"
+                            style="flex:1; min-width: 170px; margin-bottom:0;">
+                            <label for="admin-club-select"
+                                style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">클럽
+                                선택</label>
+                            <select id="admin-club-select"
+                                style="width:100%; padding:0.5rem 0.75rem; border-radius:8px;">
                                 <option value="">전체 클럽</option>
                             </select>
                         </div>
-                        <div class="input-group hidden" id="admin-user-select-group" style="flex:1; min-width: 170px; margin-bottom:0;">
-                            <label for="admin-user-select" data-i18n="label.user_select" style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">정산인 선택</label>
-                            <select id="admin-user-select" style="width:100%; padding:0.5rem 0.75rem; border-radius:8px;">
+                        <div class="input-group hidden" id="admin-user-select-group"
+                            style="flex:1; min-width: 170px; margin-bottom:0;">
+                            <label for="admin-user-select" data-i18n="label.user_select"
+                                style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">정산인
+                                선택</label>
+                            <select id="admin-user-select"
+                                style="width:100%; padding:0.5rem 0.75rem; border-radius:8px;">
                                 <option value="">전체 사용자</option>
                             </select>
                         </div>
-                        <div id="admin-history-view-mode-group" style="display:flex; align-items:center; gap:0.35rem; margin-bottom:0; background:rgba(15,23,42,0.4); padding:0.25rem; border-radius:10px; border:1px solid rgba(148,163,184,0.25);">
-                            <button type="button" id="admin-history-mode-detail-btn" class="btn-secondary active" style="padding:0.4rem 0.75rem; font-size:0.8rem; border-radius:7px; cursor:pointer; font-weight:600;" title="상세 내역 보기">📋 상세 내역</button>
-                            <button type="button" id="admin-history-mode-weekday-btn" class="btn-secondary" style="padding:0.4rem 0.75rem; font-size:0.8rem; border-radius:7px; cursor:pointer; font-weight:600;" title="요일별 요약 보기">📅 요일별 요약</button>
+                        <div id="admin-history-view-mode-group"
+                            style="display:flex; align-items:center; gap:0.35rem; margin-bottom:0; background:rgba(15,23,42,0.4); padding:0.25rem; border-radius:10px; border:1px solid rgba(148,163,184,0.25);">
+                            <button type="button" id="admin-history-mode-detail-btn" class="btn-secondary active"
+                                style="padding:0.4rem 0.75rem; font-size:0.8rem; border-radius:7px; cursor:pointer; font-weight:600;"
+                                title="상세 내역 보기">📋 상세 내역</button>
+                            <button type="button" id="admin-history-mode-weekday-btn" class="btn-secondary"
+                                style="padding:0.4rem 0.75rem; font-size:0.8rem; border-radius:7px; cursor:pointer; font-weight:600;"
+                                title="요일별 요약 보기">📅 요일별 요약</button>
                         </div>
                     </div>
                     <div id="admin-history-container" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -659,27 +867,34 @@
 
                 <div class="charts-kpi-row" aria-label="예산 주요 지표">
                     <article class="charts-kpi-card kpi-budget">
-                        <div class="charts-kpi-top"><span class="charts-kpi-icon">💼</span><span class="charts-kpi-label">선택 클럽 총 예산</span></div>
+                        <div class="charts-kpi-top"><span class="charts-kpi-icon">💼</span><span
+                                class="charts-kpi-label">선택 클럽 총 예산</span></div>
                         <strong class="charts-kpi-val" id="charts-total-budget">0원</strong>
                         <span class="charts-kpi-foot">관리자 배정 예산 기준</span>
                     </article>
                     <article class="charts-kpi-card kpi-used">
-                        <div class="charts-kpi-top"><span class="charts-kpi-icon">💳</span><span class="charts-kpi-label">현재 사용 금액</span></div>
+                        <div class="charts-kpi-top"><span class="charts-kpi-icon">💳</span><span
+                                class="charts-kpi-label">현재 사용 금액</span></div>
                         <strong class="charts-kpi-val" id="charts-used-budget">0원</strong>
                         <div class="kpi-mini-gauge-wrap" style="margin-top:0.4rem;">
                             <span class="charts-kpi-foot" id="charts-usage-rate" style="margin-top:0;">예산 소진율 0%</span>
-                            <div class="kpi-mini-gauge-track" style="width:100%; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:0.3rem; overflow:hidden;">
-                                <div id="charts-usage-gauge-fill" style="width:0%; height:100%; background:#fb923c; border-radius:2px; transition:width 0.4s ease, background 0.3s ease;"></div>
+                            <div class="kpi-mini-gauge-track"
+                                style="width:100%; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:0.3rem; overflow:hidden;">
+                                <div id="charts-usage-gauge-fill"
+                                    style="width:0%; height:100%; background:#fb923c; border-radius:2px; transition:width 0.4s ease, background 0.3s ease;">
+                                </div>
                             </div>
                         </div>
                     </article>
                     <article class="charts-kpi-card kpi-remaining">
-                        <div class="charts-kpi-top"><span class="charts-kpi-icon">🪙</span><span class="charts-kpi-label">잔여 예산</span></div>
+                        <div class="charts-kpi-top"><span class="charts-kpi-icon">🪙</span><span
+                                class="charts-kpi-label">잔여 예산</span></div>
                         <strong class="charts-kpi-val" id="charts-remaining-budget">0원</strong>
                         <span class="charts-kpi-foot">기존 사용액 포함</span>
                     </article>
                     <article class="charts-kpi-card kpi-count">
-                        <div class="charts-kpi-top"><span class="charts-kpi-icon">✅</span><span class="charts-kpi-label">올해 정산 건수</span></div>
+                        <div class="charts-kpi-top"><span class="charts-kpi-icon">✅</span><span
+                                class="charts-kpi-label">올해 정산 건수</span></div>
                         <strong class="charts-kpi-val" id="charts-total-count">0건</strong>
                         <span class="charts-kpi-foot">선택 클럽 합계</span>
                     </article>
@@ -694,38 +909,79 @@
                     <article class="card chart-card-glow chart-span-full chart-primary-card">
                         <div class="card-header">
                             <span class="card-icon">📊</span>
-                            <div><h2>월별 지출 현황</h2><div class="chart-subtitle">클럽별 월간 지출액 비교</div></div>
+                            <div>
+                                <h2>월별 지출 현황</h2>
+                                <div class="chart-subtitle">클럽별 월간 지출액 비교</div>
+                            </div>
                         </div>
-                        <div class="card-body"><div class="chart-canvas-wrap chart-canvas-primary"><canvas id="overall-monthly-chart"></canvas></div></div>
+                        <div class="card-body">
+                            <div class="chart-canvas-wrap chart-canvas-primary"><canvas
+                                    id="overall-monthly-chart"></canvas></div>
+                        </div>
                     </article>
 
                     <article class="card chart-card-glow chart-usage-card">
-                        <div class="card-header"><span class="card-icon">🎯</span><div><h2>클럽별 예산 소진율</h2><div class="chart-subtitle">링 = 클럽 고유색 · % 색 = 안전/주의/초과 · 누르면 사용 요약</div></div></div>
-                        <div class="card-body"><div class="chart-canvas-wrap usage-ring-wrap"><canvas id="club-usage-chart" style="display:none"></canvas><div id="club-usage-rings" class="usage-ring-grid" aria-label="클럽별 예산 소진율"></div></div></div>
+                        <div class="card-header"><span class="card-icon">🎯</span>
+                            <div>
+                                <h2>클럽별 예산 소진율</h2>
+                                <div class="chart-subtitle">링 = 클럽 고유색 · % 색 = 안전/주의/초과 · 누르면 사용 요약</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-canvas-wrap usage-ring-wrap"><canvas id="club-usage-chart"
+                                    style="display:none"></canvas>
+                                <div id="club-usage-rings" class="usage-ring-grid" aria-label="클럽별 예산 소진율"></div>
+                            </div>
+                        </div>
                     </article>
 
                     <article class="card chart-card-glow chart-category-card">
-                        <div class="card-header"><span class="card-icon">🥧</span><div><h2>카테고리별 비용 비중</h2><div class="chart-subtitle">행사비 · 시설비 · 상품비 비율</div></div></div>
-                        <div class="card-body"><div class="chart-canvas-wrap"><canvas id="category-pie-chart"></canvas></div></div>
+                        <div class="card-header"><span class="card-icon">🥧</span>
+                            <div>
+                                <h2>카테고리별 비용 비중</h2>
+                                <div class="chart-subtitle">행사비 · 시설비 · 상품비 비율</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-canvas-wrap"><canvas id="category-pie-chart"></canvas></div>
+                        </div>
                     </article>
 
                     <article class="card chart-card-glow chart-span-wide chart-activity-card">
-                        <div class="card-header"><span class="card-icon">🏃</span><div><h2>클럽별 정산 횟수</h2><div class="chart-subtitle">올해 활동량 · 막대를 누르면 사용 요약을 확인합니다</div></div></div>
-                        <div class="card-body"><div class="chart-canvas-wrap"><canvas id="club-activity-chart"></canvas></div></div>
+                        <div class="card-header"><span class="card-icon">🏃</span>
+                            <div>
+                                <h2>클럽별 정산 횟수</h2>
+                                <div class="chart-subtitle">올해 활동량 · 막대를 누르면 사용 요약을 확인합니다</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-canvas-wrap"><canvas id="club-activity-chart"></canvas></div>
+                        </div>
                     </article>
 
                     <aside class="card chart-card-glow recent-settlement-card">
-                        <div class="card-header"><span class="card-icon">🔔</span><div><h2>최근 정산 알림</h2><div class="chart-subtitle">최신 5건 · 참석 인원과 명단 확인</div></div></div>
-                        <div class="card-body"><div id="recent-settlement-list" class="recent-settlement-list" aria-live="polite"></div></div>
+                        <div class="card-header"><span class="card-icon">🔔</span>
+                            <div>
+                                <h2>최근 정산 알림</h2>
+                                <div class="chart-subtitle">최신 5건 · 참석 인원과 명단 확인</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="recent-settlement-list" class="recent-settlement-list" aria-live="polite"></div>
+                        </div>
                     </aside>
 
                     <article class="card chart-card-glow chart-span-full chart-attendees-card">
                         <div class="card-header chart-header-with-cartoon">
                             <div class="chart-header-title-wrap">
                                 <span class="card-icon">👥</span>
-                                <div><h2>클럽별 참석 인원</h2><div class="chart-subtitle">중복을 제외한 실 참석자 수</div></div>
+                                <div>
+                                    <h2>클럽별 참석 인원</h2>
+                                    <div class="chart-subtitle">중복을 제외한 실 참석자 수</div>
+                                </div>
                             </div>
-                            <div id="club-gathering-cartoon" class="club-gathering-cartoon" aria-label="3M 팀워크 모임 애니메이션"></div>
+                            <div id="club-gathering-cartoon" class="club-gathering-cartoon"
+                                aria-label="3M 팀워크 모임 애니메이션"></div>
                         </div>
                         <div class="card-body">
                             <div class="chart-canvas-wrap tall"><canvas id="club-unique-attendees-chart"></canvas></div>
@@ -733,11 +989,18 @@
                     </article>
 
                     <article class="card chart-card-glow chart-span-full chart-selfpay-card">
-                        <div class="card-header"><span class="card-icon">📐</span><div><h2>자부담 / 회사지원금 추이</h2><div class="chart-subtitle">월별 회사 지원금과 참석자 자부담 변화</div></div></div>
+                        <div class="card-header"><span class="card-icon">📐</span>
+                            <div>
+                                <h2>자부담 / 회사지원금 추이</h2>
+                                <div class="chart-subtitle">월별 회사 지원금과 참석자 자부담 변화</div>
+                            </div>
+                        </div>
                         <div class="card-body">
                             <div class="trend-total-summary" aria-label="회사 지원금과 자부담 비용 누적 요약">
-                                <div class="trend-total-card support"><span>총 회사 지원금</span><strong id="selfpay-trend-total-support">0원</strong></div>
-                                <div class="trend-total-card selfpay"><span>총 자부담 비용</span><strong id="selfpay-trend-total-selfpay">0원</strong></div>
+                                <div class="trend-total-card support"><span>총 회사 지원금</span><strong
+                                        id="selfpay-trend-total-support">0원</strong></div>
+                                <div class="trend-total-card selfpay"><span>총 자부담 비용</span><strong
+                                        id="selfpay-trend-total-selfpay">0원</strong></div>
                             </div>
                             <div class="chart-canvas-wrap tall"><canvas id="selfpay-trend-chart"></canvas></div>
                         </div>
@@ -748,11 +1011,16 @@
 
         <!-- Tab Content 7: Admin Dashboard -->
         <div id="tab-admin" class="tab-pane hidden admin-themed-pane" data-admin-theme="dark">
-            <div class="admin-mode-header-wrap" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+            <div class="admin-mode-header-wrap"
+                style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
                 <h2 class="admin-mode-title" data-i18n="admin.mode_title" style="margin-bottom:0;">👑 전체 관리자 모드</h2>
                 <div class="admin-mode-header-actions">
-                    <button type="button" id="admin-export-ppt-btn" class="btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12); color:#fbbf24; border-radius:8px; cursor:pointer;">📊 연간 결산 PPT</button>
-                    <button type="button" id="admin-audit-log-btn" class="btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(56,189,248,0.35); background:rgba(14,165,233,0.12); color:#7dd3fc; border-radius:8px; cursor:pointer;">📜 로그 기록</button>
+                    <button type="button" id="admin-export-ppt-btn" class="btn-secondary"
+                        style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12); color:#fbbf24; border-radius:8px; cursor:pointer;">📊
+                        연간 결산 PPT</button>
+                    <button type="button" id="admin-audit-log-btn" class="btn-secondary"
+                        style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(56,189,248,0.35); background:rgba(14,165,233,0.12); color:#7dd3fc; border-radius:8px; cursor:pointer;">📜
+                        로그 기록</button>
                 </div>
             </div>
             <div class="admin-stats-grid">
@@ -786,14 +1054,22 @@
                             <span class="admin-start-guide-icon" aria-hidden="true">🧭</span>
                         </div>
                         <div class="admin-start-actions">
-                            <button type="button" class="admin-start-action" data-admin-action="club" data-admin-target="club-management-card" aria-controls="club-management-card" aria-expanded="false">
-                                <span class="admin-start-step">1</span><span><strong>클럽·예산 설정</strong><small id="admin-start-club-status">클럽을 먼저 등록해 주세요</small></span><span class="admin-start-toggle-label">열기</span>
+                            <button type="button" class="admin-start-action" data-admin-action="club"
+                                data-admin-target="club-management-card" aria-controls="club-management-card"
+                                aria-expanded="false">
+                                <span class="admin-start-step">1</span><span><strong>클럽·예산 설정</strong><small
+                                        id="admin-start-club-status">클럽을 먼저 등록해 주세요</small></span><span
+                                    class="admin-start-toggle-label">열기</span>
                             </button>
-                            <button type="button" class="admin-start-action" data-admin-action="rules" data-admin-target="rules-management-card" aria-controls="rules-management-card" aria-expanded="false">
-                                <span class="admin-start-step">2</span><span><strong>정산 기준 확인</strong><small>모든 클럽에 공통 적용됩니다</small></span><span class="admin-start-toggle-label">열기</span>
+                            <button type="button" class="admin-start-action" data-admin-action="rules"
+                                data-admin-target="rules-management-card" aria-controls="rules-management-card"
+                                aria-expanded="false">
+                                <span class="admin-start-step">2</span><span><strong>정산 기준 확인</strong><small>모든 클럽에 공통
+                                        적용됩니다</small></span><span class="admin-start-toggle-label">열기</span>
                             </button>
                             <button type="button" class="admin-start-action" data-admin-action="charts">
-                                <span class="admin-start-step">3</span><span><strong>정산 현황 확인</strong><small>이력과 차트에서 운영 현황을 봅니다</small></span><span class="admin-start-arrow">→</span>
+                                <span class="admin-start-step">3</span><span><strong>정산 현황 확인</strong><small>이력과 차트에서 운영
+                                        현황을 봅니다</small></span><span class="admin-start-arrow">→</span>
                             </button>
                         </div>
                     </section>
@@ -807,45 +1083,60 @@
                         <div class="card-body">
                             <div class="settings-grid">
                                 <div class="input-group">
-                                    <label for="admin-setting-limit1" data-i18n="admin.rule_limit1">가. 지원 한도 (원 이하 자부담 0%)</label>
+                                    <label for="admin-setting-limit1" data-i18n="admin.rule_limit1">가. 지원 한도 (원 이하 자부담
+                                        0%)</label>
                                     <input type="text" inputmode="numeric" id="admin-setting-limit1" value="30000">
                                 </div>
                                 <div class="settings-row">
                                     <div class="input-group">
-                                        <label for="admin-setting-limit2" data-i18n="admin.rule_limit2">나. 구간 한도 (원)</label>
+                                        <label for="admin-setting-limit2" data-i18n="admin.rule_limit2">나. 구간 한도
+                                            (원)</label>
                                         <input type="text" inputmode="numeric" id="admin-setting-limit2" value="60000">
                                     </div>
                                     <div class="input-group">
-                                        <label for="admin-setting-rate2" data-i18n="admin.rule_rate2">나. 자부담 비율 (%)</label>
-                                        <input type="number" id="admin-setting-rate2" min="0" max="100" step="1" value="20">
+                                        <label for="admin-setting-rate2" data-i18n="admin.rule_rate2">나. 자부담 비율
+                                            (%)</label>
+                                        <input type="number" id="admin-setting-rate2" min="0" max="100" step="1"
+                                            value="20">
                                     </div>
                                 </div>
                                 <div class="settings-row">
                                     <div class="input-group">
-                                        <label for="admin-setting-limit3" data-i18n="admin.rule_limit3">다. 구간 한도 (원)</label>
+                                        <label for="admin-setting-limit3" data-i18n="admin.rule_limit3">다. 구간 한도
+                                            (원)</label>
                                         <input type="text" inputmode="numeric" id="admin-setting-limit3" value="120000">
                                     </div>
                                     <div class="input-group">
-                                        <label for="admin-setting-rate3" data-i18n="admin.rule_rate3">다. 자부담 비율 (%)</label>
-                                        <input type="number" id="admin-setting-rate3" min="0" max="100" step="1" value="40">
+                                        <label for="admin-setting-rate3" data-i18n="admin.rule_rate3">다. 자부담 비율
+                                            (%)</label>
+                                        <input type="number" id="admin-setting-rate3" min="0" max="100" step="1"
+                                            value="40">
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label for="admin-setting-deduction4" data-i18n="admin.rule_deduct4">라. 초과 시 자부담 공제액 (원)</label>
+                                    <label for="admin-setting-deduction4" data-i18n="admin.rule_deduct4">라. 초과 시 자부담 공제액
+                                        (원)</label>
                                     <input type="text" inputmode="numeric" id="admin-setting-deduction4" value="85000">
                                 </div>
-                                <div class="input-group" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid rgba(255,255,255,0.08);">
+                                <div class="input-group"
+                                    style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid rgba(255,255,255,0.08);">
                                     <label for="admin-setting-prize-limit">🎁 상품비 연간 최대 사용 금액 (원)</label>
-                                    <input type="text" inputmode="numeric" id="admin-setting-prize-limit" value="500000">
+                                    <input type="text" inputmode="numeric" id="admin-setting-prize-limit"
+                                        value="500000">
                                 </div>
-                                <div class="input-group" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid rgba(255,255,255,0.08);">
-                                    <label for="admin-setting-facility-limit">🏢 시설·장비 이용료 이사진 승인 시 법인카드 최대 한도 (원)</label>
-                                    <input type="text" inputmode="numeric" id="admin-setting-facility-limit" value="85000">
+                                <div class="input-group"
+                                    style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid rgba(255,255,255,0.08);">
+                                    <label for="admin-setting-facility-limit">🏢 시설·장비 이용료 이사진 승인 시 법인카드 최대 한도
+                                        (원)</label>
+                                    <input type="text" inputmode="numeric" id="admin-setting-facility-limit"
+                                        value="85000">
                                 </div>
                             </div>
                             <div class="settings-actions">
-                                <button id="admin-save-rules-btn" class="btn-primary-sm" data-i18n="admin.save_rules">정산 비율 저장 (일괄 적용)</button>
-                                <button id="admin-reset-rules-btn" class="btn-text" data-i18n="admin.reset_rules">기본값 복원</button>
+                                <button id="admin-save-rules-btn" class="btn-primary-sm" data-i18n="admin.save_rules">정산
+                                    비율 저장 (일괄 적용)</button>
+                                <button id="admin-reset-rules-btn" class="btn-text" data-i18n="admin.reset_rules">기본값
+                                    복원</button>
                             </div>
                         </div>
                     </div>
@@ -861,16 +1152,25 @@
                         <div class="card-body">
                             <div class="input-row" style="align-items:flex-end;">
                                 <div class="input-group flex-2">
-                                    <label for="club-total-budget-input" data-i18n="admin.total_club_budget_label">올해 사용 가능한 총 클럽비용 (원)</label>
+                                    <label for="club-total-budget-input" data-i18n="admin.total_club_budget_label">올해 사용
+                                        가능한 총 클럽비용 (원)</label>
                                     <div style="display:flex; gap:0.4rem;">
-                                        <input type="text" inputmode="numeric" id="club-total-budget-input" placeholder="예: 50,000,000" style="flex:1; min-width:0;">
-                                        <button type="button" id="save-club-total-budget-btn" class="btn-primary-sm" data-i18n="btn.save">저장</button>
+                                        <input type="text" inputmode="numeric" id="club-total-budget-input"
+                                            placeholder="예: 50,000,000" style="flex:1; min-width:0;">
+                                        <button type="button" id="save-club-total-budget-btn" class="btn-primary-sm"
+                                            data-i18n="btn.save">저장</button>
                                     </div>
-                                    <small id="club-total-budget-status" class="input-hint" data-i18n="state.saved_check" style="display:none; color: var(--color-secondary);">✔️ 저장되었습니다.</small>
+                                    <small id="club-total-budget-status" class="input-hint"
+                                        data-i18n="state.saved_check"
+                                        style="display:none; color: var(--color-secondary);">✔️ 저장되었습니다.</small>
                                 </div>
                                 <div class="input-group flex-1" style="margin:0;">
-                                    <span id="club-budget-summary-label" style="font-size:0.82rem; color:var(--text-secondary);" data-i18n="label.allocated_unallocated">배정 합계 / 미배정</span>
-                                    <strong id="club-budget-summary" style="display:block; font-size:0.95rem; color:var(--color-secondary);">0원 / 0원</strong>
+                                    <span id="club-budget-summary-label"
+                                        style="font-size:0.82rem; color:var(--text-secondary);"
+                                        data-i18n="label.allocated_unallocated">배정 합계 / 미배정</span>
+                                    <strong id="club-budget-summary"
+                                        style="display:block; font-size:0.95rem; color:var(--color-secondary);">0원 /
+                                        0원</strong>
                                 </div>
                             </div>
                             <div class="divider"></div>
@@ -878,18 +1178,23 @@
                                 <div class="input-row">
                                     <div class="input-group flex-2">
                                         <label for="club-name-form-input" data-i18n="admin.club_name_label">클럽명</label>
-                                        <input type="text" id="club-name-form-input" data-i18n-ph="ph.club_name" placeholder="예: 동탄 All balls" required autocomplete="off">
+                                        <input type="text" id="club-name-form-input" data-i18n-ph="ph.club_name"
+                                            placeholder="예: 동탄 All balls" required autocomplete="off">
                                     </div>
                                     <div class="input-group flex-1">
-                                        <label for="club-budget-form-input" data-i18n="admin.club_budget_label">배정 예산 (원)</label>
-                                        <input type="text" inputmode="numeric" id="club-budget-form-input" placeholder="예: 5,000,000" required>
+                                        <label for="club-budget-form-input" data-i18n="admin.club_budget_label">배정 예산
+                                            (원)</label>
+                                        <input type="text" inputmode="numeric" id="club-budget-form-input"
+                                            placeholder="예: 5,000,000" required>
                                     </div>
                                 </div>
                                 <div class="form-actions">
-                                    <button type="submit" id="add-club-btn" class="btn-primary" data-i18n="btn.add_club" style="flex:1;">
+                                    <button type="submit" id="add-club-btn" class="btn-primary" data-i18n="btn.add_club"
+                                        style="flex:1;">
                                         ➕ 클럽 추가
                                     </button>
-                                    <button type="button" id="cancel-edit-club-btn" class="btn-secondary hidden" data-i18n="btn.cancel_edit" style="flex:1;">수정 취소</button>
+                                    <button type="button" id="cancel-edit-club-btn" class="btn-secondary hidden"
+                                        data-i18n="btn.cancel_edit" style="flex:1;">수정 취소</button>
                                 </div>
                             </form>
 
@@ -904,7 +1209,8 @@
                                         <div class="club-th club-th-overlimit">85k</div>
                                         <div class="club-th club-th-actions">관리</div>
                                     </div>
-                                    <div id="club-list-container" class="scroll-y" style="max-height: 480px; display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+                                    <div id="club-list-container" class="scroll-y"
+                                        style="max-height: 480px; display:flex; flex-direction:column; gap:0.5rem; overflow-y:auto; -webkit-overflow-scrolling:touch;">
                                         <!-- Populated dynamically -->
                                     </div>
                                 </div>
@@ -915,7 +1221,7 @@
                     <div class="card" id="users-management-card">
                         <div class="card-header">
                             <span class="card-icon">👥</span>
-                            <h2 data-i18n="admin.user_mgmt_title">가입 회원 관리 (이름 / PIN 수정)</h2>
+                            <h2 data-i18n="admin.user_mgmt_title">가입 회원 관리 (이름 / PIN / 권한 설정)</h2>
                             <button type="button" class="card-collapse-btn" data-card="users-management-card">▾</button>
                         </div>
                         <div class="card-body scroll-y" style="max-height: 400px; padding: 0;">
@@ -924,6 +1230,7 @@
                                     <tr>
                                         <th data-i18n="th.name">이름</th>
                                         <th data-i18n="th.pin">6자리 PIN</th>
+                                        <th>권한 / 직책</th>
                                         <th data-i18n="th.join_date">가입일</th>
                                         <th>최근 접속</th>
                                         <th data-i18n="th.manage">관리</th>
@@ -943,7 +1250,8 @@
     </main>
 
     <!-- 관리자 감사 로그 모달 -->
-    <div id="audit-log-modal" class="modal audit-log-modal hidden" role="dialog" aria-modal="true" aria-labelledby="audit-log-modal-title">
+    <div id="audit-log-modal" class="modal audit-log-modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="audit-log-modal-title">
         <div class="modal-content-card card audit-log-modal-card">
             <div class="card-header audit-log-modal-header">
                 <div class="audit-log-title-wrap">
@@ -954,9 +1262,11 @@
                     </div>
                 </div>
                 <div class="audit-log-header-actions">
-                    <button type="button" id="audit-log-clear-btn" class="btn-secondary" style="border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">🗑️ 로그 비우기</button>
+                    <button type="button" id="audit-log-clear-btn" class="btn-secondary"
+                        style="border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">🗑️ 로그 비우기</button>
                     <button type="button" id="audit-log-refresh-btn" class="btn-secondary">↻ 새로고침</button>
-                    <button type="button" class="audit-log-close-btn" id="close-audit-log-modal" aria-label="전체 작업 로그 닫기">&times;</button>
+                    <button type="button" class="audit-log-close-btn" id="close-audit-log-modal"
+                        aria-label="전체 작업 로그 닫기">&times;</button>
                 </div>
             </div>
             <div class="card-body audit-log-modal-body">
@@ -999,7 +1309,9 @@
                     <span id="audit-log-load-status" role="status"></span>
                 </div>
                 <div id="audit-log-list" class="audit-log-list">
-                    <div class="empty-state"><span class="empty-icon">📜</span><p>로그 기록을 불러오는 중입니다.</p></div>
+                    <div class="empty-state"><span class="empty-icon">📜</span>
+                        <p>로그 기록을 불러오는 중입니다.</p>
+                    </div>
                 </div>
                 <div class="audit-log-more-wrap">
                     <button type="button" id="audit-log-load-more-btn" class="btn-secondary hidden">이전 기록 더 보기</button>
@@ -1016,12 +1328,14 @@
     </div>
 
     <!-- 차트 참석자 명단 모달 -->
-    <div id="attendance-roster-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="attendance-roster-title">
+    <div id="attendance-roster-modal" class="modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="attendance-roster-title">
         <div class="modal-content-card card attendance-roster-modal-card">
             <div class="card-header">
                 <span class="card-icon">👥</span>
                 <h2 id="attendance-roster-title">참석자 명단</h2>
-                <button type="button" id="close-attendance-roster-modal" class="attendance-roster-close" aria-label="참석자 명단 닫기">&times;</button>
+                <button type="button" id="close-attendance-roster-modal" class="attendance-roster-close"
+                    aria-label="참석자 명단 닫기">&times;</button>
             </div>
             <div class="card-body">
                 <p id="attendance-roster-summary" class="attendance-roster-summary"></p>
@@ -1036,12 +1350,14 @@
     </div>
 
     <!-- 클럽별 사용 요약 모달 -->
-    <div id="club-usage-summary-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="club-usage-summary-title">
+    <div id="club-usage-summary-modal" class="modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="club-usage-summary-title">
         <div class="modal-content-card card club-usage-summary-modal-card">
             <div class="card-header">
                 <span class="card-icon">📊</span>
                 <h2 id="club-usage-summary-title">클럽 사용 요약</h2>
-                <button type="button" id="close-club-usage-summary-modal" class="attendance-roster-close" aria-label="클럽 사용 요약 닫기">&times;</button>
+                <button type="button" id="close-club-usage-summary-modal" class="attendance-roster-close"
+                    aria-label="클럽 사용 요약 닫기">&times;</button>
             </div>
             <div class="card-body">
                 <p id="club-usage-summary-description" class="attendance-roster-summary"></p>
@@ -1050,7 +1366,14 @@
                     <table class="club-usage-summary-table">
                         <thead>
                             <tr>
-                                <th>행사 날짜</th><th>참석 인원</th><th>행사비</th><th>시설·장비 이용료</th><th>상품비</th><th>회사 지원금</th><th>자부담 비용</th><th>총 비용</th>
+                                <th>행사 날짜</th>
+                                <th>참석 인원</th>
+                                <th>행사비</th>
+                                <th>시설·장비 이용료</th>
+                                <th>상품비</th>
+                                <th>회사 지원금</th>
+                                <th>자부담 비용</th>
+                                <th>총 비용</th>
                             </tr>
                         </thead>
                         <tbody id="club-usage-summary-list"></tbody>
@@ -1064,30 +1387,42 @@
     </div>
 
     <!-- 연간 결산 PPT 생성 모달 -->
-    <div id="year-end-ppt-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="year-end-ppt-title" style="padding: 2rem 0.75rem; justify-content: flex-start !important; overflow-y: auto;">
-        <div class="modal-content-card card" style="max-width: 520px; width: 100%; margin: auto !important; border: 1px solid var(--card-border); border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.45);">
-            <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+    <div id="year-end-ppt-modal" class="modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="year-end-ppt-title"
+        style="padding: 2rem 0.75rem; justify-content: flex-start !important; overflow-y: auto;">
+        <div class="modal-content-card card"
+            style="max-width: 520px; width: 100%; margin: auto !important; border: 1px solid var(--card-border); border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.45);">
+            <div class="card-header"
+                style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.15rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <span class="card-icon">📊</span>
                     <h2 id="year-end-ppt-title" style="margin: 0; font-size: 1.15rem;">연간 클럽 결산 PPT 보고서</h2>
                 </div>
-                <button type="button" id="close-year-end-ppt-modal" class="attendance-roster-close" aria-label="닫기">&times;</button>
+                <button type="button" id="close-year-end-ppt-modal" class="attendance-roster-close"
+                    aria-label="닫기">&times;</button>
             </div>
             <div class="card-body" style="padding: 1rem 1.15rem 1.15rem;">
                 <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 0.75rem; line-height: 1.45;">
                     한 해 동안 집행된 전사 클럽 활동 및 비용 정산 데이터를 집계하여 경영진 보고용 파워포인트(.pptx) 파일로 생성합니다.
                 </p>
                 <div class="input-group" style="margin-bottom: 0.75rem;">
-                    <label for="year-end-ppt-year-select" style="font-weight: 600; font-size: 0.84rem; margin-bottom: 0.35rem; display: block; color: var(--text-primary);">결산 대상 연도 선택</label>
-                    <select id="year-end-ppt-year-select" style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: 0.92rem;"></select>
+                    <label for="year-end-ppt-year-select"
+                        style="font-weight: 600; font-size: 0.84rem; margin-bottom: 0.35rem; display: block; color: var(--text-primary);">결산
+                        대상 연도 선택</label>
+                    <select id="year-end-ppt-year-select"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: 0.92rem;"></select>
                 </div>
                 <!-- 미리보기 지표 요약 -->
-                <div id="year-end-ppt-preview-box" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.75rem; margin-bottom: 0.95rem;">
+                <div id="year-end-ppt-preview-box"
+                    style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.75rem; margin-bottom: 0.95rem;">
                     <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: center;">데이터 집계 중...</div>
                 </div>
-                <div class="form-actions" style="display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 0.5rem;">
-                    <button type="button" id="cancel-year-end-ppt-btn" class="btn-secondary" style="padding: 0.55rem 1rem; font-size: 0.9rem;">닫기</button>
-                    <button type="button" id="download-year-end-ppt-btn" class="btn-primary" style="padding: 0.55rem 1.2rem; font-size: 0.9rem; background: linear-gradient(135deg, #d97706, #b45309); font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <div class="form-actions"
+                    style="display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 0.5rem;">
+                    <button type="button" id="cancel-year-end-ppt-btn" class="btn-secondary"
+                        style="padding: 0.55rem 1rem; font-size: 0.9rem;">닫기</button>
+                    <button type="button" id="download-year-end-ppt-btn" class="btn-primary"
+                        style="padding: 0.55rem 1.2rem; font-size: 0.9rem; background: linear-gradient(135deg, #d97706, #b45309); font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
                         <span id="year-end-ppt-btn-icon">📥</span> <span id="year-end-ppt-btn-text">PPTX 다운로드</span>
                     </button>
                 </div>
@@ -1096,11 +1431,13 @@
     </div>
 
     <div id="email-report-modal" class="modal hidden">
-        <div class="modal-content-card card" style="max-width: 600px; width: 95%; border: 1px solid var(--card-border); margin: auto;">
+        <div class="modal-content-card card"
+            style="max-width: 600px; width: 95%; border: 1px solid var(--card-border); margin: auto;">
             <div class="card-header">
                 <span class="card-icon">📧</span>
                 <h2 data-i18n="modal.email_title">이메일 정산서 초안</h2>
-                <span class="modal-close" id="close-email-modal" style="position: static; font-size: 28px; cursor: pointer; margin-left: auto; color: var(--text-secondary);">&times;</span>
+                <span class="modal-close" id="close-email-modal"
+                    style="position: static; font-size: 28px; cursor: pointer; margin-left: auto; color: var(--text-secondary);">&times;</span>
             </div>
             <div class="card-body">
                 <div class="input-group">
@@ -1113,7 +1450,9 @@
                 </div>
                 <div class="input-group">
                     <label for="email-body-field" data-i18n="modal.email_body">본문 내용 (복사 가능)</label>
-                    <textarea id="email-body-field" rows="10" style="border: 1px solid var(--card-border); color: var(--text-primary); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.9rem; font-family: monospace; resize: vertical;" readonly></textarea>
+                    <textarea id="email-body-field" rows="10"
+                        style="border: 1px solid var(--card-border); color: var(--text-primary); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.9rem; font-family: monospace; resize: vertical;"
+                        readonly></textarea>
                 </div>
                 <div class="form-actions" style="margin-top: 0.5rem; display: flex; gap: 0.75rem;">
                     <button id="download-excel-btn" class="btn-primary" data-i18n="btn.excel_download" style="flex: 1;">
@@ -1124,16 +1463,22 @@
                     </button>
                 </div>
                 <div style="margin-top: 0.75rem;">
-                    <button id="share-report-btn" class="btn-primary" data-i18n="btn.share_report" style="width:100%; background: linear-gradient(135deg, hsl(38,92%,50%), hsl(282,84%,61%));">
+                    <button id="share-report-btn" class="btn-primary" data-i18n="btn.share_report"
+                        style="width:100%; background: linear-gradient(135deg, hsl(38,92%,50%), hsl(282,84%,61%));">
                         📤 엑셀+사진 첨부하여 공유
                     </button>
-                    <p id="share-report-status" data-i18n="hint.share_report" style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin-top:0.4rem;">엑셀 정산표 + 참석자/영수증 사진을 묶어 공유 시트로 보냅니다 (메일 앱 선택 가능)</p>
+                    <p id="share-report-status" data-i18n="hint.share_report"
+                        style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin-top:0.4rem;">엑셀 정산표
+                        + 참석자/영수증 사진을 묶어 공유 시트로 보냅니다 (메일 앱 선택 가능)</p>
                 </div>
                 <div style="margin-top: 0.75rem;">
-                    <button id="finalize-settlement-btn" class="btn-primary" data-i18n="btn.finalize" style="width:100%; background: linear-gradient(135deg, hsl(152,70%,40%), hsl(190,95%,40%));">
+                    <button id="finalize-settlement-btn" class="btn-primary" data-i18n="btn.finalize"
+                        style="width:100%; background: linear-gradient(135deg, hsl(152,70%,40%), hsl(190,95%,40%));">
                         ✅ 정산 확정 — 이력 저장 &amp; 초기화
                     </button>
-                    <p data-i18n="hint.finalize" style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin-top:0.4rem;">누적 카운트 반영 후 현재 데이터가 초기화됩니다</p>
+                    <p data-i18n="hint.finalize"
+                        style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin-top:0.4rem;">누적 카운트
+                        반영 후 현재 데이터가 초기화됩니다</p>
                 </div>
             </div>
         </div>
@@ -1141,7 +1486,8 @@
 
     <!-- 클럽 추가 배정 금액 입력 모달 -->
     <div id="add-club-budget-modal" class="modal hidden">
-        <div class="modal-content-card card" style="max-width: 360px; width: 90%; border: 1px solid var(--card-border); margin: auto;">
+        <div class="modal-content-card card"
+            style="max-width: 360px; width: 90%; border: 1px solid var(--card-border); margin: auto;">
             <div class="card-header">
                 <span class="card-icon">➕</span>
                 <h2 id="add-club-budget-title" style="font-size:1rem;">추가 배정 금액</h2>
@@ -1152,8 +1498,10 @@
                     <input type="text" inputmode="numeric" id="add-club-budget-input" placeholder="예: 100,000">
                 </div>
                 <div class="form-actions" style="display:flex; gap:0.5rem;">
-                    <button type="button" id="add-club-budget-confirm-btn" class="btn-primary" style="flex:1;">확인</button>
-                    <button type="button" id="add-club-budget-cancel-btn" class="btn-secondary" style="flex:1;">취소</button>
+                    <button type="button" id="add-club-budget-confirm-btn" class="btn-primary"
+                        style="flex:1;">확인</button>
+                    <button type="button" id="add-club-budget-cancel-btn" class="btn-secondary"
+                        style="flex:1;">취소</button>
                 </div>
             </div>
         </div>
@@ -1161,35 +1509,49 @@
 
     <!-- 클럽 없음 알림 모달 (관리자가 삭제/미등록) -->
     <div id="club-not-found-modal" class="modal hidden">
-        <div class="modal-content-card card" style="max-width: 340px; width: 90%; border: 1px solid rgba(239,68,68,0.4); margin: auto; text-align: center; padding: 1.5rem;">
+        <div class="modal-content-card card"
+            style="max-width: 340px; width: 90%; border: 1px solid rgba(239,68,68,0.4); margin: auto; text-align: center; padding: 1.5rem;">
             <p style="font-size: 1.3rem; margin-bottom: 0.5rem;">⚠️</p>
-            <p id="club-not-found-msg" style="font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem;">기존 클럽이 삭제되었습니다.</p>
+            <p id="club-not-found-msg" style="font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem;">기존 클럽이 삭제되었습니다.
+            </p>
             <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">클럽을 새로 선택해 주세요.</p>
-            <button id="club-not-found-ok-btn" class="btn-primary-sm" style="padding: 0.6rem 2rem; font-size: 0.9rem;">확인</button>
+            <button id="club-not-found-ok-btn" class="btn-primary-sm"
+                style="padding: 0.6rem 2rem; font-size: 0.9rem;">확인</button>
         </div>
     </div>
 
     <!-- Excel Saved Confirmation Modal -->
     <div id="excel-saved-modal" class="modal hidden">
-        <div class="modal-content-card card" style="max-width: 340px; width: 90%; border: 1px solid var(--card-border); margin: auto; text-align: center; padding: 1.5rem;">
-            <p data-i18n="excel_saved.title" style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem;">저장이 완료되었습니다.</p>
-            <p data-i18n="excel_saved.question" style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 1.25rem;">화면을 초기화하시겠습니까?</p>
+        <div class="modal-content-card card"
+            style="max-width: 340px; width: 90%; border: 1px solid var(--card-border); margin: auto; text-align: center; padding: 1.5rem;">
+            <p data-i18n="excel_saved.title" style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem;">저장이
+                완료되었습니다.</p>
+            <p data-i18n="excel_saved.question"
+                style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 1.25rem;">화면을 초기화하시겠습니까?</p>
             <div style="display: flex; gap: 0.75rem; justify-content: center;">
-                <button id="excel-saved-reset-btn" class="btn-primary-sm" data-i18n="excel_saved.yes" style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">예, 초기화</button>
-                <button id="excel-saved-keep-btn" class="btn-secondary" data-i18n="excel_saved.no" style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">아니요</button>
+                <button id="excel-saved-reset-btn" class="btn-primary-sm" data-i18n="excel_saved.yes"
+                    style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">예, 초기화</button>
+                <button id="excel-saved-keep-btn" class="btn-secondary" data-i18n="excel_saved.no"
+                    style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">아니요</button>
             </div>
         </div>
     </div>
 
     <!-- Reset Session Confirmation Modal -->
     <div id="reset-session-modal" class="modal hidden">
-        <div class="modal-content-card card" style="max-width: 340px; width: 90%; border: 1px solid var(--card-border); margin: auto; text-align: center; padding: 1.5rem;">
-            <p data-i18n="reset.title" style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem;">현재 정산을 초기화합니다.</p>
-            <p data-i18n="reset.question" style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem; white-space: pre-line;">비용 항목·참석자가 모두 삭제됩니다.
-정산 이력에는 저장되지 않습니다. 계속하시겠습니까?</p>
+        <div class="modal-content-card card"
+            style="max-width: 340px; width: 90%; border: 1px solid var(--card-border); margin: auto; text-align: center; padding: 1.5rem;">
+            <p data-i18n="reset.title" style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem;">현재 정산을
+                초기화합니다.</p>
+            <p data-i18n="reset.question"
+                style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem; white-space: pre-line;">
+                비용 항목·참석자가 모두 삭제됩니다.
+                정산 이력에는 저장되지 않습니다. 계속하시겠습니까?</p>
             <div style="display: flex; gap: 0.75rem; justify-content: center;">
-                <button id="reset-session-confirm-btn" class="btn-primary-sm" data-i18n="reset.yes" style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">예, 초기화</button>
-                <button id="reset-session-cancel-btn" class="btn-secondary" data-i18n="reset.no" style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">취소</button>
+                <button id="reset-session-confirm-btn" class="btn-primary-sm" data-i18n="reset.yes"
+                    style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">예, 초기화</button>
+                <button id="reset-session-cancel-btn" class="btn-secondary" data-i18n="reset.no"
+                    style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">취소</button>
             </div>
         </div>
     </div>
@@ -1202,23 +1564,32 @@
 
     <!-- Feedback / Request Modal -->
     <div id="feedback-modal" class="modal hidden">
-        <div class="modal-content-card card" style="max-width: 480px; width: 95%; border: 1px solid var(--card-border); margin: auto;">
+        <div class="modal-content-card card"
+            style="max-width: 480px; width: 95%; border: 1px solid var(--card-border); margin: auto;">
             <div class="card-header">
                 <span class="card-icon">📩</span>
                 <h2 data-i18n="modal.feedback_title">요청사항 보내기</h2>
-                <span class="modal-close" id="close-feedback-modal" style="position: static; font-size: 28px; cursor: pointer; margin-left: auto; color: var(--text-secondary);">&times;</span>
+                <span class="modal-close" id="close-feedback-modal"
+                    style="position: static; font-size: 28px; cursor: pointer; margin-left: auto; color: var(--text-secondary);">&times;</span>
             </div>
             <div class="card-body">
                 <div class="input-group">
                     <label for="feedback-message-input" data-i18n="modal.feedback_label">메시지</label>
-                    <textarea id="feedback-message-input" rows="5" data-i18n-ph="modal.feedback_ph" placeholder="개발자/관리자에게 전달할 요청사항이나 버그를 적어주세요." style="border: 1px solid var(--card-border); color: var(--text-primary); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.9rem; resize: vertical;"></textarea>
+                    <textarea id="feedback-message-input" rows="5" data-i18n-ph="modal.feedback_ph"
+                        placeholder="개발자/관리자에게 전달할 요청사항이나 버그를 적어주세요."
+                        style="border: 1px solid var(--card-border); color: var(--text-primary); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.9rem; resize: vertical;"></textarea>
                 </div>
                 <div class="input-group">
-                    <label for="feedback-photo-input" class="btn-secondary" style="cursor:pointer; display:inline-flex; align-items:center; gap:0.3rem; padding:0.4rem 0.8rem; font-size:0.85rem; border-radius:8px;">📷 사진 첨부</label>
+                    <label for="feedback-photo-input" class="btn-secondary"
+                        style="cursor:pointer; display:inline-flex; align-items:center; gap:0.3rem; padding:0.4rem 0.8rem; font-size:0.85rem; border-radius:8px;">📷
+                        사진 첨부</label>
                     <input type="file" id="feedback-photo-input" accept="image/*" style="display:none;">
-                    <div id="feedback-photo-preview" class="hidden" style="margin-top:0.6rem; border-radius:12px; overflow:hidden; max-height:240px; position:relative; display:flex; align-items:center; justify-content:center;">
-                        <img id="feedback-photo-img" src="" alt="첨부 사진" style="width:100%; max-height:240px; object-fit:contain; display:block; border-radius:12px;">
-                        <button id="feedback-photo-remove-btn" type="button" style="position:absolute; top:6px; right:6px; background:rgba(239,68,68,0.9); border:none; color:white; border-radius:50%; width:24px; height:24px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold;">&times;</button>
+                    <div id="feedback-photo-preview" class="hidden"
+                        style="margin-top:0.6rem; border-radius:12px; overflow:hidden; max-height:240px; position:relative; display:flex; align-items:center; justify-content:center;">
+                        <img id="feedback-photo-img" src="" alt="첨부 사진"
+                            style="width:100%; max-height:240px; object-fit:contain; display:block; border-radius:12px;">
+                        <button id="feedback-photo-remove-btn" type="button"
+                            style="position:absolute; top:6px; right:6px; background:rgba(239,68,68,0.9); border:none; color:white; border-radius:50%; width:24px; height:24px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold;">&times;</button>
                     </div>
                 </div>
                 <div class="form-actions" style="margin-top: 0.5rem;">
@@ -1226,14 +1597,16 @@
                         📨 요청 보내기
                     </button>
                 </div>
-                <p id="feedback-status" style="font-size:0.78rem; color:var(--text-muted); text-align:center; margin-top:0.4rem;"></p>
+                <p id="feedback-status"
+                    style="font-size:0.78rem; color:var(--text-muted); text-align:center; margin-top:0.4rem;"></p>
             </div>
         </div>
     </div>
 
     <!-- 새 요청사항 알림 팝업 (관리자용) -->
     <div id="feedback-popup-modal" class="modal hidden">
-        <div class="modal-content-card card" style="max-width: 440px; width: 95%; border: 1px solid rgba(245,158,11,0.4); margin: auto; box-shadow: 0 0 24px rgba(245,158,11,0.25);">
+        <div class="modal-content-card card"
+            style="max-width: 440px; width: 95%; border: 1px solid rgba(245,158,11,0.4); margin: auto; box-shadow: 0 0 24px rgba(245,158,11,0.25);">
             <div class="card-header">
                 <span class="card-icon">📩</span>
                 <h2 data-i18n="modal.new_request_title">새 요청사항 도착</h2>
@@ -1241,7 +1614,8 @@
             <div class="card-body">
                 <div id="feedback-popup-body"></div>
                 <div class="form-actions" style="margin-top: 0.75rem;">
-                    <button id="feedback-popup-confirm-btn" class="btn-primary" data-i18n="btn.confirm" style="flex:1;">확인</button>
+                    <button id="feedback-popup-confirm-btn" class="btn-primary" data-i18n="btn.confirm"
+                        style="flex:1;">확인</button>
                 </div>
             </div>
         </div>
@@ -1249,14 +1623,18 @@
 
     <!-- 요청사항 리스트 모달 (관리자용) -->
     <div id="feedback-list-modal" class="modal hidden">
-        <div class="modal-content-card card" style="max-width: 520px; width: 95%; border: 1px solid var(--card-border); margin: auto;">
+        <div class="modal-content-card card"
+            style="max-width: 520px; width: 95%; border: 1px solid var(--card-border); margin: auto;">
             <div class="card-header">
                 <span class="card-icon">📩</span>
                 <h2>요청사항 / 알림 (<span id="feedback-unread-count">0</span>건 안읽음)</h2>
-                <span class="modal-close" id="close-feedback-list-modal" style="position: static; font-size: 28px; cursor: pointer; margin-left: auto; color: var(--text-secondary);">&times;</span>
+                <span class="modal-close" id="close-feedback-list-modal"
+                    style="position: static; font-size: 28px; cursor: pointer; margin-left: auto; color: var(--text-secondary);">&times;</span>
             </div>
             <div class="card-body scroll-y" style="max-height: 60vh; display:flex; flex-direction:column; gap:0.6rem;">
-                <button id="feedback-delete-selected-btn" class="btn-text-danger hidden" style="align-self:flex-end; padding:0.3rem 0.7rem; font-size:0.78rem; border:1px solid rgba(239,68,68,0.3); border-radius:8px;">선택 삭제</button>
+                <button id="feedback-delete-selected-btn" class="btn-text-danger hidden"
+                    style="align-self:flex-end; padding:0.3rem 0.7rem; font-size:0.78rem; border:1px solid rgba(239,68,68,0.3); border-radius:8px;">선택
+                    삭제</button>
                 <div id="feedback-list-container">
                     <!-- Populated dynamically -->
                 </div>
@@ -1266,13 +1644,18 @@
 
     <!-- PIN 로그인 모달 -->
     <div id="pin-login-modal" class="modal">
-        <div class="modal-content-card card pin-modal-card" style="max-width: 340px; width: 90%; border: 1px solid var(--card-border); margin: auto;">
+        <div class="modal-content-card card pin-modal-card"
+            style="max-width: 340px; width: 90%; border: 1px solid var(--card-border); margin: auto;">
             <!-- 로그인 모드 -->
             <div id="login-mode-section">
-                <div class="card-header" style="justify-content: center; text-align: center; flex-direction: column; gap: 0.5rem; border-bottom: none; padding-bottom: 0; padding-top: 0;">
+                <div class="card-header"
+                    style="justify-content: center; text-align: center; flex-direction: column; gap: 0.5rem; border-bottom: none; padding-bottom: 0; padding-top: 0;">
                     <span class="card-icon" style="font-size: 2.2rem; margin: 0;">🔒</span>
-                    <h2 data-i18n="login.title" style="font-size: 1.35rem; font-family: 'Outfit', sans-serif;">클럽 정산 로그인</h2>
-                    <p id="app-version-info" style="font-size: 0.75rem; color: rgba(139,92,246,0.7); margin-top: 0.25rem; text-align: center; letter-spacing: 0.02em; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px;" title="클릭하면 업데이트 내역을 볼 수 있습니다">버전 확인 중...</p>
+                    <h2 data-i18n="login.title" style="font-size: 1.35rem; font-family: 'Outfit', sans-serif;">클럽 정산 로그인
+                    </h2>
+                    <p id="app-version-info"
+                        style="font-size: 0.75rem; color: rgba(139,92,246,0.7); margin-top: 0.25rem; text-align: center; letter-spacing: 0.02em; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px;"
+                        title="클릭하면 업데이트 내역을 볼 수 있습니다">버전 확인 중...</p>
                 </div>
                 <div class="card-body" style="padding-top: 0.5rem; gap: 1rem;">
                     <div class="pin-display-container">
@@ -1283,7 +1666,9 @@
                         <div class="pin-dot"></div>
                         <div class="pin-dot"></div>
                     </div>
-                    <div id="pin-error-text" class="form-error-msg hidden" data-i18n="login.error" style="text-align: center; margin: 0 0 0.5rem; font-size: 0.8rem; padding: 0.35rem;">비밀번호가 올바르지 않거나 네트워크 오류입니다.</div>
+                    <div id="pin-error-text" class="form-error-msg hidden" data-i18n="login.error"
+                        style="text-align: center; margin: 0 0 0.5rem; font-size: 0.8rem; padding: 0.35rem;">비밀번호가 올바르지
+                        않거나 네트워크 오류입니다.</div>
                     <div class="pin-keypad">
                         <button type="button" class="pin-key" data-value="1">1</button>
                         <button type="button" class="pin-key" data-value="2">2</button>
@@ -1299,32 +1684,44 @@
                         <button type="button" class="pin-key" data-value="back">⌫</button>
                     </div>
                     <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
-                        <div id="go-to-register" class="auth-toggle-link" data-i18n="login.go_register">처음 사용하시나요? 회원 등록하기</div>
-                        <button type="button" id="clear-cache-btn" style="background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.35); color:rgba(200,180,255,0.85); font-size:0.78rem; font-weight:600; cursor:pointer; padding:0.55rem 1rem; border-radius:10px; width:100%; letter-spacing:0.02em;">🔄 로그인 전에 이 버튼을 먼저 눌러주세요</button>
+                        <div id="go-to-register" class="auth-toggle-link" data-i18n="login.go_register">처음 사용하시나요? 회원
+                            등록하기</div>
+                        <button type="button" id="clear-cache-btn"
+                            style="background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.35); color:rgba(200,180,255,0.85); font-size:0.78rem; font-weight:600; cursor:pointer; padding:0.55rem 1rem; border-radius:10px; width:100%; letter-spacing:0.02em;">🔄
+                            로그인 전에 이 버튼을 먼저 눌러주세요</button>
                     </div>
                 </div>
             </div>
 
             <!-- 회원 등록 모드 -->
             <div id="register-mode-section" class="hidden">
-                <div class="card-header" style="justify-content: center; text-align: center; flex-direction: column; gap: 0.5rem; border-bottom: none; padding-bottom: 0;">
+                <div class="card-header"
+                    style="justify-content: center; text-align: center; flex-direction: column; gap: 0.5rem; border-bottom: none; padding-bottom: 0;">
                     <span class="card-icon" style="font-size: 2.2rem; margin: 0;">📝</span>
-                    <h2 data-i18n="register.title" style="font-size: 1.35rem; font-family: 'Outfit', sans-serif;">신규 회원 등록</h2>
-                    <p data-i18n="register.subtitle" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.1rem; text-align: center;">이름과 로그인용 6자리 PIN 번호를 등록하세요.<br>💡 사번이 CG001234 형식이라면 'CG'를 뺀 001234를 PIN으로 입력하세요.</p>
+                    <h2 data-i18n="register.title" style="font-size: 1.35rem; font-family: 'Outfit', sans-serif;">신규 회원
+                        등록</h2>
+                    <p data-i18n="register.subtitle"
+                        style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.1rem; text-align: center;">이름과
+                        로그인용 6자리 PIN 번호를 등록하세요.<br>💡 사번이 CG001234 형식이라면 'CG'를 뺀 001234를 PIN으로 입력하세요.</p>
                 </div>
                 <div class="card-body" style="padding-top: 0.5rem; gap: 1rem;">
                     <div class="register-form-container">
                         <div class="input-group">
                             <label for="register-name-input" data-i18n="label.name">이름</label>
-                            <input type="text" id="register-name-input" data-i18n-ph="ph.name" placeholder="예: 홍길동" autocomplete="off">
+                            <input type="text" id="register-name-input" data-i18n-ph="ph.name" placeholder="예: 홍길동"
+                                autocomplete="off">
                         </div>
                         <div class="input-group">
                             <label for="register-pin-input" data-i18n="register.pin_label">6자리 PIN 번호</label>
-                            <input type="password" id="register-pin-input" pattern="[0-9]*" inputmode="numeric" maxlength="6" data-i18n-ph="register.pin_ph" placeholder="숫자 6자리 입력">
+                            <input type="password" id="register-pin-input" pattern="[0-9]*" inputmode="numeric"
+                                maxlength="6" data-i18n-ph="register.pin_ph" placeholder="숫자 6자리 입력">
                         </div>
-                        <div id="register-error-text" class="form-error-msg hidden" style="text-align: center; margin: 0; font-size: 0.8rem; padding: 0.35rem;"></div>
-                        <button id="submit-register-btn" class="btn-primary" data-i18n="register.submit" style="width:100%; padding:0.65rem; border-radius:10px; font-weight:600;">회원 등록 완료</button>
-                        <div id="go-to-login" class="auth-toggle-link" data-i18n="register.go_login">이미 가입하셨나요? 로그인하기</div>
+                        <div id="register-error-text" class="form-error-msg hidden"
+                            style="text-align: center; margin: 0; font-size: 0.8rem; padding: 0.35rem;"></div>
+                        <button id="submit-register-btn" class="btn-primary" data-i18n="register.submit"
+                            style="width:100%; padding:0.65rem; border-radius:10px; font-weight:600;">회원 등록 완료</button>
+                        <div id="go-to-login" class="auth-toggle-link" data-i18n="register.go_login">이미 가입하셨나요? 로그인하기
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1337,127 +1734,207 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
     <!-- 상품비 안내 토스트 팝업 -->
-    <div id="prize-modal-overlay" class="prize-modal-overlay" style="display:none; position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); z-index:10000; width:calc(100% - 2.4rem); max-width:360px; pointer-events:auto;">
-        <div id="prize-modal-card" class="prize-modal-card" style="background:rgba(13,18,35,0.98); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:1.1rem 1.3rem 1rem; box-shadow:0 10px 40px rgba(0,0,0,0.6); backdrop-filter:blur(14px); text-align:center;">
-            <div id="prize-modal-icon" class="prize-modal-icon" style="font-size:1.8rem; line-height:1; margin-bottom:0.35rem;">🎁</div>
-            <div id="prize-modal-title" class="prize-modal-title" style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.5rem;">상품비 안내</div>
-            <p id="prize-modal-msg" class="prize-modal-msg" style="font-size:0.92rem; font-weight:700; color:#ffffff; text-align:center; margin:0 0 1rem; line-height:1.55; white-space:pre-line;"></p>
-            <button id="prize-modal-ok" class="prize-modal-ok-btn" type="button" style="display:block; margin:0 auto; padding:0.45rem 2.2rem; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer; letter-spacing:0.03em;">확인</button>
+    <div id="prize-modal-overlay" class="prize-modal-overlay"
+        style="display:none; position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); z-index:10000; width:calc(100% - 2.4rem); max-width:360px; pointer-events:auto;">
+        <div id="prize-modal-card" class="prize-modal-card"
+            style="background:rgba(13,18,35,0.98); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:1.1rem 1.3rem 1rem; box-shadow:0 10px 40px rgba(0,0,0,0.6); backdrop-filter:blur(14px); text-align:center;">
+            <div id="prize-modal-icon" class="prize-modal-icon"
+                style="font-size:1.8rem; line-height:1; margin-bottom:0.35rem;">🎁</div>
+            <div id="prize-modal-title" class="prize-modal-title"
+                style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.5rem;">
+                상품비 안내</div>
+            <p id="prize-modal-msg" class="prize-modal-msg"
+                style="font-size:0.92rem; font-weight:700; color:#ffffff; text-align:center; margin:0 0 1rem; line-height:1.55; white-space:pre-line;">
+            </p>
+            <button id="prize-modal-ok" class="prize-modal-ok-btn" type="button"
+                style="display:block; margin:0 auto; padding:0.45rem 2.2rem; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer; letter-spacing:0.03em;">확인</button>
         </div>
     </div>
 
     <!-- 변경이력 모달 -->
-    <div id="changelog-modal-overlay" style="display:none; position:fixed; inset:0; z-index:10300; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center;">
-        <div class="changelog-modal-card" style="background:linear-gradient(160deg,#0d0a18,#120e22); border:1.5px solid rgba(139,92,246,0.45); border-radius:20px; padding:1.4rem 1.2rem 1.2rem; max-width:380px; width:calc(100% - 2rem); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 0 40px rgba(139,92,246,0.18), 0 12px 48px rgba(0,0,0,0.7);">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.9rem; flex-shrink:0;">
+    <div id="changelog-modal-overlay"
+        style="display:none; position:fixed; inset:0; z-index:10300; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center;">
+        <div class="changelog-modal-card"
+            style="background:linear-gradient(160deg,#0d0a18,#120e22); border:1.5px solid rgba(139,92,246,0.45); border-radius:20px; padding:1.4rem 1.2rem 1.2rem; max-width:380px; width:calc(100% - 2rem); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 0 40px rgba(139,92,246,0.18), 0 12px 48px rgba(0,0,0,0.7);">
+            <div
+                style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.9rem; flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span style="font-size:1.3rem;">📋</span>
-                    <span id="changelog-modal-title" style="font-size:1rem; font-weight:700; color:#e2e8f0;">업데이트 내역</span>
+                    <span id="changelog-modal-title" style="font-size:1rem; font-weight:700; color:#e2e8f0;">업데이트
+                        내역</span>
                 </div>
-                <button id="changelog-close-btn" style="background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#a78bfa; font-size:1rem; border-radius:50%; width:2rem; height:2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
+                <button id="changelog-close-btn"
+                    style="background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#a78bfa; font-size:1rem; border-radius:50%; width:2rem; height:2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
             </div>
             <div id="changelog-content" style="overflow-y:auto; flex:1; padding-right:0.3rem;"></div>
         </div>
     </div>
 
     <!-- 확인 공통 모달 -->
-    <div id="confirm-modal-overlay" style="display:none; position:fixed; inset:0; z-index:10200; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
-        <div id="confirm-modal-box" style="background:linear-gradient(160deg,#0d0a18,#120e22); border:2px solid rgba(239,68,68,0.55); border-radius:20px; padding:1.6rem 1.4rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(239,68,68,0.22), 0 12px 48px rgba(0,0,0,0.7); text-align:center;">
+    <div id="confirm-modal-overlay"
+        style="display:none; position:fixed; inset:0; z-index:10200; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+        <div id="confirm-modal-box"
+            style="background:linear-gradient(160deg,#0d0a18,#120e22); border:2px solid rgba(239,68,68,0.55); border-radius:20px; padding:1.6rem 1.4rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(239,68,68,0.22), 0 12px 48px rgba(0,0,0,0.7); text-align:center;">
             <div id="confirm-modal-icon" style="font-size:2.6rem; margin-bottom:0.6rem;">🗑️</div>
-            <div id="confirm-modal-title" style="font-size:0.72rem; color:rgba(239,68,68,0.7); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">삭제 확인</div>
-            <p id="confirm-modal-msg" style="font-size:0.97rem; font-weight:800; color:#fff; line-height:1.6; margin:0 0 1.3rem; white-space:pre-line;"></p>
+            <div id="confirm-modal-title"
+                style="font-size:0.72rem; color:rgba(239,68,68,0.7); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">
+                삭제 확인</div>
+            <p id="confirm-modal-msg"
+                style="font-size:0.97rem; font-weight:800; color:#fff; line-height:1.6; margin:0 0 1.3rem; white-space:pre-line;">
+            </p>
             <div style="display:flex; gap:0.6rem; justify-content:center; margin-top:0.5rem;">
-                <button id="confirm-modal-ok" style="padding:0.5rem 1.6rem; background:rgba(239,68,68,0.25); border:2px solid rgba(239,68,68,0.65); color:#fca5a5; border-radius:10px; font-size:0.9rem; font-weight:800; cursor:pointer; letter-spacing:0.03em;">삭제</button>
-                <button id="confirm-modal-cancel" style="padding:0.5rem 1.6rem; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.75); border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;">취소</button>
+                <button id="confirm-modal-ok"
+                    style="padding:0.5rem 1.6rem; background:rgba(239,68,68,0.25); border:2px solid rgba(239,68,68,0.65); color:#fca5a5; border-radius:10px; font-size:0.9rem; font-weight:800; cursor:pointer; letter-spacing:0.03em;">삭제</button>
+                <button id="confirm-modal-cancel"
+                    style="padding:0.5rem 1.6rem; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.75); border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;">취소</button>
             </div>
         </div>
     </div>
 
     <!-- 회원 정보 수정 모달 -->
-    <div id="edit-user-modal-overlay" style="display:none; position:fixed; inset:0; z-index:10200; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
-        <div class="edit-user-modal-card" style="background:linear-gradient(160deg,#0d1424,#0e1830); border:2px solid rgba(99,102,241,0.5); border-radius:20px; padding:1.6rem 1.4rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(99,102,241,0.2), 0 12px 48px rgba(0,0,0,0.7);">
+    <div id="edit-user-modal-overlay"
+        style="display:none; position:fixed; inset:0; z-index:10200; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+        <div class="edit-user-modal-card"
+            style="background:linear-gradient(160deg,#0d1424,#0e1830); border:2px solid rgba(99,102,241,0.5); border-radius:20px; padding:1.6rem 1.4rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(99,102,241,0.2), 0 12px 48px rgba(0,0,0,0.7);">
             <div style="font-size:2rem; text-align:center; margin-bottom:0.4rem;">✏️</div>
-            <div id="edit-user-modal-title" style="font-size:0.72rem; color:rgba(99,102,241,0.8); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; text-align:center; margin-bottom:1rem;">회원 정보 수정</div>
+            <div id="edit-user-modal-title"
+                style="font-size:0.72rem; color:rgba(99,102,241,0.8); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; text-align:center; margin-bottom:1rem;">
+                회원 정보 수정</div>
             <div style="display:flex; flex-direction:column; gap:0.75rem;">
                 <div>
-                    <label class="edit-user-label" style="font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:0.3rem;">이름</label>
-                    <input id="edit-user-name-input" class="edit-user-input" type="text" style="width:100%; box-sizing:border-box; padding:0.5rem 0.7rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:0.5rem; font-size:0.95rem;">
+                    <label class="edit-user-label"
+                        style="font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:0.3rem;">이름</label>
+                    <input id="edit-user-name-input" class="edit-user-input" type="text"
+                        style="width:100%; box-sizing:border-box; padding:0.5rem 0.7rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:0.5rem; font-size:0.95rem;">
                 </div>
                 <div>
-                    <label class="edit-user-label" style="font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:0.3rem;">6자리 PIN</label>
-                    <input id="edit-user-pin-input" class="edit-user-input" type="text" inputmode="numeric" maxlength="6" style="width:100%; box-sizing:border-box; padding:0.5rem 0.7rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:0.5rem; font-size:0.95rem; letter-spacing:0.2em;">
+                    <label class="edit-user-label"
+                        style="font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:0.3rem;">6자리
+                        PIN</label>
+                    <input id="edit-user-pin-input" class="edit-user-input" type="text" inputmode="numeric"
+                        maxlength="6"
+                        style="width:100%; box-sizing:border-box; padding:0.5rem 0.7rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:0.5rem; font-size:0.95rem; letter-spacing:0.2em;">
                 </div>
-                <p id="edit-user-error" style="display:none; font-size:0.8rem; color:#fca5a5; text-align:center; margin:0;"></p>
+                <div>
+                    <label class="edit-user-label"
+                        style="font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:0.3rem;">권한 / 직책 (관리자 페이지 접속 여부)</label>
+                    <select id="edit-user-role-select" class="edit-user-input"
+                        style="width:100%; box-sizing:border-box; padding:0.5rem 0.7rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; border-radius:0.5rem; font-size:0.88rem;">
+                        <option value="member" style="background:#0f172a; color:#fff;">👤 일반 회원 (사용자 페이지 전용)</option>
+                        <option value="president" style="background:#0f172a; color:#fbbf24;">👑 회장 (관리자 페이지 접속 가능)</option>
+                        <option value="developer" style="background:#0f172a; color:#38bdf8;">💻 개발자 (관리자 페이지 접속 가능)</option>
+                        <option value="admin" style="background:#0f172a; color:#a78bfa;">🛡️ 추가 관리자 (관리자 페이지 접속 가능)</option>
+                    </select>
+                </div>
+                <p id="edit-user-error"
+                    style="display:none; font-size:0.8rem; color:#fca5a5; text-align:center; margin:0;"></p>
             </div>
             <div style="display:flex; gap:0.6rem; justify-content:center; margin-top:1.2rem;">
-                <button id="edit-user-modal-ok" class="edit-user-ok-btn" style="padding:0.5rem 1.6rem; background:rgba(99,102,241,0.25); border:2px solid rgba(99,102,241,0.6); color:#c7d2fe; border-radius:10px; font-size:0.9rem; font-weight:800; cursor:pointer;">저장</button>
-                <button id="edit-user-modal-cancel" class="edit-user-cancel-btn" style="padding:0.5rem 1.6rem; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.75); border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;">취소</button>
+                <button id="edit-user-modal-ok" class="edit-user-ok-btn"
+                    style="padding:0.5rem 1.6rem; background:rgba(99,102,241,0.25); border:2px solid rgba(99,102,241,0.6); color:#c7d2fe; border-radius:10px; font-size:0.9rem; font-weight:800; cursor:pointer;">저장</button>
+                <button id="edit-user-modal-cancel" class="edit-user-cancel-btn"
+                    style="padding:0.5rem 1.6rem; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.75); border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;">취소</button>
             </div>
         </div>
     </div>
 
     <!-- 정산 구간 및 자부담 기준 안내 모달 -->
-    <div id="rules-guide-modal-overlay" style="display:none; position:fixed; inset:0; z-index:10300; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem; box-sizing:border-box;">
-        <div class="rules-guide-modal-card" style="background:linear-gradient(160deg,#0d1424,#0f1a36); border:1.5px solid rgba(56,189,248,0.4); border-radius:20px; padding:1.4rem 1.3rem 1.2rem; max-width:580px; width:100%; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 0 40px rgba(56,189,248,0.18), 0 16px 48px rgba(0,0,0,0.7); box-sizing:border-box;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; flex-shrink:0;">
+    <div id="rules-guide-modal-overlay"
+        style="display:none; position:fixed; inset:0; z-index:10300; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem; box-sizing:border-box;">
+        <div class="rules-guide-modal-card"
+            style="background:linear-gradient(160deg,#0d1424,#0f1a36); border:1.5px solid rgba(56,189,248,0.4); border-radius:20px; padding:1.4rem 1.3rem 1.2rem; max-width:580px; width:100%; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 0 40px rgba(56,189,248,0.18), 0 16px 48px rgba(0,0,0,0.7); box-sizing:border-box;">
+            <div
+                style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span style="font-size:1.4rem;">📊</span>
                     <div>
-                        <h3 style="font-size:1.05rem; font-weight:800; color:#f8fafc; margin:0; letter-spacing:-0.01em;">정산 구간 및 자부담 기준 안내</h3>
-                        <p style="font-size:0.74rem; color:#94a3b8; margin:0.15rem 0 0;">인당 행사비(=행사비 ÷ 참석 인원수) 기준 계산 공식 및 예시</p>
+                        <h3
+                            style="font-size:1.05rem; font-weight:800; color:#f8fafc; margin:0; letter-spacing:-0.01em;">
+                            정산 구간 및 자부담 기준 안내</h3>
+                        <p style="font-size:0.74rem; color:#94a3b8; margin:0.15rem 0 0;">인당 행사비(=행사비 ÷ 참석 인원수) 기준 계산 공식
+                            및 예시</p>
                     </div>
                 </div>
-                <button type="button" id="rules-guide-modal-close-btn" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#cbd5e1; font-size:1.1rem; border-radius:50%; width:2rem; height:2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
+                <button type="button" id="rules-guide-modal-close-btn"
+                    style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#cbd5e1; font-size:1.1rem; border-radius:50%; width:2rem; height:2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
             </div>
             <div id="rules-guide-modal-content" style="overflow-y:auto; flex:1; padding-right:0.3rem;">
                 <!-- JS에서 AppState.rules 기준으로 동적 렌더링 -->
             </div>
             <div style="margin-top:0.9rem; flex-shrink:0;">
-                <button type="button" id="rules-guide-modal-confirm-btn" style="width:100%; padding:0.65rem; background:linear-gradient(135deg,#0284c7,#0369a1); border:none; color:#ffffff; border-radius:10px; font-size:0.92rem; font-weight:700; cursor:pointer; box-shadow:0 4px 16px rgba(2,132,199,0.35);">확인</button>
+                <button type="button" id="rules-guide-modal-confirm-btn"
+                    style="width:100%; padding:0.65rem; background:linear-gradient(135deg,#0284c7,#0369a1); border:none; color:#ffffff; border-radius:10px; font-size:0.92rem; font-weight:700; cursor:pointer; box-shadow:0 4px 16px rgba(2,132,199,0.35);">확인</button>
             </div>
         </div>
     </div>
 
     <!-- 시설·장비 이용 안내 팝업 (확인 전용 — 계산 분기 없음, 단순 승인 여부 상기용) -->
-    <div id="facility-approval-modal" style="display:none; position:fixed; inset:0; z-index:10100; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
-        <div class="facility-approval-box" style="background:linear-gradient(160deg,#1a0a00,#1f1206); border:2px solid rgba(251,113,10,0.7); border-radius:20px; padding:1.6rem 1.4rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(251,113,10,0.35), 0 12px 48px rgba(0,0,0,0.7); text-align:center;">
+    <div id="facility-approval-modal"
+        style="display:none; position:fixed; inset:0; z-index:10100; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+        <div class="facility-approval-box"
+            style="background:linear-gradient(160deg,#1a0a00,#1f1206); border:2px solid rgba(251,113,10,0.7); border-radius:20px; padding:1.6rem 1.4rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(251,113,10,0.35), 0 12px 48px rgba(0,0,0,0.7); text-align:center;">
             <div style="font-size:2.6rem; margin-bottom:0.6rem;">⚠️</div>
-            <div id="facility-approval-title" style="font-size:0.72rem; color:rgba(251,113,10,0.7); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">시설·장비 이용 안내</div>
-            <p id="facility-approval-msg" style="font-size:1.0rem; font-weight:800; color:#fff; line-height:1.6; margin:0 0 0.5rem;">시설 및 장비 이용에 대해<br>임원진의 승인을 받으셨나요?</p>
-            <p id="facility-approval-hint" style="font-size:0.82rem; color:rgba(255,200,150,0.8); margin:0 0 1.3rem; line-height:1.5;">법인카드 사용은 인당 <span id="facility-modal-limit" style="color:#fb710a; font-weight:700;">85,000원</span>을<br>초과할 수 없습니다.</p>
-            <button id="facility-approved-btn" style="width:100%; padding:0.7rem; background:linear-gradient(135deg,rgba(251,113,10,0.9),rgba(220,80,0,0.9)); border:none; color:#fff; border-radius:10px; font-size:0.92rem; font-weight:800; cursor:pointer; box-shadow:0 4px 18px rgba(251,113,10,0.4);">확인</button>
+            <div id="facility-approval-title"
+                style="font-size:0.72rem; color:rgba(251,113,10,0.7); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">
+                시설·장비 이용 안내</div>
+            <p id="facility-approval-msg"
+                style="font-size:1.0rem; font-weight:800; color:#fff; line-height:1.6; margin:0 0 0.5rem;">시설 및 장비 이용에
+                대해<br>임원진의 승인을 받으셨나요?</p>
+            <p id="facility-approval-hint"
+                style="font-size:0.82rem; color:rgba(255,200,150,0.8); margin:0 0 1.3rem; line-height:1.5;">법인카드 사용은 인당
+                <span id="facility-modal-limit" style="color:#fb710a; font-weight:700;">85,000원</span>을<br>초과할 수 없습니다.
+            </p>
+            <button id="facility-approved-btn"
+                style="width:100%; padding:0.7rem; background:linear-gradient(135deg,rgba(251,113,10,0.9),rgba(220,80,0,0.9)); border:none; color:#fff; border-radius:10px; font-size:0.92rem; font-weight:800; cursor:pointer; box-shadow:0 4px 18px rgba(251,113,10,0.4);">확인</button>
         </div>
     </div>
 
     <!-- 행사비 인당 지원액 한도 초과 확인 모달 (경고/심각 2단계 — JS에서 스타일·문구 동적 설정) -->
-    <div id="corp-overlimit-approval-modal" style="display:none; position:fixed; inset:0; z-index:10100; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
-        <div class="corp-overlimit-box" style="background:linear-gradient(160deg,#1a0a00,#1f1206); border:2px solid rgba(251,113,10,0.7); border-radius:20px; padding:1.6rem 1.4rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(251,113,10,0.35), 0 12px 48px rgba(0,0,0,0.7); text-align:center; transition:border-color 0.15s, box-shadow 0.15s, background 0.15s;">
+    <div id="corp-overlimit-approval-modal"
+        style="display:none; position:fixed; inset:0; z-index:10100; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+        <div class="corp-overlimit-box"
+            style="background:linear-gradient(160deg,#1a0a00,#1f1206); border:2px solid rgba(251,113,10,0.7); border-radius:20px; padding:1.6rem 1.4rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(251,113,10,0.35), 0 12px 48px rgba(0,0,0,0.7); text-align:center; transition:border-color 0.15s, box-shadow 0.15s, background 0.15s;">
             <div id="corp-overlimit-modal-icon" style="font-size:2.6rem; margin-bottom:0.6rem;">⚠️</div>
-            <div id="corp-overlimit-modal-label" style="font-size:0.72rem; color:rgba(251,113,10,0.7); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">인당 지원 한도 초과 주의</div>
-            <p id="corp-overlimit-modal-msg" style="font-size:1.0rem; font-weight:800; color:#fff; line-height:1.6; margin:0 0 1.3rem;"></p>
+            <div id="corp-overlimit-modal-label"
+                style="font-size:0.72rem; color:rgba(251,113,10,0.7); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">
+                인당 지원 한도 초과 주의</div>
+            <p id="corp-overlimit-modal-msg"
+                style="font-size:1.0rem; font-weight:800; color:#fff; line-height:1.6; margin:0 0 1.3rem;"></p>
             <div style="display:flex; gap:0.7rem;">
-                <button id="corp-overlimit-no-btn" style="flex:1; padding:0.65rem; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.65); border-radius:10px; font-size:0.9rem; font-weight:700; cursor:pointer;">아니요</button>
-                <button id="corp-overlimit-yes-btn" style="flex:1.2; padding:0.65rem; background:linear-gradient(135deg,rgba(251,113,10,0.9),rgba(220,80,0,0.9)); border:none; color:#fff; border-radius:10px; font-size:0.9rem; font-weight:800; cursor:pointer; box-shadow:0 4px 18px rgba(251,113,10,0.4);">✅ 네</button>
+                <button id="corp-overlimit-no-btn"
+                    style="flex:1; padding:0.65rem; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.65); border-radius:10px; font-size:0.9rem; font-weight:700; cursor:pointer;">아니요</button>
+                <button id="corp-overlimit-yes-btn"
+                    style="flex:1.2; padding:0.65rem; background:linear-gradient(135deg,rgba(251,113,10,0.9),rgba(220,80,0,0.9)); border:none; color:#fff; border-radius:10px; font-size:0.9rem; font-weight:800; cursor:pointer; box-shadow:0 4px 18px rgba(251,113,10,0.4);">✅
+                    네</button>
             </div>
         </div>
     </div>
 
     <!-- 조회 연도 선택 팝업 모달 -->
-    <div id="year-picker-modal" style="display:none; position:fixed; inset:0; z-index:10300; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
-        <div class="year-picker-box" style="background:linear-gradient(160deg,#0f172a,#1e1b4b); border:2px solid rgba(139,92,246,0.5); border-radius:20px; padding:1.5rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(139,92,246,0.25), 0 12px 48px rgba(0,0,0,0.7);">
+    <div id="year-picker-modal"
+        style="display:none; position:fixed; inset:0; z-index:10300; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+        <div class="year-picker-box"
+            style="background:linear-gradient(160deg,#0f172a,#1e1b4b); border:2px solid rgba(139,92,246,0.5); border-radius:20px; padding:1.5rem 1.3rem; max-width:340px; width:calc(100% - 2.4rem); box-shadow:0 0 40px rgba(139,92,246,0.25), 0 12px 48px rgba(0,0,0,0.7);">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
                 <div style="display:flex; align-items:center; gap:0.45rem;">
                     <span style="font-size:1.25rem;">📅</span>
-                    <h3 id="year-picker-modal-title" style="margin:0; font-size:1.05rem; font-weight:800; color:#fff;">조회 연도 선택</h3>
+                    <h3 id="year-picker-modal-title" style="margin:0; font-size:1.05rem; font-weight:800; color:#fff;">
+                        조회 연도 선택</h3>
                 </div>
-                <button type="button" id="close-year-picker-modal-btn" onclick="closeYearPickerModal()" style="background:transparent; border:none; color:var(--text-secondary); font-size:1.2rem; cursor:pointer; padding:0.2rem 0.4rem; border-radius:6px; line-height:1;">✕</button>
+                <button type="button" id="close-year-picker-modal-btn" onclick="closeYearPickerModal()"
+                    style="background:transparent; border:none; color:var(--text-secondary); font-size:1.2rem; cursor:pointer; padding:0.2rem 0.4rem; border-radius:6px; line-height:1;">✕</button>
             </div>
-            <p id="year-picker-modal-desc" style="font-size:0.78rem; color:var(--text-secondary); margin:0 0 1rem; line-height:1.4;">현재 등록된 DB에서 조회할 데이터의 연도를 선택하세요.</p>
-            <div id="year-picker-list" style="display:flex; flex-direction:column; gap:0.5rem; max-height:280px; overflow-y:auto; padding-right:0.2rem;">
+            <p id="year-picker-modal-desc"
+                style="font-size:0.78rem; color:var(--text-secondary); margin:0 0 1rem; line-height:1.4;">현재 등록된 DB에서
+                조회할 데이터의 연도를 선택하세요.</p>
+            <div id="year-picker-list"
+                style="display:flex; flex-direction:column; gap:0.5rem; max-height:280px; overflow-y:auto; padding-right:0.2rem;">
                 <!-- JS에서 DB 연도 목록 동적 렌더링 -->
             </div>
             <div style="margin-top:1.1rem; text-align:right;">
-                <button type="button" id="cancel-year-picker-modal-btn" class="year-picker-cancel-btn" onclick="closeYearPickerModal()" style="padding:0.45rem 1.1rem; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.85); border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer;">닫기</button>
+                <button type="button" id="cancel-year-picker-modal-btn" class="year-picker-cancel-btn"
+                    onclick="closeYearPickerModal()"
+                    style="padding:0.45rem 1.1rem; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.85); border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer;">닫기</button>
             </div>
         </div>
     </div>
@@ -1474,7 +1951,7 @@
             if (window.emailjs) {
                 window.emailjs.init('hx7DFf4XX6BP68qm7');
             }
-        } catch (_) {}
+        } catch (_) { }
     </script>
 
     <!-- App JavaScript -->
@@ -1482,245 +1959,246 @@
 
     <!-- Service Worker 등록 & 업데이트 처리 -->
     <script>
-    if ('serviceWorker' in navigator) {
-        let pendingWorker = null;
+        if ('serviceWorker' in navigator) {
+            let pendingWorker = null;
 
-        // 캐시 초기화 직후 리로드인지 확인 — 페이지 로드 시 한 번만 읽어 변수로 보관
-        // (showUpdateBanner와 SW_UPDATED 양쪽에서 removeItem하면 한쪽이 놓침)
-        const _cacheJustCleared = sessionStorage.getItem('cache_just_cleared') === '1';
-        if (_cacheJustCleared) sessionStorage.removeItem('cache_just_cleared');
-        function wasCacheJustCleared() { return _cacheJustCleared; }
+            // 캐시 초기화 직후 리로드인지 확인 — 페이지 로드 시 한 번만 읽어 변수로 보관
+            // (showUpdateBanner와 SW_UPDATED 양쪽에서 removeItem하면 한쪽이 놓침)
+            const _cacheJustCleared = sessionStorage.getItem('cache_just_cleared') === '1';
+            if (_cacheJustCleared) sessionStorage.removeItem('cache_just_cleared');
+            function wasCacheJustCleared() { return _cacheJustCleared; }
 
-        // 로그인 화면 버전 표시
-        function updateVersionDisplay(ver, date) {
-            const el = document.getElementById('app-version-info');
-            if (!el) return;
-            el.textContent = date ? `v${ver}  ·  ${date} 업데이트` : `v${ver}`;
-        }
-
-        // 페이지 로드 시 localStorage에서 버전 정보 즉시 표시
-        (function() {
-            const ver  = localStorage.getItem('app_current_version');
-            const date = localStorage.getItem('app_current_version_date');
-            if (ver) updateVersionDisplay(ver, date);
-        })();
-
-        function showUpdateBanner(worker) {
-            if (wasCacheJustCleared()) return; // 캐시 초기화 후 배너 억제
-            pendingWorker = worker;
-            document.getElementById('update-banner').classList.remove('hidden');
-        }
-
-        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => {
-            // 접속 즉시 새 버전이 있는지 확인
-            reg.update();
-
-            // 이미 대기 중인 새 워커가 있으면 즉시 배너 표시
-            if (reg.waiting) {
-                showUpdateBanner(reg.waiting);
+            // 로그인 화면 버전 표시
+            function updateVersionDisplay(ver, date) {
+                const el = document.getElementById('app-version-info');
+                if (!el) return;
+                el.textContent = date ? `v${ver}  ·  ${date} 업데이트` : `v${ver}`;
             }
 
-            // 새 서비스 워커가 발견되면
-            reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showUpdateBanner(newWorker);
-                    }
-                });
-            });
-        });
+            // 페이지 로드 시 localStorage에서 버전 정보 즉시 표시
+            (function () {
+                const ver = localStorage.getItem('app_current_version');
+                const date = localStorage.getItem('app_current_version_date');
+                if (ver) updateVersionDisplay(ver, date);
+            })();
 
-        // SW controller가 교체되면 자동 리로드 (skipWaiting 후 activate 시 발동)
-        let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (refreshing) return;
-            refreshing = true;
-            window.location.reload();
-        });
-
-        // 버전 정보 저장·표시 (SW_UPDATED / SW_VERSION 공용)
-        function applyVersionInfo(version) {
-            if (!version) return;
-            const today = new Date().toLocaleDateString('ko-KR', {year:'numeric', month:'2-digit', day:'2-digit'})
-                .replace(/\. /g, '.').replace(/\.$/, '');
-            const isNew = localStorage.getItem('app_current_version') !== version;
-            localStorage.setItem('app_current_version', version);
-            if (isNew) localStorage.setItem('app_current_version_date', today);
-            updateVersionDisplay(version, localStorage.getItem('app_current_version_date'));
-        }
-
-        // 서비스 워커에서 메시지 수신
-        navigator.serviceWorker.addEventListener('message', event => {
-            // SW_VERSION: 페이지 로드 시 버전 질의 응답 — 라벨 동기화만, 배너 없음
-            if (event.data?.type === 'SW_VERSION') {
-                applyVersionInfo(event.data.version);
-                return;
-            }
-            // SW_UPDATED: 새 SW activate 직후
-            if (event.data?.type === 'SW_UPDATED') {
-                const version = event.data.version;
-                applyVersionInfo(version);
+            function showUpdateBanner(worker) {
                 if (wasCacheJustCleared()) return; // 캐시 초기화 후 배너 억제
-                document.getElementById('update-banner').dataset.version = version || '';
+                pendingWorker = worker;
                 document.getElementById('update-banner').classList.remove('hidden');
             }
-        });
 
-        // 페이지 로드 시 현재 활성 SW에 버전 질의 — activate 시점 SW_UPDATED가
-        // controllerchange 자동 리로드와 경쟁해 유실되면 라벨이 구버전에 고정되는 문제 해결
-        if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ action: 'getVersion' });
-        } else {
-            // 첫 방문/캐시 초기화 직후: 컨트롤러 장악 후 질의
-            navigator.serviceWorker.ready.then(() => {
-                if (navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({ action: 'getVersion' });
+            navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => {
+                // 접속 즉시 새 버전이 있는지 확인
+                reg.update();
+
+                // 이미 대기 중인 새 워커가 있으면 즉시 배너 표시
+                if (reg.waiting) {
+                    showUpdateBanner(reg.waiting);
                 }
+
+                // 새 서비스 워커가 발견되면
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdateBanner(newWorker);
+                        }
+                    });
+                });
             });
-        }
 
-        // 최종 안전망: 서버의 sw.js에서 배포 버전을 직접 읽어 라벨 표시
-        // — 활성 SW가 구버전이거나(getVersion 미지원), SW 설치가 실패해 멈춰있거나,
-        //   프록시가 구버전을 캐시하는 환경에서도 라벨은 항상 실제 배포 버전을 표시
-        fetch('./sw.js?_=' + Date.now(), { cache: 'no-store' })
-            .then(r => r.ok ? r.text() : '')
-            .then(txt => {
-                const m = txt.match(/APP_VERSION\s*=\s*'([^']+)'/);
-                if (m) applyVersionInfo(m[1]);
-            })
-            .catch(() => {});
-
-        function markUpdateSeen() {
-            const version = document.getElementById('update-banner').dataset.version;
-            if (version) localStorage.setItem('app_update_seen_version', version);
-        }
-
-        // 업데이트 버튼 → skipWaiting 후 새로고침
-        document.getElementById('update-reload-btn').addEventListener('click', () => {
-            markUpdateSeen();
-
+            // SW controller가 교체되면 자동 리로드 (skipWaiting 후 activate 시 발동)
+            let refreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing) return;
+                refreshing = true;
                 window.location.reload();
             });
 
-            // pendingWorker가 비어있으면 등록 정보에서 직접 대기 중인 워커를 조회
-            const worker = pendingWorker || (navigator.serviceWorker.controller && navigator.serviceWorker.getRegistration().then(reg => reg && reg.waiting));
+            // 버전 정보 저장·표시 (SW_UPDATED / SW_VERSION 공용)
+            function applyVersionInfo(version) {
+                if (!version) return;
+                const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                    .replace(/\. /g, '.').replace(/\.$/, '');
+                const isNew = localStorage.getItem('app_current_version') !== version;
+                localStorage.setItem('app_current_version', version);
+                if (isNew) localStorage.setItem('app_current_version_date', today);
+                updateVersionDisplay(version, localStorage.getItem('app_current_version_date'));
+            }
 
-            Promise.resolve(worker).then(w => {
-                if (w) {
-                    w.postMessage({ action: 'skipWaiting' });
+            // 서비스 워커에서 메시지 수신
+            navigator.serviceWorker.addEventListener('message', event => {
+                // SW_VERSION: 페이지 로드 시 버전 질의 응답 — 라벨 동기화만, 배너 없음
+                if (event.data?.type === 'SW_VERSION') {
+                    applyVersionInfo(event.data.version);
+                    return;
                 }
-                // 0.5초 내에 controllerchange가 발생하지 않으면 강제 새로고침
-                setTimeout(() => window.location.reload(), 500);
+                // SW_UPDATED: 새 SW activate 직후
+                if (event.data?.type === 'SW_UPDATED') {
+                    const version = event.data.version;
+                    applyVersionInfo(version);
+                    if (wasCacheJustCleared()) return; // 캐시 초기화 후 배너 억제
+                    document.getElementById('update-banner').dataset.version = version || '';
+                    document.getElementById('update-banner').classList.remove('hidden');
+                }
             });
-        });
 
-        // 닫기 버튼
-        document.getElementById('update-dismiss-btn').addEventListener('click', () => {
-            markUpdateSeen();
-            document.getElementById('update-banner').classList.add('hidden');
-        });
-    }
+            // 페이지 로드 시 현재 활성 SW에 버전 질의 — activate 시점 SW_UPDATED가
+            // controllerchange 자동 리로드와 경쟁해 유실되면 라벨이 구버전에 고정되는 문제 해결
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ action: 'getVersion' });
+            } else {
+                // 첫 방문/캐시 초기화 직후: 컨트롤러 장악 후 질의
+                navigator.serviceWorker.ready.then(() => {
+                    if (navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.controller.postMessage({ action: 'getVersion' });
+                    }
+                });
+            }
+
+            // 최종 안전망: 서버의 sw.js에서 배포 버전을 직접 읽어 라벨 표시
+            // — 활성 SW가 구버전이거나(getVersion 미지원), SW 설치가 실패해 멈춰있거나,
+            //   프록시가 구버전을 캐시하는 환경에서도 라벨은 항상 실제 배포 버전을 표시
+            fetch('./sw.js?_=' + Date.now(), { cache: 'no-store' })
+                .then(r => r.ok ? r.text() : '')
+                .then(txt => {
+                    const m = txt.match(/APP_VERSION\s*=\s*'([^']+)'/);
+                    if (m) applyVersionInfo(m[1]);
+                })
+                .catch(() => { });
+
+            function markUpdateSeen() {
+                const version = document.getElementById('update-banner').dataset.version;
+                if (version) localStorage.setItem('app_update_seen_version', version);
+            }
+
+            // 업데이트 버튼 → skipWaiting 후 새로고침
+            document.getElementById('update-reload-btn').addEventListener('click', () => {
+                markUpdateSeen();
+
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    window.location.reload();
+                });
+
+                // pendingWorker가 비어있으면 등록 정보에서 직접 대기 중인 워커를 조회
+                const worker = pendingWorker || (navigator.serviceWorker.controller && navigator.serviceWorker.getRegistration().then(reg => reg && reg.waiting));
+
+                Promise.resolve(worker).then(w => {
+                    if (w) {
+                        w.postMessage({ action: 'skipWaiting' });
+                    }
+                    // 0.5초 내에 controllerchange가 발생하지 않으면 강제 새로고침
+                    setTimeout(() => window.location.reload(), 500);
+                });
+            });
+
+            // 닫기 버튼
+            document.getElementById('update-dismiss-btn').addEventListener('click', () => {
+                markUpdateSeen();
+                document.getElementById('update-banner').classList.add('hidden');
+            });
+        }
     </script>
     <!-- 정산 날짜 달력 피커 -->
     <script>
-    (function() {
-        const KO_MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-        function pad2(n) { return String(n).padStart(2,'0'); }
-        function toYMD(y,m,d) { return y+'-'+pad2(m)+'-'+pad2(d); }
-        function todayYMD() { return new Date().toISOString().slice(0,10); }
-        function fmtDisplay(ymd) {
-            if (!ymd) return '';
-            var p = ymd.split('-');
-            return p[0]+'년 '+parseInt(p[1])+'월 '+parseInt(p[2])+'일';
-        }
-
-        var calYear, calMonth, selectedYMD;
-
-        function initCalendar() {
-            var hi  = document.getElementById('settlement-date-input');
-            var btn = document.getElementById('settlement-date-display-btn');
-            var txt = document.getElementById('settlement-date-display-text');
-            var cal = document.getElementById('settlement-date-calendar');
-            var lbl = document.getElementById('cal-month-year');
-            var grd = document.getElementById('cal-days-grid');
-            var prv = document.getElementById('cal-prev-month');
-            var nxt = document.getElementById('cal-next-month');
-            if (!hi || !btn || !cal) return;
-
-            function setDate(ymd, notifyDuplicate) {
-                selectedYMD = ymd;
-                hi.value = ymd;
-                txt.textContent = fmtDisplay(ymd);
+        (function () {
+            const KO_MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+            function pad2(n) { return String(n).padStart(2, '0'); }
+            function toYMD(y, m, d) { return y + '-' + pad2(m) + '-' + pad2(d); }
+            function todayYMD() { return new Date().toISOString().slice(0, 10); }
+            function fmtDisplay(ymd) {
+                if (!ymd) return '';
                 var p = ymd.split('-');
-                calYear  = parseInt(p[0]);
-                calMonth = parseInt(p[1]);
-                if (notifyDuplicate) {
-                    hi.dispatchEvent(new CustomEvent('settlement-date-selected', { detail: { date: ymd } }));
-                }
+                return p[0] + '년 ' + parseInt(p[1]) + '월 ' + parseInt(p[2]) + '일';
             }
 
-            function renderGrid() {
-                lbl.textContent = calYear+'년 '+KO_MONTHS[calMonth-1];
-                grd.innerHTML = '';
-                var today = todayYMD();
-                var firstDow = new Date(calYear, calMonth-1, 1).getDay();
-                var daysInMonth = new Date(calYear, calMonth, 0).getDate();
-                for (var i=0; i<firstDow; i++) {
-                    var e = document.createElement('div');
-                    e.className = 'cal-day cal-empty';
-                    grd.appendChild(e);
+            var calYear, calMonth, selectedYMD;
+
+            function initCalendar() {
+                var hi = document.getElementById('settlement-date-input');
+                var btn = document.getElementById('settlement-date-display-btn');
+                var txt = document.getElementById('settlement-date-display-text');
+                var cal = document.getElementById('settlement-date-calendar');
+                var lbl = document.getElementById('cal-month-year');
+                var grd = document.getElementById('cal-days-grid');
+                var prv = document.getElementById('cal-prev-month');
+                var nxt = document.getElementById('cal-next-month');
+                if (!hi || !btn || !cal) return;
+
+                function setDate(ymd, notifyDuplicate) {
+                    selectedYMD = ymd;
+                    hi.value = ymd;
+                    txt.textContent = fmtDisplay(ymd);
+                    var p = ymd.split('-');
+                    calYear = parseInt(p[0]);
+                    calMonth = parseInt(p[1]);
+                    if (notifyDuplicate) {
+                        hi.dispatchEvent(new CustomEvent('settlement-date-selected', { detail: { date: ymd } }));
+                    }
                 }
-                for (var d=1; d<=daysInMonth; d++) {
-                    (function(day) {
-                        var ymd = toYMD(calYear, calMonth, day);
-                        var el  = document.createElement('div');
-                        el.className = 'cal-day';
-                        el.textContent = day;
-                        if (ymd === today) el.classList.add('cal-today');
-                        if (ymd === selectedYMD) el.classList.add('cal-selected');
-                        el.addEventListener('click', function() {
-                            setDate(ymd, true);
-                            cal.classList.add('hidden');
-                            renderGrid();
-                        });
-                        grd.appendChild(el);
-                    })(d);
+
+                function renderGrid() {
+                    lbl.textContent = calYear + '년 ' + KO_MONTHS[calMonth - 1];
+                    grd.innerHTML = '';
+                    var today = todayYMD();
+                    var firstDow = new Date(calYear, calMonth - 1, 1).getDay();
+                    var daysInMonth = new Date(calYear, calMonth, 0).getDate();
+                    for (var i = 0; i < firstDow; i++) {
+                        var e = document.createElement('div');
+                        e.className = 'cal-day cal-empty';
+                        grd.appendChild(e);
+                    }
+                    for (var d = 1; d <= daysInMonth; d++) {
+                        (function (day) {
+                            var ymd = toYMD(calYear, calMonth, day);
+                            var el = document.createElement('div');
+                            el.className = 'cal-day';
+                            el.textContent = day;
+                            if (ymd === today) el.classList.add('cal-today');
+                            if (ymd === selectedYMD) el.classList.add('cal-selected');
+                            el.addEventListener('click', function () {
+                                setDate(ymd, true);
+                                cal.classList.add('hidden');
+                                renderGrid();
+                            });
+                            grd.appendChild(el);
+                        })(d);
+                    }
                 }
+
+                setDate(hi.value || todayYMD(), false);
+
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (hi.value && hi.value !== selectedYMD) setDate(hi.value, false);
+                    renderGrid();
+                    cal.classList.toggle('hidden');
+                });
+                prv.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    calMonth--; if (calMonth < 1) { calMonth = 12; calYear--; }
+                    renderGrid();
+                });
+                nxt.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    calMonth++; if (calMonth > 12) { calMonth = 1; calYear++; }
+                    renderGrid();
+                });
+                cal.addEventListener('click', function (e) { e.stopPropagation(); });
+                document.addEventListener('click', function () { cal.classList.add('hidden'); });
+
+                window._onSettleDateReset = function () { setDate(todayYMD(), false); };
+                window._onSettleDateChange = function (ymd) { setDate(ymd, false); };
             }
 
-            setDate(hi.value || todayYMD(), false);
-
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (hi.value && hi.value !== selectedYMD) setDate(hi.value, false);
-                renderGrid();
-                cal.classList.toggle('hidden');
-            });
-            prv.addEventListener('click', function(e) {
-                e.stopPropagation();
-                calMonth--; if (calMonth < 1) { calMonth=12; calYear--; }
-                renderGrid();
-            });
-            nxt.addEventListener('click', function(e) {
-                e.stopPropagation();
-                calMonth++; if (calMonth > 12) { calMonth=1; calYear++; }
-                renderGrid();
-            });
-            cal.addEventListener('click', function(e) { e.stopPropagation(); });
-            document.addEventListener('click', function() { cal.classList.add('hidden'); });
-
-            window._onSettleDateReset  = function() { setDate(todayYMD(), false); };
-            window._onSettleDateChange = function(ymd) { setDate(ymd, false); };
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initCalendar);
-        } else {
-            initCalendar();
-        }
-    })();
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initCalendar);
+            } else {
+                initCalendar();
+            }
+        })();
     </script>
 </body>
+
 </html>
