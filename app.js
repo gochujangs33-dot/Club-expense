@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.5';
+const APP_VERSION      = '1.7.6';
 const APP_VERSION_DATE = '2026.11.23';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6067,7 +6067,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     border: { type: 'solid', pt: 0.5, color: 'CBD5E1' }
                 });
 
-                // 하단 여백: 해당 클럽 연간 전체 참석 임직원 명단 및 개인별 참석 횟수 카드
+                // 하단 여백: 해당 클럽 연간 전체 참석 임직원 명단 및 개인별 참석 횟수 카드 (글자 겹침·칸 이탈 방지 자동 맞춤)
                 const memberList = Array.from(club.uniqueMap.values())
                     .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name));
 
@@ -6076,28 +6076,96 @@ document.addEventListener('DOMContentLoaded', () => {
                     return `${m.name}${idPart} ${m.count}회`;
                 });
 
-                const tableApproxH = Math.max(0.65, tRows.length * 0.28);
-                const cardY = Math.min(3.98, Math.max(3.18, 1.78 + tableApproxH + 0.16));
-                const cardH = Math.max(1.12, 5.25 - cardY);
+                const estimateRosterLines = (items, fontPt, boxWidthIn = 8.1) => {
+                    if (!items || items.length === 0) return 1;
+                    // 한글/숫자 혼합 평균 폭(in) 보수적 추정 (약 fontPt * 0.0125 in/char 기준, 10% 여유)
+                    const maxUnitsPerLine = (boxWidthIn * 72) / (fontPt * 0.92);
+                    const sepUnits = 3.5; // '  •  '
+                    let lines = 1;
+                    let curUnits = 0;
+                    items.forEach((txt, idx) => {
+                        let units = 0;
+                        for (let i = 0; i < txt.length; i++) {
+                            units += txt.charCodeAt(i) > 127 ? 1.05 : 0.62;
+                        }
+                        const addUnits = (idx > 0 && curUnits > 0 ? sepUnits : 0) + units;
+                        if (curUnits > 0 && curUnits + addUnits > maxUnitsPerLine) {
+                            lines++;
+                            curUnits = units;
+                        } else {
+                            curUnits += addUnits;
+                        }
+                    });
+                    return lines;
+                };
 
-                sc.addShape(pptx.ShapeType.roundRect, {
-                    x: 0.8, y: cardY, w: 8.4, h: cardH,
-                    rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
-                });
+                const pickRosterLayout = (items, availHeightIn, boxWidthIn = 8.1) => {
+                    const presets = [
+                        { fontSize: 8.5, lineSpacing: 1.25 },
+                        { fontSize: 7.8, lineSpacing: 1.18 },
+                        { fontSize: 7.2, lineSpacing: 1.14 },
+                        { fontSize: 6.6, lineSpacing: 1.10 }
+                    ];
+                    for (const p of presets) {
+                        const lineCount = estimateRosterLines(items, p.fontSize, boxWidthIn);
+                        const neededH = lineCount * (p.fontSize / 72) * p.lineSpacing + 0.08;
+                        if (neededH <= availHeightIn) {
+                            return { ...p, fits: true };
+                        }
+                    }
+                    return { ...presets[presets.length - 1], fits: false };
+                };
 
-                sc.addText(`👥 [${club.name}] ${targetYear}년 전체 참석 임직원 명단 (실인원 ${club.uniqueCount}명, 누적 연인원 ${club.attendeesSum}명)`, {
-                    x: 0.95, y: cardY + 0.08, w: 8.1, h: 0.25,
-                    fontSize: 9.5, bold: true, color: '1E40AF', fontFace: font
-                });
+                const tableApproxH = Math.max(0.62, 0.30 + Math.max(0, tRows.length - 1) * 0.255);
+                const sameSlideCardY = 1.78 + tableApproxH + 0.14;
+                const sameSlideAvailCardH = 5.34 - sameSlideCardY;
+                const sameSlideAvailBodyH = sameSlideAvailCardH - 0.38;
+                const sameSlideLayout = pickRosterLayout(memberTexts, Math.max(0, sameSlideAvailBodyH));
 
-                const memberBody = memberTexts.length > 0 
-                    ? memberTexts.join('  •  ')
-                    : '해당 연도 등록된 참석자 기록이 없습니다.';
+                const renderRosterCardOnSlide = (targetSlide, cY, cH, items, titleText, layout) => {
+                    targetSlide.addShape(pptx.ShapeType.roundRect, {
+                        x: 0.8, y: cY, w: 8.4, h: cH,
+                        rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+                    });
+                    targetSlide.addText(titleText, {
+                        x: 0.95, y: cY + 0.07, w: 8.1, h: 0.24,
+                        fontSize: 9.2, bold: true, color: '1E40AF', fontFace: font, valign: 'top', margin: 0
+                    });
+                    const bodyText = items.length > 0
+                        ? items.join('  •  ')
+                        : '해당 연도 등록된 참석자 기록이 없습니다.';
+                    targetSlide.addText(bodyText, {
+                        x: 0.95, y: cY + 0.33, w: 8.1, h: Math.max(0.4, cH - 0.39),
+                        fontSize: layout.fontSize, color: '334155', fontFace: font,
+                        lineSpacingMultiple: layout.lineSpacing, valign: 'top', margin: 0
+                    });
+                };
 
-                sc.addText(memberBody, {
-                    x: 0.95, y: cardY + 0.35, w: 8.1, h: cardH - 0.45,
-                    fontSize: 8.5, color: '334155', fontFace: font, lineSpacingMultiple: 1.35
-                });
+                const rosterTitle = `👥 [${club.name}] ${targetYear}년 전체 참석 임직원 명단 (실인원 ${club.uniqueCount}명, 누적 연인원 ${club.attendeesSum}명)`;
+
+                if (sameSlideAvailCardH >= 0.88 && sameSlideLayout.fits) {
+                    renderRosterCardOnSlide(sc, sameSlideCardY, sameSlideAvailCardH, memberTexts, rosterTitle, sameSlideLayout);
+                } else {
+                    // 표가 길거나 참석 인원이 많아 현재 슬라이드 하단에 겹침/이탈이 예상되면 별도 슬라이드에 깔끔히 배치
+                    const scRoster = pptx.addSlide();
+                    scRoster.background = { color: 'F8FAFC' };
+                    scRoster.addText('CLUB ACTIVITY REPORT — ATTENDEES', {
+                        x: 0.8, y: 0.32, w: 4.5, h: 0.22,
+                        fontSize: 9.5, bold: true, color: '2563EB', fontFace: font
+                    });
+                    scRoster.addText(`[${club.name}] ${targetYear}년 전체 참석 임직원 명단`, {
+                        x: 0.8, y: 0.54, w: 8.4, h: 0.42,
+                        fontSize: 19, bold: true, color: '0F172A', fontFace: font
+                    });
+                    scRoster.addShape(pptx.ShapeType.line, {
+                        x: 0.8, y: 1.0, w: 8.4, h: 0,
+                        line: { color: 'E2E8F0', width: 1 }
+                    });
+                    const fullCardY = 1.16;
+                    const fullCardH = 4.18;
+                    const fullLayout = pickRosterLayout(memberTexts, fullCardH - 0.38);
+                    renderRosterCardOnSlide(scRoster, fullCardY, fullCardH, memberTexts, rosterTitle, fullLayout);
+                }
             });
 
             // [Slide Last] 결산 마감 및 감사 (Closing Slide - 라이트 테마 일체화)
@@ -8090,6 +8158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.6', date: '2026.11.23', items: ['연간 결산 PPT 보고서 클럽별 상세 슬라이드(5p~) 참석자 명단 카드 개선: 행사 표 높이와 참석 인원 수에 맞춰 글자 크기·줄간격을 자동 조절하고, 공간이 부족할 경우 별도 명단 슬라이드로 자동 분리하여 글자 겹침 및 칸 이탈 현상 해결'] },
         { ver: '1.7.5', date: '2026.11.23', items: ['관리자 대시보드 상단 요약 지표 개편: [👥 총 등록 가입자] 카드를 [🏢 총 등록 클럽] 수 표시로 변경'] },
         { ver: '1.7.4', date: '2026.11.23', items: ['관리자 차트 [자부담 / 회사지원금 추이]에 총 자부담 비용 및 총 회사 지원금의 비중(%) 표시 추가 (상단 누적 요약 카드 및 월별 그래프 툴팁 동시 반영)'] },
         { ver: '1.7.3', date: '2026.11.23', items: ['정산 완료 확인 팝업 문구 및 버튼 간소화: 수신 메일, 디바이스 저장(활성화/비활성화), 정산 완료 확인 시 현재 화면 초기화 안내만 깔끔하게 표시되도록 개선'] },
