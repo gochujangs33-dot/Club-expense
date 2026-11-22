@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.3';
+const APP_VERSION      = '1.7.4';
 const APP_VERSION_DATE = '2026.11.23';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -8090,6 +8090,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.4', date: '2026.11.23', items: ['관리자 차트 [자부담 / 회사지원금 추이]에 총 자부담 비용 및 총 회사 지원금의 비중(%) 표시 추가 (상단 누적 요약 카드 및 월별 그래프 툴팁 동시 반영)'] },
         { ver: '1.7.3', date: '2026.11.23', items: ['정산 완료 확인 팝업 문구 및 버튼 간소화: 수신 메일, 디바이스 저장(활성화/비활성화), 정산 완료 확인 시 현재 화면 초기화 안내만 깔끔하게 표시되도록 개선'] },
         { ver: '1.7.2', date: '2026.11.23', items: ['정산 날짜 선택 달력 UI 및 휴일 표시 개선: 실제 달력과 동일하게 일요일이 맨 왼쪽에서 시작해 일~토요일 순으로 정렬되도록 고정하고, 일요일 및 법정 공휴일·대체공휴일은 빨간색(휴일명 표시), 토요일은 파란색으로 명확히 구분 표시', '정산 날짜 선택 버튼에 선택한 날짜의 요일 및 공휴일명(예: (일요일), (목요일 · 광복절))이 해당 요일 색상과 함께 직관적으로 표시되도록 개선'] },
         { ver: '1.7.1', date: '2026.11.12', items: ['관리자 전용 비밀번호(000000) 접속 폐지 및 역할 기반(회장·개발자·추가 관리자) 권한 체계 도입: 본인 PIN으로 로그인 시 사용자 페이지로 우선 접속되며, 관리자 권한 보유자에게만 상단 [👑 관리자 페이지] ↔ [👤 사용자 페이지] 전환 버튼 표시', '초기 관리자 권한 지정(회장: 이현준 003645, 개발자: 김종필 002531) 및 관리자 페이지 [가입 회원 관리]에서 회장/개발자 변경 및 추가 관리자 권한 실시간 부여·해제 기능 탑재'] },
@@ -10768,10 +10769,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const totalSupport = filtered.reduce((sum, entry) => sum + Math.max(0, parseAmount(entry.finalSupportAmount)), 0);
         const totalSelfPay = filtered.reduce((sum, entry) => sum + Math.max(0, parseAmount(entry.totalSelfPay)), 0);
+        const totalCombined = totalSupport + totalSelfPay;
+        const supportRatioPct = totalCombined > 0 ? ((totalSupport / totalCombined) * 100).toFixed(1) : '0.0';
+        const selfPayRatioPct = totalCombined > 0 ? ((totalSelfPay / totalCombined) * 100).toFixed(1) : '0.0';
         const totalSupportEl = document.getElementById('selfpay-trend-total-support');
         const totalSelfPayEl = document.getElementById('selfpay-trend-total-selfpay');
-        if (totalSupportEl) totalSupportEl.textContent = SettlementCalculator.formatCurrency(totalSupport);
-        if (totalSelfPayEl) totalSelfPayEl.textContent = SettlementCalculator.formatCurrency(totalSelfPay);
+        if (totalSupportEl) {
+            totalSupportEl.innerHTML = `${SettlementCalculator.formatCurrency(totalSupport)} <em class="trend-ratio">(${supportRatioPct}%)</em>`;
+        }
+        if (totalSelfPayEl) {
+            totalSelfPayEl.innerHTML = `${SettlementCalculator.formatCurrency(totalSelfPay)} <em class="trend-ratio">(${selfPayRatioPct}%)</em>`;
+        }
 
         const byMonth = {};
         filtered.forEach(entry => {
@@ -10834,7 +10842,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     legend: { labels: { color: '#cbd5e1', boxWidth: 12, boxHeight: 12, borderRadius: 4, padding: 14 } },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `${ctx.dataset.label}: ${SettlementCalculator.formatCurrency(ctx.parsed.y)}`
+                            label: ctx => {
+                                const monthKey = labels[ctx.dataIndex];
+                                const mData = byMonth[monthKey] || { selfPay: 0, support: 0 };
+                                const monthTotal = (mData.support || 0) + (mData.selfPay || 0);
+                                const pct = monthTotal > 0 ? ((ctx.parsed.y / monthTotal) * 100).toFixed(1) : '0.0';
+                                return `${ctx.dataset.label}: ${SettlementCalculator.formatCurrency(ctx.parsed.y)} (${pct}%)`;
+                            }
                         }
                     }
                 },

@@ -2128,6 +2128,7 @@ html[data-app-theme="light"] .club-progress-subtext {
 }
 
 .trend-total-card strong { font-size: 1.2rem; }
+.trend-total-card strong .trend-ratio { font-style: normal; font-size: 0.82em; font-weight: 700; opacity: 0.9; margin-left: 0.2rem; }
 .trend-total-card.support strong { color: #34d399; }
 .trend-total-card.selfpay strong { color: #f87171; }
 
