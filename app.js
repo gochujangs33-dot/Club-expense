@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.4';
+const APP_VERSION      = '1.7.5';
 const APP_VERSION_DATE = '2026.11.23';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -8090,6 +8090,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.5', date: '2026.11.23', items: ['관리자 대시보드 상단 요약 지표 개편: [👥 총 등록 가입자] 카드를 [🏢 총 등록 클럽] 수 표시로 변경'] },
         { ver: '1.7.4', date: '2026.11.23', items: ['관리자 차트 [자부담 / 회사지원금 추이]에 총 자부담 비용 및 총 회사 지원금의 비중(%) 표시 추가 (상단 누적 요약 카드 및 월별 그래프 툴팁 동시 반영)'] },
         { ver: '1.7.3', date: '2026.11.23', items: ['정산 완료 확인 팝업 문구 및 버튼 간소화: 수신 메일, 디바이스 저장(활성화/비활성화), 정산 완료 확인 시 현재 화면 초기화 안내만 깔끔하게 표시되도록 개선'] },
         { ver: '1.7.2', date: '2026.11.23', items: ['정산 날짜 선택 달력 UI 및 휴일 표시 개선: 실제 달력과 동일하게 일요일이 맨 왼쪽에서 시작해 일~토요일 순으로 정렬되도록 고정하고, 일요일 및 법정 공휴일·대체공휴일은 빨간색(휴일명 표시), 토요일은 파란색으로 명확히 구분 표시', '정산 날짜 선택 버튼에 선택한 날짜의 요일 및 공휴일명(예: (일요일), (목요일 · 광복절))이 해당 요일 색상과 함께 직관적으로 표시되도록 개선'] },
@@ -8987,7 +8988,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tbody.appendChild(tr);
             });
-            document.getElementById('admin-total-users').textContent = `${userCount}명`;
+            const totalUsersEl = document.getElementById('admin-total-users');
+            if (totalUsersEl) totalUsersEl.textContent = `${userCount}명`;
 
             tbody.querySelectorAll('.user-role-select').forEach(selectEl => {
                 selectEl.addEventListener('change', () => {
@@ -9321,6 +9323,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         });
         updateAdminStartGuide();
+        const totalClubsEl = document.getElementById('admin-total-clubs');
+        if (totalClubsEl) totalClubsEl.textContent = `${clubs.length}개`;
         const allocated = clubs.reduce((sum, [, c]) => sum + (c.budget || 0), 0);
         const remaining = (AppState.clubTotalBudget || 0) - allocated;
         const budgetSummaryEl = document.getElementById('club-budget-summary');
