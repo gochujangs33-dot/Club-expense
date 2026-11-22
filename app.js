@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.2';
+const APP_VERSION      = '1.7.3';
 const APP_VERSION_DATE = '2026.11.23';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -7130,17 +7130,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const senderEmail = 'Gochujangs33@gmail.com';
             const willSaveExcel = AppState.saveExcelToDevice !== false;
 
-            const confirmMsg = willSaveExcel
-                ? `정산 내역을 Gochujangs33@gmail.com 계정으로 자동 발송하고, 작성 기기에 엑셀 파일을 저장한 뒤 정산을 완료하시겠습니까?\n\n` +
-                  `• 발신 메일: ${senderEmail} (클라우드 자동 발송)\n` +
-                  `• 수신 메일: ${recipientEmail}\n` +
-                  `• 디바이스 저장: 엑셀 파일 다운로드 (ON)\n\n` +
-                  `※ 확인 시 현재 데이터가 정산 이력에 저장되고 화면이 초기화됩니다.`
-                : `정산 내역을 Gochujangs33@gmail.com 계정으로 자동 발송하고 정산을 완료하시겠습니까?\n\n` +
-                  `• 발신 메일: ${senderEmail} (클라우드 자동 발송)\n` +
-                  `• 수신 메일: ${recipientEmail}\n` +
-                  `• 디바이스 저장: 건너뜀 (OFF - 메일만 발송)\n\n` +
-                  `※ 확인 시 현재 데이터가 정산 이력에 저장되고 화면이 초기화됩니다.`;
+            const confirmMsg =
+                `수신 메일 : ${recipientEmail}\n` +
+                `디바이스 저장 : ${willSaveExcel ? '활성화' : '비활성화'}\n\n` +
+                `정산 완료 확인 시 현재 화면이 초기화됩니다.`;
 
             // ── 관리자 DB 중복 정산 사전 검증 (이메일 발송/엑셀 다운로드 전 원천 차단) ──
             const duplicate = await AppState.checkDuplicateSettlement();
@@ -7201,7 +7194,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }, 2000);
                     }
                 },
-                willSaveExcel ? '저장 & 이메일 발송 및 정산 완료' : '이메일 발송 및 정산 완료',
+                '정산 완료',
                 '정산 완료 확인',
                 '💾'
             );
@@ -8097,6 +8090,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.3', date: '2026.11.23', items: ['정산 완료 확인 팝업 문구 및 버튼 간소화: 수신 메일, 디바이스 저장(활성화/비활성화), 정산 완료 확인 시 현재 화면 초기화 안내만 깔끔하게 표시되도록 개선'] },
         { ver: '1.7.2', date: '2026.11.23', items: ['정산 날짜 선택 달력 UI 및 휴일 표시 개선: 실제 달력과 동일하게 일요일이 맨 왼쪽에서 시작해 일~토요일 순으로 정렬되도록 고정하고, 일요일 및 법정 공휴일·대체공휴일은 빨간색(휴일명 표시), 토요일은 파란색으로 명확히 구분 표시', '정산 날짜 선택 버튼에 선택한 날짜의 요일 및 공휴일명(예: (일요일), (목요일 · 광복절))이 해당 요일 색상과 함께 직관적으로 표시되도록 개선'] },
         { ver: '1.7.1', date: '2026.11.12', items: ['관리자 전용 비밀번호(000000) 접속 폐지 및 역할 기반(회장·개발자·추가 관리자) 권한 체계 도입: 본인 PIN으로 로그인 시 사용자 페이지로 우선 접속되며, 관리자 권한 보유자에게만 상단 [👑 관리자 페이지] ↔ [👤 사용자 페이지] 전환 버튼 표시', '초기 관리자 권한 지정(회장: 이현준 003645, 개발자: 김종필 002531) 및 관리자 페이지 [가입 회원 관리]에서 회장/개발자 변경 및 추가 관리자 권한 실시간 부여·해제 기능 탑재'] },
         { ver: '1.7.0', date: '2026.11.11', items: ['3M 사내 클럽 비용 정산기 v1.7.0 정식 최종 배포: 모바일 전용 사용자 매뉴얼 & PC 전용 관리자 매뉴얼 분리 완성, 전사원 명부 실시간(Realtime) 동기화 & 👑 최다 참석 1위 왕관 배지, 정산 결과 총 자부담 자동 일원화 및 사규 최소 기준 미달 방지, 전체 작업 로그 최적화 등 모든 핵심 기능 안정화 및 정식 릴리즈'] },
