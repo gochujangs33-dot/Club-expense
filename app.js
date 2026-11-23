@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.15';
+const APP_VERSION      = '1.7.16';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6618,6 +6618,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const computedRows = rows.map(r => {
             const totalClubMembers = r.regularMembers + r.nonMembers;
+            const remaining = r.budget - r.support;
             const budgetRatio = totalBudget > 0 ? (r.budget / totalBudget) * 100 : 0;
             const memberRatio = totalAllMembers > 0 ? (totalClubMembers / totalAllMembers) * 100 : 0;
             const burnRate = r.budget > 0 ? (r.support / r.budget) * 100 : 0;
@@ -6628,6 +6629,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .join(', ');
             return {
                 ...r,
+                remaining,
                 totalMembers: totalClubMembers,
                 budgetRatio,
                 memberRatio,
@@ -6642,6 +6644,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: '총합계',
             budget: totalBudget,
             support: totalSupport,
+            remaining: totalBudget - totalSupport,
             eventCount: totalEvents,
             regularMembers: totalRegular,
             nonMembers: totalNonMembers,
@@ -6698,8 +6701,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentInterimSummaryData = summary;
 
             const isLight = document.documentElement.getAttribute('data-app-theme') === 'light';
-            const thStyle = `padding:0.55rem 0.6rem; font-size:0.78rem; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--card-border); background:${isLight ? '#e2e8f0' : 'rgba(15,23,42,0.92)'}; color:var(--text-primary); position:sticky; top:0; z-index:2;`;
-            const tdBase = `padding:0.48rem 0.6rem; font-size:0.8rem; border-bottom:1px solid var(--card-border); white-space:nowrap;`;
+            const thStyle = `padding:0.5rem 0.55rem; font-size:0.78rem; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--card-border); background:${isLight ? '#e2e8f0' : 'rgba(15,23,42,0.92)'}; color:var(--text-primary); position:sticky; top:0; z-index:2;`;
+            const tdBase = `padding:0.42rem 0.55rem; font-size:0.8rem; border-bottom:1px solid var(--card-border); white-space:nowrap;`;
 
             const bodyHtml = summary.rows.map(r => {
                 const isExhausted = r.budget > 0 && r.burnRate >= 99.5;
@@ -6709,11 +6712,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const burnBg = isExhausted
                     ? (isLight ? 'background:#15803d; color:#ffffff; font-weight:700;' : 'background:rgba(22,163,74,0.85); color:#ffffff; font-weight:700;')
                     : '';
+                const remColor = r.remaining < 0
+                    ? 'color:#ef4444; font-weight:700;'
+                    : (r.remaining === 0 ? 'color:var(--text-muted);' : 'color:var(--color-secondary); font-weight:600;');
                 return `
                     <tr style="${rowHighlight}">
                         <td style="${tdBase} font-weight:700; text-align:left;">${AppState.escapeHtml(r.name)}</td>
                         <td style="${tdBase} text-align:right;">${formatAmount(r.budget)}</td>
                         <td style="${tdBase} text-align:right;">${formatAmount(r.support)}</td>
+                        <td style="${tdBase} text-align:right; ${remColor}">${formatAmount(r.remaining)}</td>
                         <td style="${tdBase} text-align:right;">${r.eventCount}</td>
                         <td style="${tdBase} text-align:right;">${r.regularMembers}</td>
                         <td style="${tdBase} text-align:right;">${r.nonMembers}</td>
@@ -6734,6 +6741,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="${tdBase} text-align:left; border-top:2px solid var(--card-border);">${t.name}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.budget)}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.support)}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.remaining)}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.eventCount}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.regularMembers}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.nonMembers}</td>
@@ -6747,12 +6755,13 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             tableWrap.innerHTML = `
-                <table style="width:100%; border-collapse:collapse; min-width:860px;">
+                <table style="width:100%; border-collapse:collapse; min-width:960px;">
                     <thead>
                         <tr>
                             <th style="${thStyle} text-align:left;">클럽명</th>
                             <th style="${thStyle} text-align:right;">예산</th>
                             <th style="${thStyle} text-align:right;">지원금</th>
+                            <th style="${thStyle} text-align:right;">잔여금액</th>
                             <th style="${thStyle} text-align:right;">행사수</th>
                             <th style="${thStyle} text-align:right;">정회원</th>
                             <th style="${thStyle} text-align:right;">비회원</th>
@@ -6784,13 +6793,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const { year, rows, totals } = currentInterimSummaryData;
-        const headers = ['클럽명', '예산', '지원금', '행사수', '정회원', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
+        const headers = ['클럽명', '예산', '지원금', '잔여금액', '행사수', '정회원', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
         const aoa = [headers];
         rows.forEach(r => {
             aoa.push([
                 r.name,
                 r.budget,
                 r.support,
+                r.remaining,
                 r.eventCount,
                 r.regularMembers,
                 r.nonMembers,
@@ -6806,6 +6816,7 @@ document.addEventListener('DOMContentLoaded', () => {
             totals.name,
             totals.budget,
             totals.support,
+            totals.remaining,
             totals.eventCount,
             totals.regularMembers,
             totals.nonMembers,
@@ -6819,7 +6830,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         ws['!cols'] = [
-            { wch: 16 }, { wch: 13 }, { wch: 13 }, { wch: 8 },
+            { wch: 16 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 8 },
             { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 12 },
             { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 24 }
         ];
@@ -8708,6 +8719,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.16', date: '2026.11.24', items: ['관리자 [📋 중간 취합표] 팝업 PC 전체 화면 높이 최적화(잘림 없이 전 클럽 및 총합계 한눈에 표시) 및 [지원금]과 [행사수] 사이에 [잔여금액] 컬럼 추가 (엑셀 다운로드 동시 반영)'] },
         { ver: '1.7.15', date: '2026.11.24', items: ['정회원·비회원 참석자 수 라벨에서 불필요한 [(명)] 표기 제거', '관리자 대시보드에 [📋 중간 취합표] 팝업 및 엑셀(.xlsx) 다운로드 기능 신설: 클럽별 예산·지원금·행사수·정회원·비회원·예산비율·인원비율·소진율·인당지원금·평균참여인원·비고(온라인/가족행사 자동 카운트) 및 총합계 자동 집계'] },
         { ver: '1.7.14', date: '2026.11.24', items: ['정산 입력 화면 [참석자 및 기존 누적 정보] 카드 개편: 좌측 [정회원 참석자 수(자동 반영)] / 우측 [비회원 참석자 수(수동 기입, 정산 금액 미반영)] 2열 분리 및 [비고(온라인·가족 행사·새 항목 추가)] 드롭다운 신설'] },
         { ver: '1.7.13', date: '2026.11.24', items: ['관리자 [가입 회원 관리 > 수정] 모달에서 회원의 회사 이메일(@mmm.com) 수정 기능 추가 (정산 수신 메일 자동 동기화 포함)'] },

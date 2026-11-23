@@ -1498,20 +1498,20 @@
     </div>
 
     <!-- 중간 행사 진행 내역 취합표 모달 (관리자 전용) -->
-    <div id="interim-summary-modal" class="modal hidden" role="dialog" aria-modal="true" style="z-index:10360;">
-        <div class="modal-content-card" style="max-width:1160px; width:calc(100% - 1.5rem); max-height:88vh; display:flex; flex-direction:column; padding:1.25rem;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.85rem;">
+    <div id="interim-summary-modal" class="modal hidden" role="dialog" aria-modal="true" style="z-index:10360; padding:1rem; align-items:center; justify-content:center;">
+        <div class="modal-content-card" style="width:100%; max-width:1520px !important; max-height:calc(100dvh - 2rem) !important; display:flex; flex-direction:column; padding:1.15rem 1.25rem; box-sizing:border-box;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.75rem; flex-shrink:0;">
                 <div>
                     <h3 style="margin:0; font-size:1.08rem; font-weight:800; color:var(--text-primary);">📋 중간 행사 진행 내역 취합표</h3>
-                    <p style="margin:0.18rem 0 0; font-size:0.76rem; color:var(--text-secondary);">클럽별 예산·지원금·행사수·정회원·비회원·소진율·비고가 자동 집계됩니다.</p>
+                    <p style="margin:0.15rem 0 0; font-size:0.76rem; color:var(--text-secondary);">클럽별 예산·지원금·잔여금액·행사수·정회원·비회원·소진율·비고가 자동 집계됩니다.</p>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                    <select id="interim-summary-year-select" style="padding:0.38rem 0.65rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.82rem; font-weight:600;"></select>
-                    <button type="button" id="download-interim-excel-btn" class="btn-primary" style="padding:0.42rem 0.9rem; font-size:0.82rem; font-weight:700; border-radius:8px; width:auto; display:inline-flex; align-items:center; gap:0.35rem;">📥 엑셀 다운로드</button>
-                    <button type="button" id="close-interim-summary-modal" class="close-btn" style="position:static; font-size:1.35rem; line-height:1;">&times;</button>
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:nowrap; flex-shrink:0;">
+                    <select id="interim-summary-year-select" style="width:auto; min-width:92px; padding:0.4rem 0.65rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.82rem; font-weight:600;"></select>
+                    <button type="button" id="download-interim-excel-btn" class="btn-primary" style="padding:0.42rem 0.9rem; font-size:0.82rem; font-weight:700; border-radius:8px; width:auto; white-space:nowrap; display:inline-flex; align-items:center; gap:0.35rem;">📥 엑셀 다운로드</button>
+                    <button type="button" id="close-interim-summary-modal" class="close-btn" style="position:static; font-size:1.35rem; line-height:1; flex-shrink:0;">&times;</button>
                 </div>
             </div>
-            <div id="interim-summary-table-wrap" class="scroll-y" style="flex:1; overflow:auto; border:1px solid var(--card-border); border-radius:10px;"></div>
+            <div id="interim-summary-table-wrap" class="scroll-y" style="flex:1; min-height:0; max-height:none !important; overflow:auto; border:1px solid var(--card-border); border-radius:10px;"></div>
         </div>
     </div>
 
