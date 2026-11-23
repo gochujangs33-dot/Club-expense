@@ -363,17 +363,42 @@
                             style="display:block; margin:-0.45rem 1rem 0.6rem; font-size:0.72rem; color:var(--text-muted);">사진은
                             저용량으로 변환해 서버에 임시 저장됩니다.</small>
                         <div class="card-body">
-                            <div class="input-group">
-                                <label for="member-count-input" data-i18n="label.member_count">정회원 참석자 수 (명)</label>
-                                <input type="number" id="member-count-input" min="0" placeholder="예: 20" value="0"
-                                    readonly class="readonly-input">
-                                <small class="input-hint" data-i18n="hint.member_count">💡 '참석자 명부' 탭에서 인원을 관리하면 자동
-                                    반영됩니다.</small>
+                            <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.65rem;">
+                                <div class="input-group" style="margin-bottom:0;">
+                                    <label for="member-count-input" data-i18n="label.member_count">정회원 참석자 수 (명)</label>
+                                    <input type="number" id="member-count-input" min="0" placeholder="예: 20" value="0"
+                                        readonly class="readonly-input">
+                                    <small class="input-hint" data-i18n="hint.member_count">💡 '참석자 명부' 탭 인원 자동 반영</small>
+                                </div>
+                                <div class="input-group" style="margin-bottom:0;">
+                                    <label for="non-member-count-input">비회원 참석자 수 (명)</label>
+                                    <input type="number" id="non-member-count-input" min="0" placeholder="예: 0" value="0">
+                                    <small class="input-hint">💡 수동 기입 (정산 금액 미반영)</small>
+                                </div>
                             </div>
                             <div class="input-group">
                                 <label for="prev-prize-input" data-i18n="label.prize_remaining">올해 상품비 잔여 한도 (원)</label>
                                 <input type="text" id="prev-prize-input" value="0" readonly class="readonly-input">
                                 <small class="input-hint" id="prize-remaining-hint" style="font-weight:500;"></small>
+                            </div>
+                            <div class="input-group">
+                                <label for="event-note-select">비고 (특이사항)</label>
+                                <select id="event-note-select">
+                                    <option value="">선택 안 함 (일반 행사)</option>
+                                    <option value="온라인">온라인</option>
+                                    <option value="가족 행사">가족 행사</option>
+                                    <option value="__new__">+ 새 비고 항목 추가</option>
+                                </select>
+                                <div id="new-note-input-row" class="hidden"
+                                    style="display:flex; gap:0.4rem; margin-top:0.4rem; align-items:center;">
+                                    <input type="text" id="new-note-input" placeholder="새 비고 입력 (예: 워크샵)"
+                                        autocomplete="off" style="flex:1; min-width:0;">
+                                    <button type="button" id="add-new-note-btn" class="btn-secondary"
+                                        style="white-space:nowrap; padding:0.45rem 0.75rem; font-size:0.82rem;">추가</button>
+                                    <button type="button" id="cancel-new-note-btn" class="btn-text-danger"
+                                        style="white-space:nowrap; padding:0.45rem 0.55rem; font-size:0.82rem; font-weight:600; cursor:pointer;">취소</button>
+                                </div>
+                                <small class="input-hint">💡 선택 시 중간 행사 내역 취합표 비고란에 자동 카운트됩니다.</small>
                             </div>
                         </div>
                     </div>

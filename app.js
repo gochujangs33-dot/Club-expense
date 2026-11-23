@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.13';
+const APP_VERSION      = '1.7.14';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -489,6 +489,9 @@ const AppState = {
     },
 
     memberCount: 0,
+    nonMemberCount: 0,
+    eventNote: '',
+    customNoteOptions: [],
     previousPrizeTotal: 0,
     expenseItems: [],
     attendees: [],
@@ -530,6 +533,21 @@ const AppState = {
             const savedMemberCount = localStorage.getItem('club_expense_members');
             if (savedMemberCount) {
                 this.memberCount = parseInt(savedMemberCount, 10) || 0;
+            }
+            const savedNonMemberCount = localStorage.getItem('club_expense_non_members');
+            if (savedNonMemberCount !== null) {
+                this.nonMemberCount = Math.max(0, parseInt(savedNonMemberCount, 10) || 0);
+            }
+            const savedEventNote = localStorage.getItem('club_expense_event_note');
+            if (savedEventNote !== null) {
+                this.eventNote = savedEventNote;
+            }
+            const savedCustomNotes = localStorage.getItem('club_custom_note_options');
+            if (savedCustomNotes) {
+                try {
+                    const parsedNotes = JSON.parse(savedCustomNotes);
+                    if (Array.isArray(parsedNotes)) this.customNoteOptions = parsedNotes;
+                } catch (_) {}
             }
             // previousPrizeTotal은 clubRegistry.prizeUsed 기준 — localStorage 구버전 값 무시
             // rules는 globalSettings/rules (관리자 설정) 기준 — localStorage 구버전 무시
@@ -918,6 +936,9 @@ const AppState = {
         try {
             localStorage.setItem('club_expense_items', JSON.stringify(this.expenseItems));
             localStorage.setItem('club_expense_members', this.memberCount.toString());
+            localStorage.setItem('club_expense_non_members', String(this.nonMemberCount || 0));
+            localStorage.setItem('club_expense_event_note', this.eventNote || '');
+            localStorage.setItem('club_custom_note_options', JSON.stringify(this.customNoteOptions || []));
             localStorage.setItem('club_expense_attendees', JSON.stringify(this.attendees));
             localStorage.setItem('club_expense_directory', JSON.stringify(this.directory));
             localStorage.setItem('club_report_email', this.reportEmail || '');
@@ -945,6 +966,8 @@ const AppState = {
             const dataToSync = {
                 // 세션 데이터만 유저별 저장
                 memberCount: this.memberCount,
+                nonMemberCount: this.nonMemberCount || 0,
+                eventNote: this.eventNote || '',
                 expenseItems: this.expenseItems,
                 attendees: this.attendees,
                 directory: this.directory,
@@ -1134,6 +1157,8 @@ const AppState = {
                                 // previousPrizeTotal → clubRegistry.prizeUsed 기준
                                 if (data.clubName !== undefined) this.clubName = data.clubName;
                                 if (data.clubId !== undefined) this.clubId = data.clubId;
+                                this.nonMemberCount = Math.max(0, parseInt(data.nonMemberCount, 10) || 0);
+                                this.eventNote = data.eventNote ? String(data.eventNote) : '';
                                 if (data.reportEmail !== undefined && data.reportEmail) {
                                     this.reportEmail = data.reportEmail;
                                 } else if (userData.email) {
@@ -1155,6 +1180,8 @@ const AppState = {
                                 this.expenseItems = []; this.eventPhotos = [];
                                 this.attendees = [];
                                 this.memberCount = 0;
+                                this.nonMemberCount = 0;
+                                this.eventNote = '';
                                 this.previousPrizeTotal = 0;
                                 this.annualBudget = 0;
                                 this.usedBudget = 0;
@@ -1302,7 +1329,7 @@ const AppState = {
         this.firebaseDb.ref('clubRegistry').set(this.clubRegistry).catch(err => console.error("클럽 레지스트리 저장 실패:", err));
     },
 
-    // 관리자가 저장한 자부담 구간/비율 설정을 모든 유저에게 실시간 동기화
+    // 관리자가 저장한 자부담 구간/비율 설정 및 공통 비고 항목을 모든 유저에게 실시간 동기화
     loadGlobalSettings() {
         if (!this.firebaseDb) return;
         this.firebaseDb.ref('globalSettings/rules').on('value', snapshot => {
@@ -1312,6 +1339,27 @@ const AppState = {
                 if (typeof window._onGlobalSettingsUpdate === 'function') window._onGlobalSettingsUpdate();
             }
         }, err => console.error('globalSettings 로딩 실패:', err));
+
+        this.firebaseDb.ref('globalSettings/noteOptions').on('value', snapshot => {
+            const notes = snapshot.val();
+            if (Array.isArray(notes)) {
+                this.customNoteOptions = notes.map(n => String(n || '').trim()).filter(Boolean);
+                if (typeof window._renderEventNoteOptions === 'function') window._renderEventNoteOptions();
+            }
+        }, err => console.error('globalSettings/noteOptions 로딩 실패:', err));
+    },
+
+    saveCustomNoteOptions() {
+        try {
+            localStorage.setItem('club_custom_note_options', JSON.stringify(this.customNoteOptions || []));
+        } catch (_) {}
+        if (!this.firebaseDb) return Promise.resolve(false);
+        return this.firebaseDb.ref('globalSettings/noteOptions').set(this.customNoteOptions || [])
+            .then(() => true)
+            .catch(err => {
+                console.error('공통 비고 항목 저장 실패:', err);
+                return false;
+            });
     },
 
     saveGlobalRules(auditEvent = null) {
@@ -1831,6 +1879,8 @@ const AppState = {
         this.expenseItems = [];
         this.attendees = [];
         this.memberCount = 0;
+        this.nonMemberCount = 0;
+        this.eventNote = '';
         this.cancelEdit();
         this.save();
         this.render();
@@ -2380,6 +2430,8 @@ const AppState = {
         this.expenseItems = [];
         this.attendees = [];
         this.memberCount = 0;
+        this.nonMemberCount = 0;
+        this.eventNote = '';
         // 상품비 연간 누적은 세션 데이터가 아니라 클럽 단위 확정값 — 0으로 지우면 연 50만원 한도
         // 검증이 "누적 0원" 기준으로 계산돼 한도 초과 등록이 통과되는 구멍이 생김 (v1.6.233)
         this.previousPrizeTotal = (this.clubId && this.clubRegistry[this.clubId])
@@ -2519,6 +2571,13 @@ const AppState = {
         const memberCountInput = document.getElementById('member-count-input');
         if (memberCountInput) {
             memberCountInput.value = this.memberCount;
+        }
+        const nonMemberCountInput = document.getElementById('non-member-count-input');
+        if (nonMemberCountInput && document.activeElement !== nonMemberCountInput) {
+            nonMemberCountInput.value = this.nonMemberCount || 0;
+        }
+        if (typeof window._renderEventNoteOptions === 'function') {
+            window._renderEventNoteOptions();
         }
 
         // Update Tab badge and list labels
@@ -3855,6 +3914,11 @@ const AppState = {
         this.eventPhotos = JSON.parse(JSON.stringify(getHistoryEventPhotos(entry)));
         // memberCount가 없으면 attendees 수로 보완 (구버전 데이터 호환)
         this.memberCount = entry.memberCount || (entry.attendees ? entry.attendees.length : 0);
+        this.nonMemberCount = Math.max(0, parseInt(entry.nonMemberCount, 10) || 0);
+        this.eventNote = entry.eventNote ? String(entry.eventNote) : '';
+        if (this.eventNote && !['온라인', '가족 행사'].includes(this.eventNote) && !(this.customNoteOptions || []).includes(this.eventNote)) {
+            this.customNoteOptions = [...(this.customNoteOptions || []), this.eventNote];
+        }
         if (entry.clubName) this.clubName = entry.clubName;
         // clubId 없는 구버전 데이터: 이름으로 역조회해서 복원
         if (entry.clubId) {
@@ -4317,6 +4381,8 @@ const AppState = {
                 clubName: this.clubName || "기본 클럽",
                 clubId: this.clubId || '',
                 memberCount: this.memberCount,
+                nonMemberCount: this.nonMemberCount || 0,
+                eventNote: this.eventNote || '',
                 totalCost: result.totalCost,
                 prizeCost: result.prizeCost,
                 finalSupportAmount: result.totalCost - finalTotalSelfPay,
@@ -4350,6 +4416,8 @@ const AppState = {
                 if (this.currentPin) {
                     const settlementPath = `settlements/${this.currentPin}`;
                     firebaseUpdates[`${settlementPath}/memberCount`] = 0;
+                    firebaseUpdates[`${settlementPath}/nonMemberCount`] = 0;
+                    firebaseUpdates[`${settlementPath}/eventNote`] = '';
                     firebaseUpdates[`${settlementPath}/expenseItems`] = [];
                     firebaseUpdates[`${settlementPath}/attendees`] = [];
                     firebaseUpdates[`${settlementPath}/directory`] = nextDirectory;
@@ -4419,6 +4487,8 @@ const AppState = {
             this.expenseItems = [];
             this.attendees = [];
             this.memberCount = 0;
+            this.nonMemberCount = 0;
+            this.eventNote = '';
             this.previousPrizeTotal = this.clubId && this.clubRegistry[this.clubId]
                 ? (this.clubRegistry[this.clubId].prizeUsed || 0)
                 : 0;
@@ -4462,6 +4532,8 @@ function resetSettlementSession(auditEvent = null) {
     AppState.expenseItems = [];
     AppState.attendees = [];
     AppState.memberCount = 0;
+    AppState.nonMemberCount = 0;
+    AppState.eventNote = '';
     // 상품비 연간 누적은 클럽 단위 확정값 — 0으로 지우지 않고 clubRegistry 기준으로 복원 (v1.6.233)
     AppState.previousPrizeTotal = (AppState.clubId && AppState.clubRegistry[AppState.clubId])
         ? (AppState.clubRegistry[AppState.clubId].prizeUsed || 0)
@@ -4725,6 +4797,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? AppState.lastCalculatedSelfPay : Math.round(result.itemSelfPay);
                 const updatedFields = {
                     memberCount: AppState.memberCount,
+                    nonMemberCount: AppState.nonMemberCount || 0,
+                    eventNote: AppState.eventNote || '',
                     totalCost: result.totalCost,
                     prizeCost: result.prizeCost,
                     finalSupportAmount: result.totalCost - finalTotalSelfPay,
@@ -4765,10 +4839,101 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set form input fields default values
     const memberInput = document.getElementById('member-count-input');
+    const nonMemberInput = document.getElementById('non-member-count-input');
     const prizeInput = document.getElementById('prev-prize-input');
 
     memberInput.value = AppState.memberCount;
+    if (nonMemberInput) {
+        nonMemberInput.value = AppState.nonMemberCount || 0;
+        nonMemberInput.addEventListener('input', () => {
+            AppState.nonMemberCount = Math.max(0, parseInt(nonMemberInput.value, 10) || 0);
+        });
+        nonMemberInput.addEventListener('change', () => {
+            AppState.nonMemberCount = Math.max(0, parseInt(nonMemberInput.value, 10) || 0);
+            nonMemberInput.value = AppState.nonMemberCount;
+            AppState.save();
+        });
+    }
     prizeInput.value = formatAmount(AppState.previousPrizeTotal);
+
+    // 비고 (특이사항) 드롭다운 + 새 항목 추가
+    (function initEventNoteControls() {
+        const noteSelect = document.getElementById('event-note-select');
+        const newRow = document.getElementById('new-note-input-row');
+        const newInput = document.getElementById('new-note-input');
+        const addBtn = document.getElementById('add-new-note-btn');
+        const cancelBtn = document.getElementById('cancel-new-note-btn');
+        if (!noteSelect) return;
+
+        const DEFAULT_NOTES = ['온라인', '가족 행사'];
+
+        const renderNoteOptions = () => {
+            const seen = new Set(DEFAULT_NOTES);
+            const extras = [];
+            (AppState.customNoteOptions || []).forEach(n => {
+                const v = String(n || '').trim();
+                if (v && !seen.has(v)) {
+                    seen.add(v);
+                    extras.push(v);
+                }
+            });
+            const currentVal = String(AppState.eventNote || '').trim();
+            if (currentVal && !seen.has(currentVal)) {
+                seen.add(currentVal);
+                extras.push(currentVal);
+            }
+            const allOptions = [...DEFAULT_NOTES, ...extras];
+            noteSelect.innerHTML = `<option value="">선택 안 함 (일반 행사)</option>` +
+                allOptions.map(n => `<option value="${AppState.escapeHtml(n)}">${AppState.escapeHtml(n)}</option>`).join('') +
+                `<option value="__new__">+ 새 비고 항목 추가</option>`;
+            noteSelect.value = currentVal;
+        };
+        window._renderEventNoteOptions = renderNoteOptions;
+        renderNoteOptions();
+
+        const closeNewNote = () => {
+            if (newInput) newInput.value = '';
+            if (newRow) newRow.classList.add('hidden');
+            noteSelect.value = AppState.eventNote || '';
+        };
+
+        const submitNewNote = () => {
+            const val = (newInput?.value || '').trim();
+            if (!val) {
+                alert('추가할 비고 항목명을 입력해 주세요.');
+                return;
+            }
+            if (!['온라인', '가족 행사'].includes(val) && !(AppState.customNoteOptions || []).includes(val)) {
+                AppState.customNoteOptions = [...(AppState.customNoteOptions || []), val];
+                AppState.saveCustomNoteOptions();
+            }
+            AppState.eventNote = val;
+            if (newInput) newInput.value = '';
+            if (newRow) newRow.classList.add('hidden');
+            renderNoteOptions();
+            AppState.save();
+        };
+
+        noteSelect.addEventListener('change', () => {
+            if (noteSelect.value === '__new__') {
+                if (newRow) newRow.classList.remove('hidden');
+                if (newInput) newInput.focus();
+                return;
+            }
+            if (newRow) newRow.classList.add('hidden');
+            AppState.eventNote = noteSelect.value || '';
+            AppState.save();
+        });
+
+        if (addBtn) addBtn.addEventListener('click', submitNewNote);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeNewNote);
+        if (newInput) {
+            newInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); submitNewNote(); }
+                if (e.key === 'Escape') closeNewNote();
+            });
+        }
+    })();
 
     // 금액 입력란 1000단위 콤마(,) 자동 적용
     ['expense-amount-input', 'expense-corporate-amount-input',
@@ -8258,6 +8423,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.14', date: '2026.11.24', items: ['정산 입력 화면 [참석자 및 기존 누적 정보] 카드 개편: 좌측 [정회원 참석자 수(자동 반영)] / 우측 [비회원 참석자 수(수동 기입, 정산 금액 미반영)] 2열 분리 및 [비고(온라인·가족 행사·새 항목 추가)] 드롭다운 신설'] },
         { ver: '1.7.13', date: '2026.11.24', items: ['관리자 [가입 회원 관리 > 수정] 모달에서 회원의 회사 이메일(@mmm.com) 수정 기능 추가 (정산 수신 메일 자동 동기화 포함)'] },
         { ver: '1.7.12', date: '2026.11.24', items: ['상단 [+ 새 클럽 직접 등록] 입력창에 [취소] 버튼 및 Esc 닫기 지원 추가 (등록을 취소하고 기존 클럽 선택 화면으로 즉시 복귀 가능)'] },
         { ver: '1.7.11', date: '2026.11.24', items: ['신규 회원 가입 시 입력한 회사 이메일(@mmm.com)이 [정산 및 발송 설정 > 회사 이메일 주소 (받는 사람)]에 즉시 자동 저장·연동되도록 보강 (재로그인 시에도 자동 유지)'] },
