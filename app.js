@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.17';
+const APP_VERSION      = '1.7.18';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6657,7 +6657,10 @@ document.addEventListener('DOMContentLoaded', () => {
             noteText: ''
         };
 
-        return { year: yearStr, rows: computedRows, totals };
+        const labTotalBudget = Math.max(0, Number(AppState.clubTotalBudget) || 0);
+        const labRemainingBudget = labTotalBudget - totalBudget;
+
+        return { year: yearStr, rows: computedRows, totals, labTotalBudget, labRemainingBudget };
     }
 
     let currentInterimSummaryData = null;
@@ -6732,8 +6735,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? (isLight ? 'background:#15803d; color:#ffffff; font-weight:700;' : 'background:rgba(22,163,74,0.85); color:#ffffff; font-weight:700;')
                     : '';
                 const remColor = r.remaining < 0
-                    ? 'color:#ef4444; font-weight:700;'
-                    : (r.remaining === 0 ? 'color:var(--text-muted);' : 'color:var(--color-secondary); font-weight:600;');
+                    ? (isLight ? 'color:#dc2626; font-weight:700;' : 'color:#f87171; font-weight:700;')
+                    : (r.remaining === 0 ? 'color:var(--text-muted);' : (isLight ? 'color:#1e40af; font-weight:600;' : 'color:#93c5fd; font-weight:600;'));
                 return `
                     <tr style="${rowHighlight}">
                         <td style="${tdBase} font-weight:700; text-align:left;">${AppState.escapeHtml(r.name)}</td>
@@ -6755,6 +6758,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const t = summary.totals;
             const totalRowBg = isLight ? 'background:#e2e8f0; color:#0f172a;' : 'background:rgba(30,41,59,0.95); color:#f8fafc;';
+            const labRowBg = isLight ? 'background:#fef9c3; color:#0f172a;' : 'background:rgba(234,179,8,0.14); color:#fef08a;';
+            const labBalColor = summary.labRemainingBudget < 0
+                ? (isLight ? 'color:#dc2626;' : 'color:#f87171;')
+                : (isLight ? 'color:#1e40af;' : 'color:#93c5fd;');
             const footHtml = `
                 <tr style="${totalRowBg} font-weight:800;">
                     <td style="${tdBase} text-align:left; border-top:2px solid var(--card-border);">${t.name}</td>
@@ -6770,6 +6777,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.perPersonSupport)}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.avgParticipants}</td>
                     <td style="${tdBase} text-align:left; border-top:2px solid var(--card-border);"></td>
+                </tr>
+                <tr style="${labRowBg} font-weight:800;">
+                    <td style="${tdBase} text-align:left; border-top:1px solid var(--card-border);">연구소 총 예산</td>
+                    <td style="${tdBase} text-align:right; border-top:1px solid var(--card-border);">${formatAmount(summary.labTotalBudget)}</td>
+                    <td colspan="11" style="${tdBase} text-align:left; border-top:1px solid var(--card-border); font-weight:500; font-size:0.74rem; color:var(--text-secondary);"></td>
+                </tr>
+                <tr style="${labRowBg} font-weight:800;">
+                    <td style="${tdBase} text-align:left; border-top:1px solid var(--card-border);">연구소 예산 잔액</td>
+                    <td style="${tdBase} text-align:right; border-top:1px solid var(--card-border); ${labBalColor}">${formatAmount(summary.labRemainingBudget)}</td>
+                    <td colspan="11" style="${tdBase} text-align:left; border-top:1px solid var(--card-border); font-weight:500; font-size:0.74rem; color:var(--text-secondary);">미배정 잔액 (연구소 총 예산 − 클럽 배정 예산 합계) · 실집행 기준 잔액: ${formatAmount(summary.labTotalBudget - t.support)}원</td>
                 </tr>
             `;
 
@@ -6811,7 +6828,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('엑셀 라이브러리가 준비되지 않았습니다.');
             return;
         }
-        const { year, titleText, rows, totals } = currentInterimSummaryData;
+        const { year, titleText, rows, totals, labTotalBudget, labRemainingBudget } = currentInterimSummaryData;
         const headers = ['클럽명', '예산', '지원금', '잔여금액', '행사수', '정회원', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
         const aoa = [
             [titleText || `${year}년 진행 내역`],
@@ -6850,6 +6867,8 @@ document.addEventListener('DOMContentLoaded', () => {
             totals.avgParticipants,
             ''
         ]);
+        aoa.push(['연구소 총 예산', labTotalBudget]);
+        aoa.push(['연구소 예산 잔액', labRemainingBudget]);
 
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         ws['!cols'] = [
@@ -8742,6 +8761,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.18', date: '2026.11.24', items: ['[📋 중간 취합표] 하단에 [연구소 총 예산] 및 [연구소 예산 잔액] 행 추가 (엑셀 다운로드 동시 반영) 및 [잔여금액] 텍스트 색상을 눈이 편안한 차분한 톤으로 개선'] },
         { ver: '1.7.17', date: '2026.11.24', items: ['[📋 중간 취합표] 상단 타이틀 및 엑셀 첫 행에 조회 기간(예: 2026년 1월 ~ 현재 날짜 진행 내역)이 자동 표시되도록 개선'] },
         { ver: '1.7.16', date: '2026.11.24', items: ['관리자 [📋 중간 취합표] 팝업 PC 전체 화면 높이 최적화(잘림 없이 전 클럽 및 총합계 한눈에 표시) 및 [지원금]과 [행사수] 사이에 [잔여금액] 컬럼 추가 (엑셀 다운로드 동시 반영)'] },
         { ver: '1.7.15', date: '2026.11.24', items: ['정회원·비회원 참석자 수 라벨에서 불필요한 [(명)] 표기 제거', '관리자 대시보드에 [📋 중간 취합표] 팝업 및 엑셀(.xlsx) 다운로드 기능 신설: 클럽별 예산·지원금·행사수·정회원·비회원·예산비율·인원비율·소진율·인당지원금·평균참여인원·비고(온라인/가족행사 자동 카운트) 및 총합계 자동 집계'] },
