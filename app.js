@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.26';
+const APP_VERSION      = '1.7.27';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -510,6 +510,7 @@ const AppState = {
     annualBudget: 0,
     usedBudget: 0,
     reportEmail: '',
+    emailWebhookUrl: '',
     saveExcelToDevice: true, // 작성 디바이스에 엑셀파일 저장 여부 (기본값 true)
     eventPhotos: [],
     clubName: '',
@@ -1350,6 +1351,34 @@ const AppState = {
                 if (typeof window._renderEventNoteOptions === 'function') window._renderEventNoteOptions();
             }
         }, err => console.error('globalSettings/noteOptions 로딩 실패:', err));
+
+        this.firebaseDb.ref('globalSettings/emailWebhookUrl').on('value', snapshot => {
+            this.emailWebhookUrl = String(snapshot.val() || '').trim();
+            const webhookInput = document.getElementById('admin-email-webhook-input');
+            if (webhookInput && document.activeElement !== webhookInput) {
+                webhookInput.value = this.emailWebhookUrl;
+            }
+        }, err => console.error('globalSettings/emailWebhookUrl 로딩 실패:', err));
+    },
+
+    saveEmailWebhookUrl(url) {
+        const cleanUrl = String(url || '').trim();
+        this.emailWebhookUrl = cleanUrl;
+        if (!this.firebaseDb) return Promise.resolve(false);
+        const updates = { 'globalSettings/emailWebhookUrl': cleanUrl };
+        this.appendAuditUpdate(updates, {
+            action: 'UPDATE',
+            targetType: '메일 웹훅 설정',
+            targetId: 'emailWebhookUrl',
+            targetLabel: '정산서 엑셀 자동 첨부 메일 설정',
+            summary: cleanUrl ? 'Google Apps Script 첨부 메일 웹훅 URL 저장' : 'Google Apps Script 첨부 메일 웹훅 URL 해제'
+        });
+        return this.firebaseDb.ref().update(updates)
+            .then(() => true)
+            .catch(err => {
+                console.error('emailWebhookUrl 저장 실패:', err);
+                return false;
+            });
     },
 
     saveCustomNoteOptions() {
@@ -3427,13 +3456,61 @@ const AppState = {
         };
     },
 
-    // 이메일 발송 실행 (EmailJS 클라우드 자동 발송 우선, Web Share / mailto 폴백)
+    // 이메일 발송 실행 (1. Google Apps Script 엑셀+사진 첨부 자동 발송, 2. EmailJS 텍스트 자동 발송, 3. Web Share / mailto 폴백)
     async sendReportEmail(recipient, sender = 'Gochujangs33@gmail.com', subject, body) {
         const EMAILJS_SERVICE_ID  = 'service_yjm2gpq';
         const EMAILJS_TEMPLATE_ID = 'template_t862eth';
         const EMAILJS_PUBLIC_KEY  = 'hx7DFf4XX6BP68qm7';
 
-        // 1. EmailJS 클라우드 자동 발송 (Gochujangs33@gmail.com 발신)
+        // 1. Google Apps Script 웹훅이 설정된 경우: 정산서 엑셀 + 사진 첨부파일을 동봉해 자동 발송
+        const webhookUrl = String(this.emailWebhookUrl || '').trim();
+        if (webhookUrl && /^https:\/\/script\.google\.com\/macros\//i.test(webhookUrl)) {
+            try {
+                const files = await this.collectReportFiles();
+                const attachments = [];
+                let totalBytes = 0;
+                const MAX_TOTAL_BYTES = 18 * 1024 * 1024;
+                for (let i = 0; i < files.length; i++) {
+                    const f = files[i];
+                    if (i > 0 && totalBytes + f.size > MAX_TOTAL_BYTES) {
+                        console.warn('첨부파일 총 용량 제한으로 일부 파일 제외:', f.name);
+                        continue;
+                    }
+                    const base64 = await this.fileToBase64(f);
+                    attachments.push({
+                        name: f.name,
+                        mimeType: f.type || 'application/octet-stream',
+                        base64
+                    });
+                    totalBytes += f.size;
+                }
+                const res = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        to: recipient,
+                        subject,
+                        body,
+                        senderName: '3M 클럽 비용 정산기',
+                        attachments
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    if (data && data.success) {
+                        console.log(`[Apps Script] 첨부파일 ${attachments.length}개 포함 자동 발송 완료`);
+                        return { success: true, method: 'apps_script', attachmentCount: attachments.length };
+                    }
+                    console.warn('[Apps Script] 응답 오류, EmailJS로 폴백:', data);
+                } else {
+                    console.warn('[Apps Script] HTTP 오류, EmailJS로 폴백:', res.status);
+                }
+            } catch (gasErr) {
+                console.warn('[Apps Script] 자동 발송 예외, EmailJS로 폴백:', gasErr);
+            }
+        }
+
+        // 2. EmailJS 클라우드 자동 발송 (Gochujangs33@gmail.com 발신, 텍스트 요약)
         let emailjsSuccess = false;
         try {
             if (window.emailjs && typeof window.emailjs.send === 'function') {
@@ -7684,6 +7761,83 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Admin: Google Apps Script 첨부 메일 웹훅 설정
+    const emailWebhookInput = document.getElementById('admin-email-webhook-input');
+    const saveEmailWebhookBtn = document.getElementById('save-email-webhook-btn');
+    const emailWebhookStatus = document.getElementById('admin-email-webhook-status');
+    const copyGasScriptBtn = document.getElementById('copy-gas-script-btn');
+    const testEmailWebhookBtn = document.getElementById('test-email-webhook-btn');
+    if (emailWebhookInput && AppState.emailWebhookUrl) {
+        emailWebhookInput.value = AppState.emailWebhookUrl;
+    }
+    if (saveEmailWebhookBtn && emailWebhookInput) {
+        saveEmailWebhookBtn.addEventListener('click', async () => {
+            const url = emailWebhookInput.value.trim();
+            if (url && !/^https:\/\/script\.google\.com\/macros\//i.test(url)) {
+                alert('올바른 Google Apps Script 웹 앱 URL(https://script.google.com/macros/...)을 입력해 주세요.');
+                return;
+            }
+            const ok = await AppState.saveEmailWebhookUrl(url);
+            if (ok && emailWebhookStatus) {
+                emailWebhookStatus.style.display = 'block';
+                setTimeout(() => { emailWebhookStatus.style.display = 'none'; }, 2500);
+            } else if (!ok) {
+                alert('웹 앱 URL 저장에 실패했습니다. 네트워크 연결을 확인해 주세요.');
+            }
+        });
+    }
+    if (copyGasScriptBtn) {
+        copyGasScriptBtn.addEventListener('click', async () => {
+            try {
+                const res = await fetch('./google_apps_script_email.gs?_=' + Date.now());
+                const code = await res.text();
+                await navigator.clipboard.writeText(code);
+                alert('Google Apps Script 코드가 클립보드에 복사되었습니다.\nscript.google.com 새 프로젝트에 붙여넣고 웹 앱으로 배포해 주세요.');
+            } catch (err) {
+                alert('코드 복사에 실패했습니다. 저장소의 google_apps_script_email.gs 파일을 확인해 주세요.');
+            }
+        });
+    }
+    if (testEmailWebhookBtn && emailWebhookInput) {
+        testEmailWebhookBtn.addEventListener('click', async () => {
+            const url = emailWebhookInput.value.trim() || AppState.emailWebhookUrl;
+            if (!url || !/^https:\/\/script\.google\.com\/macros\//i.test(url)) {
+                alert('먼저 올바른 Google Apps Script 웹 앱 URL을 입력해 주세요.');
+                return;
+            }
+            const testTo = (AppState.reportEmail || '').trim() || prompt('테스트 메일을 받을 이메일 주소를 입력해 주세요:', '');
+            if (!testTo || !testTo.trim()) return;
+            testEmailWebhookBtn.disabled = true;
+            const prevText = testEmailWebhookBtn.textContent;
+            testEmailWebhookBtn.textContent = '⏳ 발송 중...';
+            try {
+                AppState.emailWebhookUrl = url;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        to: testTo.trim(),
+                        subject: '[3M 클럽 비용 정산기] 첨부 메일 연동 테스트',
+                        body: 'Google Apps Script 첨부 메일 연동이 정상적으로 완료되었습니다.',
+                        senderName: '3M 클럽 비용 정산기',
+                        attachments: []
+                    })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.success) {
+                    alert(`✅ 테스트 메일이 [${testTo.trim()}]로 발송되었습니다!`);
+                } else {
+                    alert('❌ 연동 테스트 실패: ' + (data.error || `HTTP ${res.status}`));
+                }
+            } catch (err) {
+                alert('❌ 연동 테스트 중 오류가 발생했습니다: ' + (err.message || err));
+            } finally {
+                testEmailWebhookBtn.disabled = false;
+                testEmailWebhookBtn.textContent = prevText;
+            }
+        });
+    }
+
     // 상품비 누적액 표시 갱신 (현재 세션 PRIZE 항목 합계 → prizeInput 반영)
     // previousPrizeTotal은 클럽 레지스트리(prizeUsed)에서 관리하므로 여기서 건드리지 않음
     function syncPrizeTotalFromItems() {
@@ -8132,7 +8286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // 2. 이메일 보고서 생성 및 발송
                         sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> 이메일 발송 준비 중...`;
                         const report = AppState.generateEmailReport();
-                        await AppState.sendReportEmail(recipientEmail, senderEmail, report.subject, report.body);
+                        const emailResult = await AppState.sendReportEmail(recipientEmail, senderEmail, report.subject, report.body);
 
                         // 3. 정산 확정 (Firebase 이력 저장, 누적 카운트 반영, 세션 초기화)
                         sendEmailBtn.innerHTML = '<span class="btn-icon">⏳</span> 정산 저장 중...';
@@ -8142,6 +8296,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         sendEmailBtn.innerHTML = `<span class='btn-icon'>✓</span> ${t('state.saved')}`;
 
+                        const attachNotice = (emailResult && emailResult.method === 'apps_script')
+                            ? `📎 메일 첨부: 정산서 엑셀 등 ${emailResult.attachmentCount}개 파일 동봉 완료\n`
+                            : '';
                         const saveNotice = willSaveExcel
                             ? `📂 ${todayStr} 정산 엑셀 파일이 디바이스(다운로드 폴더)에 저장되었습니다.\n`
                             : `📂 설정에 따라 디바이스 엑셀 저장은 건너뛰었습니다.\n`;
@@ -8149,6 +8306,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         alert(
                             `✅ ${todayStr} 정산이 정상적으로 완료되었습니다!\n\n` +
                             `📧 이메일 발송: [${senderEmail}] → [${recipientEmail}]\n` +
+                            attachNotice +
                             saveNotice +
                             `✅ 현재 입력 항목이 초기화되었습니다.\n` +
                             `📋 이번 정산 내역은 [정산 이력] 탭에서 언제든 확인하실 수 있습니다.`
@@ -9057,6 +9215,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.27', date: '2026.11.24', items: ['정산 완료 시 Google Apps Script 연동을 통해 정산서 엑셀(.xlsx) 및 영수증/행사 사진이 이메일에 실제 파일로 자동 첨부·발송되도록 기능 추가 (관리자 페이지 웹 앱 URL 1회 등록)'] },
         { ver: '1.7.26', date: '2026.11.24', items: ['[📋 중간 결산] 엑셀 다운로드 시 전체 표 테마 디자인(제목 배너, 헤더, 테두리, 천 단위/퍼센트 서식, 총합계·연구소 예산 행) 및 100% 소진 클럽 강조 색상(노란 행 + 진녹색 소진율 배지) 적용'] },
         { ver: '1.7.25', date: '2026.11.24', items: ['기존 회원의 정산 수신 이메일(이현준 hjlee@mmm.com 등)을 회원 목록 및 수정 화면에 자동 동기화하고 구버전 기본값(finance@club.com) 제외 처리'] },
         { ver: '1.7.24', date: '2026.11.24', items: ['정산 및 발송 설정 등에서 회사 이메일을 등록·수정한 회원의 경우 관리자 [회원 정보 수정] 모달 및 회원 목록에 등록된 이메일이 자동 표시되고 수정 가능하도록 동기화 보강'] },

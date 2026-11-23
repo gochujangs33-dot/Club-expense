@@ -1257,6 +1257,42 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="card" id="admin-email-webhook-card" style="margin-top:1rem;">
+                        <div class="card-header">
+                            <span class="card-icon">📧</span>
+                            <h2>정산서 엑셀 자동 첨부 메일 설정</h2>
+                            <button type="button" class="card-collapse-btn" data-card="admin-email-webhook-card">▾</button>
+                        </div>
+                        <div class="card-body">
+                            <p style="font-size:0.8rem; color:var(--text-secondary); margin:0 0 0.65rem; line-height:1.45;">
+                                Google Apps Script 웹 앱 URL을 등록하면 <b>정산 완료</b> 시 정산서 엑셀 파일(<code>.xlsx</code>)과 첨부 사진이 이메일에 자동으로 동봉되어 발송됩니다.
+                            </p>
+                            <div class="input-group" style="margin-bottom:0.55rem;">
+                                <label for="admin-email-webhook-input">Apps Script 웹 앱 URL</label>
+                                <div style="display:flex; gap:0.4rem;">
+                                    <input type="url" id="admin-email-webhook-input"
+                                        placeholder="https://script.google.com/macros/s/.../exec"
+                                        style="flex:1; min-width:0; font-size:0.82rem;">
+                                    <button type="button" id="save-email-webhook-btn" class="btn-primary-sm">저장</button>
+                                </div>
+                                <small id="admin-email-webhook-status" class="input-hint" style="display:none; color:var(--color-secondary);">✔️ 저장되었습니다.</small>
+                            </div>
+                            <div style="display:flex; gap:0.45rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+                                <button type="button" id="copy-gas-script-btn" class="btn-secondary" style="font-size:0.78rem; padding:0.35rem 0.7rem;">📋 Apps Script 코드 복사</button>
+                                <button type="button" id="test-email-webhook-btn" class="btn-secondary" style="font-size:0.78rem; padding:0.35rem 0.7rem;">✉️ 연동 테스트 메일 발송</button>
+                            </div>
+                            <details style="font-size:0.76rem; color:var(--text-muted); line-height:1.5;">
+                                <summary style="cursor:pointer; font-weight:600; color:var(--text-secondary);">배포 방법 보기 (1회 설정)</summary>
+                                <ol style="margin:0.4rem 0 0 1.1rem; padding:0;">
+                                    <li>발신 계정(<code>Gochujangs33@gmail.com</code>)으로 <b>script.google.com</b> 접속 → 새 프로젝트</li>
+                                    <li>위 <b>[Apps Script 코드 복사]</b> 클릭 후 붙여넣고 저장</li>
+                                    <li><b>[배포] → [새 배포] → [웹 앱]</b> (실행: 나 / 액세스: <b>모든 사용자</b>)</li>
+                                    <li>생성된 <code>https://script.google.com/macros/s/.../exec</code> URL을 위에 입력 후 저장</li>
+                                </ol>
+                            </details>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="admin-col-right">
