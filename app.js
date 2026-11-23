@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.27';
+const APP_VERSION      = '1.7.28';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1199,6 +1199,8 @@ const AppState = {
                             }
                             this.isLoggedIn = true;
                             this.currentPin = pin;
+                            // 인증 완료 후 공통 설정(정산 규칙·비고 항목·메일 웹훅 URL) 실시간 리스너 재연결
+                            this.loadGlobalSettings();
 
                             // 0번 원칙 준수: 전사원 명부는 공유 명부(settlements/000000/directory)를 실시간 공유 기준으로 로드
                             this.loadDirectoryShared().finally(() => {
@@ -1336,6 +1338,7 @@ const AppState = {
     // 관리자가 저장한 자부담 구간/비율 설정 및 공통 비고 항목을 모든 유저에게 실시간 동기화
     loadGlobalSettings() {
         if (!this.firebaseDb) return;
+        this.firebaseDb.ref('globalSettings/rules').off('value');
         this.firebaseDb.ref('globalSettings/rules').on('value', snapshot => {
             const rules = snapshot.val();
             if (rules && typeof rules === 'object') {
@@ -1344,6 +1347,7 @@ const AppState = {
             }
         }, err => console.error('globalSettings 로딩 실패:', err));
 
+        this.firebaseDb.ref('globalSettings/noteOptions').off('value');
         this.firebaseDb.ref('globalSettings/noteOptions').on('value', snapshot => {
             const notes = snapshot.val();
             if (Array.isArray(notes)) {
@@ -1352,6 +1356,7 @@ const AppState = {
             }
         }, err => console.error('globalSettings/noteOptions 로딩 실패:', err));
 
+        this.firebaseDb.ref('globalSettings/emailWebhookUrl').off('value');
         this.firebaseDb.ref('globalSettings/emailWebhookUrl').on('value', snapshot => {
             this.emailWebhookUrl = String(snapshot.val() || '').trim();
             const webhookInput = document.getElementById('admin-email-webhook-input');
@@ -3463,7 +3468,14 @@ const AppState = {
         const EMAILJS_PUBLIC_KEY  = 'hx7DFf4XX6BP68qm7';
 
         // 1. Google Apps Script 웹훅이 설정된 경우: 정산서 엑셀 + 사진 첨부파일을 동봉해 자동 발송
-        const webhookUrl = String(this.emailWebhookUrl || '').trim();
+        let webhookUrl = String(this.emailWebhookUrl || '').trim();
+        if (!webhookUrl && this.firebaseDb) {
+            try {
+                const snap = await this.firebaseDb.ref('globalSettings/emailWebhookUrl').once('value');
+                webhookUrl = String(snap.val() || '').trim();
+                if (webhookUrl) this.emailWebhookUrl = webhookUrl;
+            } catch (_) {}
+        }
         if (webhookUrl && /^https:\/\/script\.google\.com\/macros\//i.test(webhookUrl)) {
             try {
                 const files = await this.collectReportFiles();
@@ -9215,6 +9227,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.28', date: '2026.11.24', items: ['로그인 인증 직후 globalSettings(메일 웹훅 URL·정산 규칙·비고 항목) 실시간 리스너 재연결 및 발송 시점 직접 조회 보강으로 첨부 메일 미발송 원인 해결'] },
         { ver: '1.7.27', date: '2026.11.24', items: ['정산 완료 시 Google Apps Script 연동을 통해 정산서 엑셀(.xlsx) 및 영수증/행사 사진이 이메일에 실제 파일로 자동 첨부·발송되도록 기능 추가 (관리자 페이지 웹 앱 URL 1회 등록)'] },
         { ver: '1.7.26', date: '2026.11.24', items: ['[📋 중간 결산] 엑셀 다운로드 시 전체 표 테마 디자인(제목 배너, 헤더, 테두리, 천 단위/퍼센트 서식, 총합계·연구소 예산 행) 및 100% 소진 클럽 강조 색상(노란 행 + 진녹색 소진율 배지) 적용'] },
         { ver: '1.7.25', date: '2026.11.24', items: ['기존 회원의 정산 수신 이메일(이현준 hjlee@mmm.com 등)을 회원 목록 및 수정 화면에 자동 동기화하고 구버전 기본값(finance@club.com) 제외 처리'] },
