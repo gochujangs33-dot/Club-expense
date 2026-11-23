@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.9';
+const APP_VERSION      = '1.7.10';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -8013,7 +8013,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Keyboard support for PIN entry
     document.addEventListener('keydown', (e) => {
         if (pinModal.classList.contains('hidden')) return;
-        if (document.activeElement && ['register-name-input', 'register-phone-input', 'register-email-prefix-input', 'register-pin-input'].includes(document.activeElement.id)) return;
+        if (document.activeElement && ['register-name-input', 'register-email-prefix-input', 'register-pin-input'].includes(document.activeElement.id)) return;
         if (e.key >= '0' && e.key <= '9') {
             handlePinKeyPress(e.key);
         } else if (e.key === 'Backspace') {
@@ -8233,8 +8233,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('login-mode-section').classList.add('hidden');
         document.getElementById('register-mode-section').classList.remove('hidden');
         document.getElementById('register-name-input').value = '';
-        const phoneEl = document.getElementById('register-phone-input');
-        if (phoneEl) phoneEl.value = '';
         const emailPrefixEl = document.getElementById('register-email-prefix-input');
         if (emailPrefixEl) emailPrefixEl.value = '';
         document.getElementById('register-pin-input').value = '';
@@ -8243,6 +8241,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.10', date: '2026.11.24', items: ['신규 회원 등록 기입 항목을 [이름 / PIN 번호 / 회사 이메일(@mmm.com)] 3가지로 정돈 (연락처 입력란 제거)'] },
         { ver: '1.7.9', date: '2026.11.24', items: ['신규 회원 가입 화면에 [연락처] 및 [@mmm.com 고정 회사 이메일] 입력란 추가 (가입 시 정산 수신 메일 자동 연동 및 관리자 회원 목록에 연락처·이메일 표시)'] },
         { ver: '1.7.8', date: '2026.11.23', items: ['[현재 참석자] 탭 버튼 명칭을 [📋 종전 참석자 불러오기]로 변경하고, 버튼 클릭 시 별도 팝업 없이 가장 최근 정산 참석자 명단이 아래 [현재 참석자 명단]에 즉시 일괄 추가되도록 개선'] },
         { ver: '1.7.7', date: '2026.11.23', items: ['[현재 참석자] 탭에 [📋 이전 참석자 불러오기] 기능 추가: 선택한 클럽의 최근 정산 참석자 명단을 체크박스로 한 번에 불러온 뒤 일부 인원만 손쉽게 추가·수정·삭제 가능 (중복 인원 자동 제외)'] },
@@ -8559,7 +8558,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Submit Registration
     document.getElementById('submit-register-btn').addEventListener('click', () => {
         const name = document.getElementById('register-name-input').value.trim();
-        const phone = (document.getElementById('register-phone-input')?.value || '').trim();
         const rawEmailPrefix = (document.getElementById('register-email-prefix-input')?.value || '').trim();
         const emailPrefix = rawEmailPrefix.replace(/@.*$/, '').trim();
         const email = emailPrefix ? `${emailPrefix}@mmm.com` : '';
@@ -8571,16 +8569,6 @@ document.addEventListener('DOMContentLoaded', () => {
             regError.classList.remove('hidden');
             return;
         }
-        if (!phone) {
-            regError.textContent = "연락처를 입력해 주세요.";
-            regError.classList.remove('hidden');
-            return;
-        }
-        if (!emailPrefix || /\s/.test(emailPrefix)) {
-            regError.textContent = "회사 이메일 아이디(@mmm.com 앞부분)를 공백 없이 입력해 주세요.";
-            regError.classList.remove('hidden');
-            return;
-        }
         if (pin.length !== 6 || isNaN(pin)) {
             regError.textContent = "6자리 숫자의 PIN 번호를 입력해 주세요.";
             regError.classList.remove('hidden');
@@ -8588,6 +8576,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (pin === "000000") {
             regError.textContent = "000000은 관리자용 PIN 번호이므로 등록할 수 없습니다.";
+            regError.classList.remove('hidden');
+            return;
+        }
+        if (!emailPrefix || /\s/.test(emailPrefix)) {
+            regError.textContent = "회사 이메일 아이디(@mmm.com 앞부분)를 공백 없이 입력해 주세요.";
             regError.classList.remove('hidden');
             return;
         }
@@ -8619,7 +8612,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const initialRole = AppState.normalizeUserRole(null, pin);
                 const initialAdmin = AppState.checkHasAdminAccess(null, pin);
                 const registrationUpdates = {
-                    [`users/${pin}`]: { name, phone, email, registeredAt, role: initialRole, isAdmin: initialAdmin }
+                    [`users/${pin}`]: { name, email, registeredAt, role: initialRole, isAdmin: initialAdmin }
                 };
                 AppState.appendAuditUpdate(registrationUpdates, {
                     action: 'CREATE',
@@ -8627,7 +8620,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     targetId: pin,
                     targetLabel: `${name} (${pin})`,
                     summary: `신규 회원 '${name} (${pin})' 가입 등록`,
-                    details: { 이름: name, 연락처: phone, 이메일: email, PIN: pin, 권한: AppState.getRoleLabel(initialRole, initialAdmin) }
+                    details: { 이름: name, PIN: pin, 이메일: email, 권한: AppState.getRoleLabel(initialRole, initialAdmin) }
                 }, { pin, name, role: AppState.getRoleLabel(initialRole, initialAdmin) });
                 firebaseDb.ref().update(registrationUpdates).then(() => {
                     alert(`${name}${t('alert.register_success')}`);
@@ -9132,11 +9125,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isAdminUser) {
                     tr.style.background = 'rgba(245, 158, 11, 0.04)';
                 }
-                const contactParts = [];
-                if (user.phone) contactParts.push(`📞 ${AppState.escapeHtml(user.phone)}`);
-                if (user.email) contactParts.push(`✉️ ${AppState.escapeHtml(user.email)}`);
-                const contactHtml = contactParts.length > 0
-                    ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem;">${contactParts.join(' · ')}</div>`
+                const contactHtml = user.email
+                    ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem;">✉️ ${AppState.escapeHtml(user.email)}</div>`
                     : '';
                 tr.innerHTML = `
                     <td>
