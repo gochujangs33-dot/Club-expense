@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.18';
+const APP_VERSION      = '1.7.19';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6638,6 +6638,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 avgParticipants,
                 noteText
             };
+        }).sort((a, b) => {
+            const aFull = (a.budget > 0 && a.burnRate >= 99.5) ? 1 : 0;
+            const bFull = (b.budget > 0 && b.burnRate >= 99.5) ? 1 : 0;
+            if (bFull !== aFull) return bFull - aFull;
+            if (Math.abs(b.burnRate - a.burnRate) > 0.001) return b.burnRate - a.burnRate;
+            if (b.support !== a.support) return b.support - a.support;
+            return a.name.localeCompare(b.name, 'ko');
         });
 
         const totals = {
@@ -6786,7 +6793,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr style="${labRowBg} font-weight:800;">
                     <td style="${tdBase} text-align:left; border-top:1px solid var(--card-border);">연구소 예산 잔액</td>
                     <td style="${tdBase} text-align:right; border-top:1px solid var(--card-border); ${labBalColor}">${formatAmount(summary.labRemainingBudget)}</td>
-                    <td colspan="11" style="${tdBase} text-align:left; border-top:1px solid var(--card-border); font-weight:500; font-size:0.74rem; color:var(--text-secondary);">미배정 잔액 (연구소 총 예산 − 클럽 배정 예산 합계) · 실집행 기준 잔액: ${formatAmount(summary.labTotalBudget - t.support)}원</td>
+                    <td colspan="11" style="${tdBase} text-align:left; border-top:1px solid var(--card-border);"></td>
                 </tr>
             `;
 
@@ -8761,6 +8768,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.19', date: '2026.11.24', items: ['[📋 중간 취합표] 100% 소진 클럽 상단 배치 및 소진율 높은 순 자동 정렬 적용, 하단 [연구소 예산 잔액] 우측 불필요한 설명 문구 제거'] },
         { ver: '1.7.18', date: '2026.11.24', items: ['[📋 중간 취합표] 하단에 [연구소 총 예산] 및 [연구소 예산 잔액] 행 추가 (엑셀 다운로드 동시 반영) 및 [잔여금액] 텍스트 색상을 눈이 편안한 차분한 톤으로 개선'] },
         { ver: '1.7.17', date: '2026.11.24', items: ['[📋 중간 취합표] 상단 타이틀 및 엑셀 첫 행에 조회 기간(예: 2026년 1월 ~ 현재 날짜 진행 내역)이 자동 표시되도록 개선'] },
         { ver: '1.7.16', date: '2026.11.24', items: ['관리자 [📋 중간 취합표] 팝업 PC 전체 화면 높이 최적화(잘림 없이 전 클럽 및 총합계 한눈에 표시) 및 [지원금]과 [행사수] 사이에 [잔여금액] 컬럼 추가 (엑셀 다운로드 동시 반영)'] },
