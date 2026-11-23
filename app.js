@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.12';
+const APP_VERSION      = '1.7.13';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -8258,6 +8258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.13', date: '2026.11.24', items: ['관리자 [가입 회원 관리 > 수정] 모달에서 회원의 회사 이메일(@mmm.com) 수정 기능 추가 (정산 수신 메일 자동 동기화 포함)'] },
         { ver: '1.7.12', date: '2026.11.24', items: ['상단 [+ 새 클럽 직접 등록] 입력창에 [취소] 버튼 및 Esc 닫기 지원 추가 (등록을 취소하고 기존 클럽 선택 화면으로 즉시 복귀 가능)'] },
         { ver: '1.7.11', date: '2026.11.24', items: ['신규 회원 가입 시 입력한 회사 이메일(@mmm.com)이 [정산 및 발송 설정 > 회사 이메일 주소 (받는 사람)]에 즉시 자동 저장·연동되도록 보강 (재로그인 시에도 자동 유지)'] },
         { ver: '1.7.10', date: '2026.11.24', items: ['신규 회원 등록 기입 항목을 [이름 / PIN 번호 / 회사 이메일(@mmm.com)] 3가지로 정돈 (연락처 입력란 제거)'] },
@@ -8799,18 +8800,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function editAdminUser(oldPin, currentName, currentRole = 'member') {
-        const overlay    = document.getElementById('edit-user-modal-overlay');
-        const nameInput  = document.getElementById('edit-user-name-input');
-        const pinInput   = document.getElementById('edit-user-pin-input');
-        const roleSelect = document.getElementById('edit-user-role-select');
-        const errEl      = document.getElementById('edit-user-error');
-        const okBtn      = document.getElementById('edit-user-modal-ok');
-        const cancelBtn  = document.getElementById('edit-user-modal-cancel');
+    function editAdminUser(oldPin, currentName, currentRole = 'member', currentEmail = '') {
+        const overlay          = document.getElementById('edit-user-modal-overlay');
+        const nameInput        = document.getElementById('edit-user-name-input');
+        const pinInput         = document.getElementById('edit-user-pin-input');
+        const emailPrefixInput = document.getElementById('edit-user-email-prefix-input');
+        const roleSelect       = document.getElementById('edit-user-role-select');
+        const errEl            = document.getElementById('edit-user-error');
+        const okBtn            = document.getElementById('edit-user-modal-ok');
+        const cancelBtn        = document.getElementById('edit-user-modal-cancel');
         if (!overlay) return;
 
         nameInput.value = currentName;
         pinInput.value  = oldPin;
+        if (emailPrefixInput) {
+            emailPrefixInput.value = String(currentEmail || '').trim().replace(/@.*$/, '');
+        }
         if (roleSelect) roleSelect.value = ['president', 'developer', 'admin', 'member'].includes(currentRole) ? currentRole : 'member';
         errEl.style.display = 'none';
         overlay.style.display = 'flex';
@@ -8820,15 +8825,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const handleOk = () => {
             const newName = nameInput.value.trim();
             const newPin  = pinInput.value.trim();
+            const rawEmailPrefix = emailPrefixInput ? emailPrefixInput.value.trim() : '';
+            const emailPrefix = rawEmailPrefix.replace(/@.*$/, '').trim();
+            const newEmail = emailPrefix ? `${emailPrefix}@mmm.com` : '';
             const newRole = roleSelect ? roleSelect.value : currentRole;
             const nextIsAdmin = newRole !== 'member';
             if (!newName) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
             if (!/^\d{6}$/.test(newPin)) { errEl.textContent = t('alert.pin_digit_required'); errEl.style.display = 'block'; return; }
             if (newPin === '000000') { errEl.textContent = '000000은 사용할 수 없는 PIN 번호입니다.'; errEl.style.display = 'block'; return; }
+            if (emailPrefix && /\s/.test(emailPrefix)) { errEl.textContent = '이메일 아이디는 공백 없이 입력해주세요.'; errEl.style.display = 'block'; return; }
 
             firebaseDb.ref('users').once('value').then(allSnap => {
                 const allUsers = allSnap.val() || {};
                 const userData = { ...(allUsers[oldPin] || {}) };
+                const prevEmail = String(userData.email || currentEmail || '');
                 const prevRole = AppState.normalizeUserRole(userData, oldPin);
                 const prevIsAdmin = AppState.checkHasAdminAccess(userData, oldPin);
 
@@ -8847,6 +8857,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 close();
                 const nowTs = Date.now();
                 userData.name = newName;
+                userData.email = newEmail;
                 userData.role = newRole;
                 userData.isAdmin = nextIsAdmin;
                 userData.roleUpdatedAt = nowTs;
@@ -8858,12 +8869,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     targetType: '회원 정보 수정',
                     targetId: newPin,
                     targetLabel: `${newName} (${newPin})`,
-                    summary: `회원 정보 수정: '${currentName} (${oldPin}, ${prevRoleLabel})' → '${newName} (${newPin}, ${nextRoleLabel})'`,
+                    summary: `회원 정보 수정: '${currentName} (${oldPin}, ${prevRoleLabel})' → '${newName} (${newPin}, ${nextRoleLabel})'${newEmail && newEmail !== prevEmail ? ` · 이메일: ${newEmail}` : ''}`,
                     details: {
                         이전이름: currentName,
                         변경이름: newName,
                         이전PIN: oldPin,
                         변경PIN: newPin,
+                        이전이메일: prevEmail || '-',
+                        변경이메일: newEmail || '-',
                         이전권한: prevRoleLabel,
                         변경권한: nextRoleLabel
                     }
@@ -8886,13 +8899,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (newPin === oldPin) {
                     const updates = {
                         [`users/${oldPin}/name`]: userData.name,
+                        [`users/${oldPin}/email`]: userData.email,
                         [`users/${oldPin}/role`]: userData.role,
                         [`users/${oldPin}/isAdmin`]: userData.isAdmin,
                         [`users/${oldPin}/roleUpdatedAt`]: nowTs
                     };
+                    if (newEmail) {
+                        updates[`settlements/${oldPin}/reportEmail`] = newEmail;
+                    }
                     applyRoleDisplacement(updates);
                     AppState.appendAuditUpdate(updates, auditEvent);
-                    return firebaseDb.ref().update(updates);
+                    return firebaseDb.ref().update(updates).then(() => {
+                        if (String(AppState.currentPin) === String(oldPin)) {
+                            AppState.userName = newName;
+                            if (newEmail) {
+                                AppState.reportEmail = newEmail;
+                                setSettingsFormValues(AppState.rules);
+                            }
+                        }
+                    });
                 }
                 if (allUsers[newPin]) {
                     alert(t('alert.pin_already_used'));
@@ -8905,14 +8930,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                     applyRoleDisplacement(updates);
                     if (settlementSnap.exists()) {
-                        updates[`settlements/${newPin}`] = settlementSnap.val();
+                        const sVal = { ...(settlementSnap.val() || {}) };
+                        if (newEmail) sVal.reportEmail = newEmail;
+                        updates[`settlements/${newPin}`] = sVal;
                         updates[`settlements/${oldPin}`] = null;
+                    } else if (newEmail) {
+                        updates[`settlements/${newPin}/reportEmail`] = newEmail;
                     }
                     AppState.appendAuditUpdate(updates, auditEvent);
                     return firebaseDb.ref().update(updates).then(() => {
                         if (String(AppState.currentPin) === String(oldPin)) {
                             AppState.currentPin = newPin;
                             AppState.userName = newName;
+                            if (newEmail) {
+                                AppState.reportEmail = newEmail;
+                                setSettingsFormValues(AppState.rules);
+                            }
                             AppState.userRole = newRole;
                             AppState.hasAdminAccess = nextIsAdmin;
                             AppState._bindUserRoleListener(newPin);
@@ -9165,7 +9198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td><span style="font-size:0.8rem; color:var(--text-muted);">${dateStr}</span></td>
                     <td><span style="font-size:0.78rem; color:var(--text-muted);">${lastLoginStr}</span></td>
                     <td style="white-space:nowrap;">
-                        <button class="btn-edit-user btn-secondary" data-pin="${AppState.escapeHtml(pin)}" data-name="${AppState.escapeHtml(user.name)}" data-role="${AppState.escapeHtml(role)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">수정</button>
+                        <button class="btn-edit-user btn-secondary" data-pin="${AppState.escapeHtml(pin)}" data-name="${AppState.escapeHtml(user.name)}" data-role="${AppState.escapeHtml(role)}" data-email="${AppState.escapeHtml(user.email || '')}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">수정</button>
                         <button class="btn-delete-user btn-text-danger" data-pin="${AppState.escapeHtml(pin)}" data-name="${AppState.escapeHtml(user.name)}" style="padding:0.3rem 0.6rem; font-size:0.78rem;">삭제</button>
                     </td>
                 `;
@@ -9189,7 +9222,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     editAdminUser(
                         btn.getAttribute('data-pin'),
                         btn.getAttribute('data-name'),
-                        btn.getAttribute('data-role') || 'member'
+                        btn.getAttribute('data-role') || 'member',
+                        btn.getAttribute('data-email') || ''
                     );
                 });
             });
