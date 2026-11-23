@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.7';
+const APP_VERSION      = '1.7.8';
 const APP_VERSION_DATE = '2026.11.23';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6739,73 +6739,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 이전 참석자 불러오기 (클럽별 최근 정산 이력에서 체크박스 선택 후 일괄 추가)
+    // 종전 참석자 불러오기 (버튼 클릭 시 가장 최근 정산 참석자 명단을 현재 명단에 즉시 추가)
     (function initPrevAttendeesLoader() {
         const openBtn = document.getElementById('load-prev-attendees-btn');
-        const modal = document.getElementById('prev-attendees-modal');
-        const closeBtn = document.getElementById('prev-attendees-close-btn');
-        const cancelBtn = document.getElementById('prev-attendees-cancel-btn');
-        const applyBtn = document.getElementById('prev-attendees-apply-btn');
-        const clubLabel = document.getElementById('prev-attendees-club-label');
-        const historySelect = document.getElementById('prev-attendees-history-select');
-        const selectAllChk = document.getElementById('prev-attendees-select-all');
-        const countBadge = document.getElementById('prev-attendees-selected-count');
-        const checklistEl = document.getElementById('prev-attendees-checklist');
-        if (!openBtn || !modal || !historySelect || !checklistEl) return;
-
-        let candidateEntries = [];
-
-        const closeModal = () => modal.classList.add('hidden');
-
-        const updateSelectedCount = () => {
-            const boxes = Array.from(checklistEl.querySelectorAll('.prev-att-checkbox'));
-            const checkedCount = boxes.filter(b => b.checked).length;
-            if (countBadge) countBadge.textContent = `${checkedCount}명 선택됨`;
-            if (selectAllChk) {
-                selectAllChk.checked = boxes.length > 0 && checkedCount === boxes.length;
-                selectAllChk.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
-            }
-        };
-
-        const renderChecklist = () => {
-            const idx = parseInt(historySelect.value, 10) || 0;
-            const entry = candidateEntries[idx];
-            checklistEl.innerHTML = '';
-            if (!entry || !Array.isArray(entry.attendees) || entry.attendees.length === 0) {
-                checklistEl.innerHTML = '<div style="padding:1rem; text-align:center; font-size:0.82rem; color:var(--text-muted);">참석자 정보가 없습니다.</div>';
-                updateSelectedCount();
-                return;
-            }
-
-            const existingIds = new Set((AppState.attendees || []).map(a => String(a.employeeId || '').trim()).filter(Boolean));
-            const existingNames = new Set((AppState.attendees || []).map(a => String(a.name || '').trim()).filter(Boolean));
-
-            entry.attendees.forEach((att, attIdx) => {
-                if (!att || !att.name) return;
-                const name = String(att.name).trim();
-                const empId = String(att.employeeId || '').trim();
-                const alreadyAdded = (empId && existingIds.has(empId)) || (!empId && existingNames.has(name));
-
-                const label = document.createElement('label');
-                label.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.42rem 0.6rem; border-radius:8px; border:1px solid var(--card-border); cursor:pointer; font-size:0.85rem;';
-                if (alreadyAdded) label.style.opacity = '0.65';
-
-                label.innerHTML = `
-                    <span style="display:inline-flex; align-items:center; gap:0.5rem; color:var(--text-primary); font-weight:600;">
-                        <input type="checkbox" class="prev-att-checkbox" data-idx="${attIdx}" ${alreadyAdded ? '' : 'checked'}>
-                        <span>${AppState.escapeHtml(name)}</span>
-                        ${empId ? `<span style="font-size:0.75rem; color:var(--text-secondary); font-weight:500;">(${AppState.escapeHtml(empId)})</span>` : ''}
-                    </span>
-                    ${alreadyAdded ? '<span style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">이미 추가됨</span>' : ''}
-                `;
-                checklistEl.appendChild(label);
-            });
-
-            checklistEl.querySelectorAll('.prev-att-checkbox').forEach(chk => {
-                chk.addEventListener('change', updateSelectedCount);
-            });
-            updateSelectedCount();
-        };
+        if (!openBtn) return;
 
         openBtn.addEventListener('click', async () => {
             if (!AppState.clubName && !AppState.clubId) {
@@ -6830,93 +6767,53 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!byId.has(key)) byId.set(key, entry);
                 });
 
-                candidateEntries = Array.from(byId.values())
-                    .sort((a, b) => {
-                        const da = String(a.settlementDate || a.date || '');
-                        const db = String(b.settlementDate || b.date || '');
-                        if (db !== da) return db.localeCompare(da);
-                        return (Number(b.id) || 0) - (Number(a.id) || 0);
-                    })
-                    .slice(0, 15);
+                const sortedEntries = Array.from(byId.values()).sort((a, b) => {
+                    const da = String(a.settlementDate || a.date || '');
+                    const db = String(b.settlementDate || b.date || '');
+                    if (db !== da) return db.localeCompare(da);
+                    return (Number(b.id) || 0) - (Number(a.id) || 0);
+                });
 
-                if (candidateEntries.length === 0) {
-                    alert(`'${AppState.clubName || '선택한 클럽'}'의 이전 정산 참석자 기록이 없습니다.`);
+                if (sortedEntries.length === 0) {
+                    alert(`'${AppState.clubName || '선택한 클럽'}'의 종전 정산 참석자 기록이 없습니다.`);
                     return;
                 }
 
-                if (clubLabel) {
-                    clubLabel.textContent = `[${AppState.clubName || '기본 클럽'}] 최근 정산 명단을 불러온 뒤 일부만 수정할 수 있습니다.`;
+                const latestEntry = sortedEntries[0];
+                const existingIds = new Set((AppState.attendees || []).map(a => String(a.employeeId || '').trim()).filter(Boolean));
+                const existingNames = new Set((AppState.attendees || []).map(a => String(a.name || '').trim()).filter(Boolean));
+                const baseId = Date.now();
+                let addedCount = 0;
+
+                latestEntry.attendees.forEach((att, seq) => {
+                    if (!att || !att.name) return;
+                    const name = String(att.name).trim();
+                    const empId = String(att.employeeId || '').trim();
+                    if ((empId && existingIds.has(empId)) || (!empId && existingNames.has(name))) return;
+
+                    AppState.attendees.push({
+                        id: baseId + seq,
+                        name,
+                        employeeId: empId
+                    });
+                    if (empId) existingIds.add(empId);
+                    existingNames.add(name);
+                    addedCount++;
+                });
+
+                if (addedCount === 0) {
+                    alert('종전 참석자가 이미 모두 현재 명단에 포함되어 있습니다.');
+                    return;
                 }
 
-                historySelect.innerHTML = candidateEntries.map((e, i) => {
-                    const dStr = (e.settlementDate || (e.date ? String(e.date).slice(0, 10) : '-')).slice(0, 10);
-                    const creator = e.creatorName ? ` · ${e.creatorName}` : '';
-                    const recentTag = i === 0 ? ' (가장 최근)' : '';
-                    return `<option value="${i}">${dStr} (${e.attendees.length}명${creator})${recentTag}</option>`;
-                }).join('');
-                historySelect.value = '0';
-
-                renderChecklist();
-                modal.classList.remove('hidden');
+                AppState.memberCount = AppState.attendees.length;
+                AppState.save();
+                AppState.render();
             } finally {
                 openBtn.disabled = false;
                 openBtn.textContent = origText;
             }
         });
-
-        historySelect.addEventListener('change', renderChecklist);
-
-        if (selectAllChk) {
-            selectAllChk.addEventListener('change', () => {
-                const checked = selectAllChk.checked;
-                checklistEl.querySelectorAll('.prev-att-checkbox').forEach(chk => {
-                    chk.checked = checked;
-                });
-                updateSelectedCount();
-            });
-        }
-
-        applyBtn.addEventListener('click', () => {
-            const idx = parseInt(historySelect.value, 10) || 0;
-            const entry = candidateEntries[idx];
-            if (!entry || !Array.isArray(entry.attendees)) return;
-
-            const existingIds = new Set((AppState.attendees || []).map(a => String(a.employeeId || '').trim()).filter(Boolean));
-            const existingNames = new Set((AppState.attendees || []).map(a => String(a.name || '').trim()).filter(Boolean));
-            const baseId = Date.now();
-            let addedCount = 0;
-
-            checklistEl.querySelectorAll('.prev-att-checkbox:checked').forEach((chk, seq) => {
-                const att = entry.attendees[parseInt(chk.getAttribute('data-idx'), 10)];
-                if (!att || !att.name) return;
-                const name = String(att.name).trim();
-                const empId = String(att.employeeId || '').trim();
-                if ((empId && existingIds.has(empId)) || (!empId && existingNames.has(name))) return;
-
-                AppState.attendees.push({
-                    id: baseId + seq,
-                    name,
-                    employeeId: empId
-                });
-                if (empId) existingIds.add(empId);
-                existingNames.add(name);
-                addedCount++;
-            });
-
-            if (addedCount === 0) {
-                alert('추가할 새 참석자가 선택되지 않았습니다.');
-                return;
-            }
-
-            AppState.memberCount = AppState.attendees.length;
-            AppState.save();
-            AppState.render();
-            closeModal();
-        });
-
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
-        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     })();
 
     // Toggle settings panel handler
@@ -8338,6 +8235,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.8', date: '2026.11.23', items: ['[현재 참석자] 탭 버튼 명칭을 [📋 종전 참석자 불러오기]로 변경하고, 버튼 클릭 시 별도 팝업 없이 가장 최근 정산 참석자 명단이 아래 [현재 참석자 명단]에 즉시 일괄 추가되도록 개선'] },
         { ver: '1.7.7', date: '2026.11.23', items: ['[현재 참석자] 탭에 [📋 이전 참석자 불러오기] 기능 추가: 선택한 클럽의 최근 정산 참석자 명단을 체크박스로 한 번에 불러온 뒤 일부 인원만 손쉽게 추가·수정·삭제 가능 (중복 인원 자동 제외)'] },
         { ver: '1.7.6', date: '2026.11.23', items: ['연간 결산 PPT 보고서 클럽별 상세 슬라이드(5p~) 참석자 명단 카드 개선: 행사 표 높이와 참석 인원 수에 맞춰 글자 크기·줄간격을 자동 조절하고, 공간이 부족할 경우 별도 명단 슬라이드로 자동 분리하여 글자 겹침 및 칸 이탈 현상 해결'] },
         { ver: '1.7.5', date: '2026.11.23', items: ['관리자 대시보드 상단 요약 지표 개편: [👥 총 등록 가입자] 카드를 [🏢 총 등록 클럽] 수 표시로 변경'] },
