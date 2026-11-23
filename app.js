@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.24';
+const APP_VERSION      = '1.7.25';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1159,7 +1159,7 @@ const AppState = {
                                 if (data.clubId !== undefined) this.clubId = data.clubId;
                                 this.nonMemberCount = Math.max(0, parseInt(data.nonMemberCount, 10) || 0);
                                 this.eventNote = data.eventNote ? String(data.eventNote) : '';
-                                if (data.reportEmail !== undefined && data.reportEmail) {
+                                if (data.reportEmail !== undefined && data.reportEmail && data.reportEmail !== 'finance@club.com') {
                                     this.reportEmail = data.reportEmail;
                                     if (!userData.email) {
                                         this.firebaseDb.ref(`users/${pin}/email`).set(data.reportEmail).catch(() => {});
@@ -8844,6 +8844,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.25', date: '2026.11.24', items: ['기존 회원의 정산 수신 이메일(이현준 hjlee@mmm.com 등)을 회원 목록 및 수정 화면에 자동 동기화하고 구버전 기본값(finance@club.com) 제외 처리'] },
         { ver: '1.7.24', date: '2026.11.24', items: ['정산 및 발송 설정 등에서 회사 이메일을 등록·수정한 회원의 경우 관리자 [회원 정보 수정] 모달 및 회원 목록에 등록된 이메일이 자동 표시되고 수정 가능하도록 동기화 보강'] },
         { ver: '1.7.23', date: '2026.11.24', items: ['관리자 페이지 상단 요약 카드 4종 구성을 [총 등록 클럽 / 클럽 총 예산 / 전체 누적 지원금 / 잔여 금액]으로 개편'] },
         { ver: '1.7.22', date: '2026.11.24', items: ['관리자 페이지의 [📋 중간 취합표] 버튼 및 관련 표기(안내 문구, 엑셀 시트·파일명)를 [📋 중간 결산]으로 변경'] },
@@ -8923,8 +8924,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { ver: '1.6.309', date: '2026.10.20', items: ['연간 결산 PPT 클럽별 예산 소진율 그래프(3p) 원래 2단 레이아웃(막대/퍼센트 + 사용금액/잔여 + 배정금액) 완벽 복원 및 각 클럽별 고유 지정 색상(그래프 막대 및 좌측 클럽명 글자색) 적용', '소진율 막대그래프의 모든 텍스트(클럽명·배정금액·사용금액·퍼센트)를 PPT 독립 텍스트 상자로 배치하여 슬라이드 위에서 직접 타이핑 수정 가능하게 최적화', '클럽별 상세 활동 슬라이드(5p+) 상단 메타 박스 줄바꿈 배치: "연간 예산 · 총 집행액 · 상품비" 1줄, "참석 실인원" 2줄로 분리하여 끝자리 금액 잘림 현상 완전 해소', '관리자 모드 헤더 내 중복되던 기존 테마 토글 버튼 제거 (최상단 헤더의 상시 테마 토글 버튼으로 깔끔하게 일원화)'] },
         { ver: '1.6.308', date: '2026.10.20', items: ['연간 결산 PPT 소진율 막대 차트(3p) 전면 개편: Office 통합 차트 대신 슬라이드 상에서 즉시 클릭·수정 가능한 독립 텍스트 상자(클럽명·소진율) 및 벡터 막대 도형(트랙+채움)으로 전환', '보고서 전반 "고유 실인원" / "고유 N명" 표기를 "실인원 N명"으로 통일(2p KPI 카드 및 하단 성과 요약, 5p+ 활동 상세 테이블 합계 행 등)', '클럽별 상세 활동 테이블(5p+) 헤더에서 중복되는 "행사명 (비고)" 열을 생략하고 6개 열(진행일자/결제액/지원금/자부담/상품비/참석인원)로 넓고 쾌적하게 재배치', '슬라이드 전반 글자 크기·행 높이·여백·패딩 전면 재조정: KPI 카드 수직 간격 확대, 도넛 차트 범례 항목 균등 배치, 테이블 셀 상하 마진(3.5pt) 및 하단 참석자 명단 줄간격(1.35배) 확보로 답답함 완전 해소'] },
         { ver: '1.6.307', date: '2026.10.20', items: ['사용자 요청사항 제출 시 관리자 사이트 실시간 팝업과 함께 등록된 Gochujangs33@gmail.com 계정을 통해 개발자(jkim47@mmm.com) 이메일 동시 발송 연동', '연간 결산 PPT 보고서(2p, 3p) 차트 및 글자를 이미지 방식에서 실제 클릭·편집 가능한 네이티브 파워포인트 차트(도넛/가로막대) 및 텍스트 박스로 전면 개편', '결산 보고서 클럽별 실적 비교표(4p) 컬럼 폭 및 셀 패딩 미세 조정으로 "평균인원" 헤더 및 합계 행 금액(15,700,000원 등) 글자 줄바꿈 현상 완전 해결'] },
-        { ver: '1.6.306', date: '2026.10.19', items: ['연간 결산 PPT 보고서 라이트 테마 일체화: 첫 표지 및 마감 감사 슬라이드를 본문과 동일한 밝고 세련된 프리미엄 라이트 테마로 전면 통일', '표지 타이틀 및 파일명을 "2026년 3M 클럽 행사 결산 및 마감 보고서"로 직관적 변경 및 줄바꿈 없이 한 줄로 깔끔하게 최적화', '총괄 요약(2p) KPI 지표 카드 개편: 회사 결산 취지에 맞춰 자부담이 섞인 결제총액 대신 "회사 지원금 실집행액" 및 "잔여 예산"을 메인 지표로 정확히 재분류', '클럽별 소진율 수평 막대 차트(3p) 레이아웃 개선: 소진율(%)은 막대바 내부, 총 배정 예산은 우측, 실제 사용 금액은 막대바 밑으로 직관적 재배치', '클럽별 실적 비교표(4p) 컬럼 너비 자동 최적화로 마지막 "행사수" 헤더 글자 줄바꿈 현상 원천 해결', '클럽별 상세 활동 슬라이드(5p~) 하단 여백에 해당 클럽 한 해 전체 참석 임직원 명단 및 개인별 참석 횟수(이름(사번) N회) 정보 카드 신설'] },
-        { ver: '1.6.305', date: '2026.10.19', items: ['Gochujangs33@gmail.com 계정 기반 EmailJS 클라우드 자동 발송 서비스 연동 완료', '정산 완료 클릭 시 사용자 개별 메일 앱을 띄우지 않고 클라우드에서 회사 수신 이메일로 정산 보고서 원클릭 자동 발송 지원', '네트워크 단절 또는 한도 초과 시에도 기존 Web Share / mailto 연동으로 부드럽게 전환되는 안전 2중 폴백 체계 구축'] },
         { ver: '1.6.304', date: '2026.10.19', items: ['최상단 헤더(로그인/로그아웃 바)에 상시 Dark/Light 화면 테마 토글 버튼 추가 (일반 회원·오프라인 상태에서도 언제든 1클릭으로 테마 전환 지원)', '헤더 테마 토글과 관리자 탭 테마 설정 간의 실시간 양방향 활성화 상태 자동 동기화'] },
         { ver: '1.6.303', date: '2026.10.19', items: ['정산 이력 테이블에서 작성자와 상관없이 모든 회원이 해당 건의 엑셀 파일을 다시 다운로드할 수 있도록 권한 정책 개선', '정산 이력 테이블 행사 날짜 셀에 정산 담당자(👤 정산인: OOO) 정보 표기 및 다운로드 엑셀 파일명에 작성자 이름 자동 포함'] },
         { ver: '1.6.302', date: '2026.10.19', items: ['자동 정산 결과 화면 하단 메인 액션 버튼 문구를 "정산 완료"로 직관적 간소화 ("💾 파일 저장 및 정산 완료" → "💾 정산 완료")'] },
@@ -9416,11 +9415,11 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.style.display = 'flex';
         nameInput.focus();
 
-        // users/{pin}/email이 비어있는 기존 회원은 settlements/{pin}/reportEmail에서 자동 조회해 표시
+        // users/{pin}/email이 비어있는 기존 회원은 settlements/{pin}/reportEmail에서 자동 조회해 표시 (구 기본값 finance@club.com 제외)
         if (!currentEmail && firebaseDb && oldPin) {
             firebaseDb.ref(`settlements/${oldPin}/reportEmail`).once('value').then(snap => {
                 const fallbackEmail = String(snap.val() || '').trim();
-                if (!fallbackEmail) return;
+                if (!fallbackEmail || fallbackEmail === 'finance@club.com') return;
                 if (overlay.style.display === 'flex' && emailPrefixInput && !emailTouched && !emailPrefixInput.value.trim()) {
                     emailPrefixInput.value = fallbackEmail.replace(/@.*$/, '');
                 }
