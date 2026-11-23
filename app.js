@@ -1,8 +1,8 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.8';
-const APP_VERSION_DATE = '2026.11.23';
+const APP_VERSION      = '1.7.9';
+const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
 let _selectedQueryYear = String(new Date().getFullYear());
@@ -1134,7 +1134,11 @@ const AppState = {
                                 // previousPrizeTotal → clubRegistry.prizeUsed 기준
                                 if (data.clubName !== undefined) this.clubName = data.clubName;
                                 if (data.clubId !== undefined) this.clubId = data.clubId;
-                                if (data.reportEmail !== undefined) this.reportEmail = data.reportEmail;
+                                if (data.reportEmail !== undefined && data.reportEmail) {
+                                    this.reportEmail = data.reportEmail;
+                                } else if (userData.email) {
+                                    this.reportEmail = userData.email;
+                                }
                                 if (data.saveExcelToDevice !== undefined) this.saveExcelToDevice = data.saveExcelToDevice !== false;
                                 this.settlementHistory = data.settlementHistory || [];
                                 if (data.eventPhotos) {
@@ -8009,7 +8013,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Keyboard support for PIN entry
     document.addEventListener('keydown', (e) => {
         if (pinModal.classList.contains('hidden')) return;
-        if (document.activeElement && (document.activeElement.id === 'register-name-input' || document.activeElement.id === 'register-pin-input')) return;
+        if (document.activeElement && ['register-name-input', 'register-phone-input', 'register-email-prefix-input', 'register-pin-input'].includes(document.activeElement.id)) return;
         if (e.key >= '0' && e.key <= '9') {
             handlePinKeyPress(e.key);
         } else if (e.key === 'Backspace') {
@@ -8229,12 +8233,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('login-mode-section').classList.add('hidden');
         document.getElementById('register-mode-section').classList.remove('hidden');
         document.getElementById('register-name-input').value = '';
+        const phoneEl = document.getElementById('register-phone-input');
+        if (phoneEl) phoneEl.value = '';
+        const emailPrefixEl = document.getElementById('register-email-prefix-input');
+        if (emailPrefixEl) emailPrefixEl.value = '';
         document.getElementById('register-pin-input').value = '';
         document.getElementById('register-error-text').classList.add('hidden');
     });
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.9', date: '2026.11.24', items: ['신규 회원 가입 화면에 [연락처] 및 [@mmm.com 고정 회사 이메일] 입력란 추가 (가입 시 정산 수신 메일 자동 연동 및 관리자 회원 목록에 연락처·이메일 표시)'] },
         { ver: '1.7.8', date: '2026.11.23', items: ['[현재 참석자] 탭 버튼 명칭을 [📋 종전 참석자 불러오기]로 변경하고, 버튼 클릭 시 별도 팝업 없이 가장 최근 정산 참석자 명단이 아래 [현재 참석자 명단]에 즉시 일괄 추가되도록 개선'] },
         { ver: '1.7.7', date: '2026.11.23', items: ['[현재 참석자] 탭에 [📋 이전 참석자 불러오기] 기능 추가: 선택한 클럽의 최근 정산 참석자 명단을 체크박스로 한 번에 불러온 뒤 일부 인원만 손쉽게 추가·수정·삭제 가능 (중복 인원 자동 제외)'] },
         { ver: '1.7.6', date: '2026.11.23', items: ['연간 결산 PPT 보고서 클럽별 상세 슬라이드(5p~) 참석자 명단 카드 개선: 행사 표 높이와 참석 인원 수에 맞춰 글자 크기·줄간격을 자동 조절하고, 공간이 부족할 경우 별도 명단 슬라이드로 자동 분리하여 글자 겹침 및 칸 이탈 현상 해결'] },
@@ -8428,10 +8437,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { ver: '1.6.178', date: '2026.07.01', items: ['정산 이력 삭제 안내 문구 수정: "문의" → "요청"'] },
         { ver: '1.6.177', date: '2026.07.01', items: ['정산 이력 헤더에 "이력 삭제가 필요한 경우 관리자에게 요청하세요" 안내 추가'] },
         { ver: '1.6.176', date: '2026.07.01', items: ['이력 카드 날짜 표시 개선 — settlementDate 우선 표시, 수정 시각은 날짜+시간 함께 표시'] },
-        { ver: '1.6.175', date: '2026.07.01', items: ['수정 모드에서 정산 날짜 원본 날짜로 복원', '"파일 저장 및 정산 완료" 버튼 수정 모드 중 숨김 처리'] },
-        { ver: '1.6.174', date: '2026.07.01', items: ['정산 이력 수정 시 settlementDate 반영', '이력 카드에 "📥 엑셀" 버튼 추가 — 수정된 버전으로 엑셀 다운로드'] },
-        { ver: '1.6.173', date: '2026.07.01', items: ['수정 완료 버튼 동작 수정 — 모바일 async 다운로드 차단 문제 해결, 관리자 이력도 동시 수정'] },
-        { ver: '1.6.172', date: '2026.07.01', items: ['수정 모드 배너에 "✅ 수정 완료" 버튼 추가'] },
         { ver: '1.6.171', date: '2026.07.01', items: ['엑셀 파일명 형식 변경 — 클럽명(날짜).xlsx'] },
         { ver: '1.6.170', date: '2026.07.01', items: ['"파일 저장 및 정산 완료" 버튼명 변경 + 클릭 시 확인 팝업 추가'] },
         { ver: '1.6.169', date: '2026.07.01', items: ['클럽 깜빡임 버그 수정 — Firebase 일괄 삭제로 변경', '엑셀 저장 후 데이터 초기화 누락 수정'] },
@@ -8554,11 +8559,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Submit Registration
     document.getElementById('submit-register-btn').addEventListener('click', () => {
         const name = document.getElementById('register-name-input').value.trim();
+        const phone = (document.getElementById('register-phone-input')?.value || '').trim();
+        const rawEmailPrefix = (document.getElementById('register-email-prefix-input')?.value || '').trim();
+        const emailPrefix = rawEmailPrefix.replace(/@.*$/, '').trim();
+        const email = emailPrefix ? `${emailPrefix}@mmm.com` : '';
         const pin = document.getElementById('register-pin-input').value.trim();
         const regError = document.getElementById('register-error-text');
 
         if (!name) {
             regError.textContent = "이름을 입력해 주세요.";
+            regError.classList.remove('hidden');
+            return;
+        }
+        if (!phone) {
+            regError.textContent = "연락처를 입력해 주세요.";
+            regError.classList.remove('hidden');
+            return;
+        }
+        if (!emailPrefix || /\s/.test(emailPrefix)) {
+            regError.textContent = "회사 이메일 아이디(@mmm.com 앞부분)를 공백 없이 입력해 주세요.";
             regError.classList.remove('hidden');
             return;
         }
@@ -8600,7 +8619,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const initialRole = AppState.normalizeUserRole(null, pin);
                 const initialAdmin = AppState.checkHasAdminAccess(null, pin);
                 const registrationUpdates = {
-                    [`users/${pin}`]: { name, registeredAt, role: initialRole, isAdmin: initialAdmin }
+                    [`users/${pin}`]: { name, phone, email, registeredAt, role: initialRole, isAdmin: initialAdmin }
                 };
                 AppState.appendAuditUpdate(registrationUpdates, {
                     action: 'CREATE',
@@ -8608,7 +8627,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     targetId: pin,
                     targetLabel: `${name} (${pin})`,
                     summary: `신규 회원 '${name} (${pin})' 가입 등록`,
-                    details: { 이름: name, PIN: pin, 권한: AppState.getRoleLabel(initialRole, initialAdmin) }
+                    details: { 이름: name, 연락처: phone, 이메일: email, PIN: pin, 권한: AppState.getRoleLabel(initialRole, initialAdmin) }
                 }, { pin, name, role: AppState.getRoleLabel(initialRole, initialAdmin) });
                 firebaseDb.ref().update(registrationUpdates).then(() => {
                     alert(`${name}${t('alert.register_success')}`);
@@ -8617,9 +8636,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     AppState.isLoggedIn = true;
                     AppState.currentPin = pin;
                     AppState.userName = name;
+                    AppState.reportEmail = email;
                     AppState.userRole = initialRole;
                     AppState.hasAdminAccess = initialAdmin;
                     AppState._bindUserRoleListener(pin);
+                    AppState.save();
                     
                     setAdminMode(false);
                     syncHeaderAdminButton();
@@ -9111,12 +9132,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isAdminUser) {
                     tr.style.background = 'rgba(245, 158, 11, 0.04)';
                 }
+                const contactParts = [];
+                if (user.phone) contactParts.push(`📞 ${AppState.escapeHtml(user.phone)}`);
+                if (user.email) contactParts.push(`✉️ ${AppState.escapeHtml(user.email)}`);
+                const contactHtml = contactParts.length > 0
+                    ? `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem;">${contactParts.join(' · ')}</div>`
+                    : '';
                 tr.innerHTML = `
                     <td>
                         <div style="display:inline-flex; align-items:center; flex-wrap:wrap;">
                             <strong>${AppState.escapeHtml(user.name)}</strong>
                             ${getRoleBadgeHtml(role)}
                         </div>
+                        ${contactHtml}
                     </td>
                     <td><code>${AppState.escapeHtml(pin)}</code></td>
                     <td>

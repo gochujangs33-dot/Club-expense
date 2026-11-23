@@ -1793,6 +1793,19 @@
                                 autocomplete="off">
                         </div>
                         <div class="input-group">
+                            <label for="register-phone-input">연락처</label>
+                            <input type="tel" id="register-phone-input" inputmode="tel" placeholder="예: 010-1234-5678"
+                                autocomplete="off">
+                        </div>
+                        <div class="input-group">
+                            <label for="register-email-prefix-input">회사 이메일</label>
+                            <div style="display:flex; align-items:center; border:1px solid var(--card-border); border-radius:var(--radius-sm, 8px); background:var(--input-bg, rgba(255,255,255,0.06)); overflow:hidden;">
+                                <input type="text" id="register-email-prefix-input" placeholder="아이디 입력 (예: jkim47)" autocomplete="off"
+                                    style="flex:1; min-width:0; border:none; background:transparent; padding:0.55rem 0.65rem; color:var(--text-primary); outline:none;">
+                                <span style="padding:0.55rem 0.75rem; font-size:0.85rem; font-weight:700; color:var(--text-secondary); background:rgba(148,163,184,0.14); border-left:1px solid var(--card-border); white-space:nowrap;">@mmm.com</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
                             <label for="register-pin-input" data-i18n="register.pin_label">6자리 PIN 번호</label>
                             <input type="password" id="register-pin-input" pattern="[0-9]*" inputmode="numeric"
                                 maxlength="6" data-i18n-ph="register.pin_ph" placeholder="숫자 6자리 입력">
