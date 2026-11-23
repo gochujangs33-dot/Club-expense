@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.21';
+const APP_VERSION      = '1.7.22';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6597,7 +6597,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.id === 'year-end-ppt-modal') closeYearEndPptModal();
     });
 
-    // ── 중간 행사 진행 내역 취합표 모달 & 엑셀 다운로드 ───────────────────
+    // ── 중간 결산 모달 & 엑셀 다운로드 ───────────────────
     function buildInterimSummaryData(selectedYear, historyList, clubRegistry) {
         const yearStr = String(selectedYear || 'ALL');
         const filteredEntries = (historyList || []).filter(e => {
@@ -6741,7 +6741,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .sort(compareHistoryEntriesNewestFirst);
                 lastHistoryList = historyList;
             } catch (e) {
-                console.error('중간 취합표 이력 로드 실패:', e);
+                console.error('중간 결산 이력 로드 실패:', e);
             }
         }
 
@@ -6929,9 +6929,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 24 }
         ];
         const wb = XLSX.utils.book_new();
-        const sheetName = year === 'ALL' ? '전체_중간취합' : `${year}년_중간취합`;
+        const sheetName = year === 'ALL' ? '전체_중간결산' : `${year}년_중간결산`;
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        const fileName = year === 'ALL' ? '중간_행사_취합표_전체.xlsx' : `중간_행사_취합표_${year}년.xlsx`;
+        const fileName = year === 'ALL' ? '중간_결산_전체.xlsx' : `중간_결산_${year}년.xlsx`;
         XLSX.writeFile(wb, fileName);
     }
 
@@ -8833,6 +8833,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.22', date: '2026.11.24', items: ['관리자 페이지의 [📋 중간 취합표] 버튼 및 관련 표기(안내 문구, 엑셀 시트·파일명)를 [📋 중간 결산]으로 변경'] },
         { ver: '1.7.21', date: '2026.11.24', items: ['전체 코드 정밀 점검 및 안정화: 정산 확정·이력 수정 시 공유 전사원 명부(settlements/000000/directory) 누적 횟수 실시간 재계산 보강, 수정 모드 엑셀 다운로드 시 비회원 수·비고·정산일 동기화, 정산 초기화 시 영수증 썸네일 클린업 및 중간 취합표 실시간 최신 이력 조회 보강'] },
         { ver: '1.7.20', date: '2026.11.24', items: ['사용자 [정산 이력] 탭에서도 정산 이력을 직접 삭제할 수 있도록 권한 확대 (삭제 시 감사 로그 자동 기록 및 클럽 예산·참석 횟수 동시 차감)', '비용 항목 입력 시 법인카드/개인카드 영수증 첨부 우측에 긴 안내 문구 대신 작은 영수증 썸네일 이미지가 표시되도록 개선 (클릭 시 확대 보기)'] },
         { ver: '1.7.19', date: '2026.11.24', items: ['[📋 중간 취합표] 100% 소진 클럽 상단 배치 및 소진율 높은 순 자동 정렬 적용, 하단 [연구소 예산 잔액] 우측 불필요한 설명 문구 제거'] },
