@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.16';
+const APP_VERSION      = '1.7.17';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6695,9 +6695,28 @@ document.addEventListener('DOMContentLoaded', () => {
         yearSelect.innerHTML = years.map(y => `<option value="${y}" ${String(y) === defaultYear ? 'selected' : ''}>${y}년</option>`).join('') +
             `<option value="ALL" ${defaultYear === 'ALL' ? 'selected' : ''}>전체 연도</option>`;
 
+        const formatInterimTitle = (selYear) => {
+            const now = new Date();
+            const curY = now.getFullYear();
+            const curM = now.getMonth() + 1;
+            const curD = now.getDate();
+            if (String(selYear) === 'ALL') {
+                return `전체 기간 ~ ${curY}년 ${curM}월 ${curD}일 진행 내역`;
+            }
+            if (String(selYear) === String(curY)) {
+                return `${selYear}년 1월 ~ ${curY}년 ${curM}월 ${curD}일 진행 내역`;
+            }
+            return `${selYear}년 1월 ~ ${selYear}년 12월 진행 내역`;
+        };
+
         const renderTable = () => {
             const selYear = yearSelect.value || defaultYear;
+            const titleText = formatInterimTitle(selYear);
+            const titleEl = document.getElementById('interim-summary-modal-title');
+            if (titleEl) titleEl.textContent = `📋 ${titleText}`;
+
             const summary = buildInterimSummaryData(selYear, historyList, AppState.clubRegistry);
+            summary.titleText = titleText;
             currentInterimSummaryData = summary;
 
             const isLight = document.documentElement.getAttribute('data-app-theme') === 'light';
@@ -6792,9 +6811,13 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('엑셀 라이브러리가 준비되지 않았습니다.');
             return;
         }
-        const { year, rows, totals } = currentInterimSummaryData;
+        const { year, titleText, rows, totals } = currentInterimSummaryData;
         const headers = ['클럽명', '예산', '지원금', '잔여금액', '행사수', '정회원', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
-        const aoa = [headers];
+        const aoa = [
+            [titleText || `${year}년 진행 내역`],
+            [],
+            headers
+        ];
         rows.forEach(r => {
             aoa.push([
                 r.name,
@@ -8719,6 +8742,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.17', date: '2026.11.24', items: ['[📋 중간 취합표] 상단 타이틀 및 엑셀 첫 행에 조회 기간(예: 2026년 1월 ~ 현재 날짜 진행 내역)이 자동 표시되도록 개선'] },
         { ver: '1.7.16', date: '2026.11.24', items: ['관리자 [📋 중간 취합표] 팝업 PC 전체 화면 높이 최적화(잘림 없이 전 클럽 및 총합계 한눈에 표시) 및 [지원금]과 [행사수] 사이에 [잔여금액] 컬럼 추가 (엑셀 다운로드 동시 반영)'] },
         { ver: '1.7.15', date: '2026.11.24', items: ['정회원·비회원 참석자 수 라벨에서 불필요한 [(명)] 표기 제거', '관리자 대시보드에 [📋 중간 취합표] 팝업 및 엑셀(.xlsx) 다운로드 기능 신설: 클럽별 예산·지원금·행사수·정회원·비회원·예산비율·인원비율·소진율·인당지원금·평균참여인원·비고(온라인/가족행사 자동 카운트) 및 총합계 자동 집계'] },
         { ver: '1.7.14', date: '2026.11.24', items: ['정산 입력 화면 [참석자 및 기존 누적 정보] 카드 개편: 좌측 [정회원 참석자 수(자동 반영)] / 우측 [비회원 참석자 수(수동 기입, 정산 금액 미반영)] 2열 분리 및 [비고(온라인·가족 행사·새 항목 추가)] 드롭다운 신설'] },
