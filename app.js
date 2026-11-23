@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.11';
+const APP_VERSION      = '1.7.12';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -4576,6 +4576,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const newClubInputRow = document.getElementById('new-club-input-row');
     const newClubNameInput = document.getElementById('new-club-name-input');
     const registerNewClubBtn = document.getElementById('register-new-club-btn');
+    const cancelNewClubBtn = document.getElementById('cancel-new-club-btn');
+
+    const closeNewClubInput = () => {
+        if (newClubNameInput) newClubNameInput.value = '';
+        if (newClubInputRow) newClubInputRow.classList.add('hidden');
+        if (clubNameInput) clubNameInput.value = AppState.clubName || '';
+    };
+    if (cancelNewClubBtn) {
+        cancelNewClubBtn.addEventListener('click', closeNewClubInput);
+    }
+    if (newClubNameInput) {
+        newClubNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeNewClubInput();
+        });
+    }
 
     // 클럽이 삭제/미존재 시 팝업 (window에 등록해 AppState 내부에서도 호출 가능)
     window.showClubNotFoundModal = function() {
@@ -8243,6 +8258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.12', date: '2026.11.24', items: ['상단 [+ 새 클럽 직접 등록] 입력창에 [취소] 버튼 및 Esc 닫기 지원 추가 (등록을 취소하고 기존 클럽 선택 화면으로 즉시 복귀 가능)'] },
         { ver: '1.7.11', date: '2026.11.24', items: ['신규 회원 가입 시 입력한 회사 이메일(@mmm.com)이 [정산 및 발송 설정 > 회사 이메일 주소 (받는 사람)]에 즉시 자동 저장·연동되도록 보강 (재로그인 시에도 자동 유지)'] },
         { ver: '1.7.10', date: '2026.11.24', items: ['신규 회원 등록 기입 항목을 [이름 / PIN 번호 / 회사 이메일(@mmm.com)] 3가지로 정돈 (연락처 입력란 제거)'] },
         { ver: '1.7.9', date: '2026.11.24', items: ['신규 회원 가입 화면에 [연락처] 및 [@mmm.com 고정 회사 이메일] 입력란 추가 (가입 시 정산 수신 메일 자동 연동 및 관리자 회원 목록에 연락처·이메일 표시)'] },
@@ -8435,9 +8451,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { ver: '1.6.182', date: '2026.07.02', items: ['관리자 로그인 시 globalHistory 전체 기준으로 명부 누적 카운트 자동 재계산 — 모든 사용자 정산 이력 반영'] },
         { ver: '1.6.181', date: '2026.07.02', items: ['명부 누적 카운트 사번 기준으로 변경 — 동명이인(같은 이름, 다른 사번) 정확히 구분'] },
         { ver: '1.6.180', date: '2026.07.02', items: ['정산 이력 클럽 단위 전체 공유 — 같은 클럽이면 다른 사용자 정산 이력도 표시', '이력 카드에 정산인 이름 표시 (👤), 타인 항목 수정 버튼 숨김'] },
-        { ver: '1.6.179', date: '2026.07.02', items: ['잔여 예산 미반영 버그 수정 — Firebase 미동기화 시 개인 이력 합산으로 보완', '정산 완료 팝업 버튼이 "삭제"로 표시되던 버그 수정 → "확인"으로 변경'] },
-        { ver: '1.6.178', date: '2026.07.01', items: ['정산 이력 삭제 안내 문구 수정: "문의" → "요청"'] },
-        { ver: '1.6.177', date: '2026.07.01', items: ['정산 이력 헤더에 "이력 삭제가 필요한 경우 관리자에게 요청하세요" 안내 추가'] },
         { ver: '1.6.176', date: '2026.07.01', items: ['이력 카드 날짜 표시 개선 — settlementDate 우선 표시, 수정 시각은 날짜+시간 함께 표시'] },
         { ver: '1.6.171', date: '2026.07.01', items: ['엑셀 파일명 형식 변경 — 클럽명(날짜).xlsx'] },
         { ver: '1.6.170', date: '2026.07.01', items: ['"파일 저장 및 정산 완료" 버튼명 변경 + 클릭 시 확인 팝업 추가'] },
