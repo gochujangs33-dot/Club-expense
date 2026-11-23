@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.19';
+const APP_VERSION      = '1.7.20';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1941,25 +1941,41 @@ const AppState = {
             updatePendingSelfPayPreview();
 
             const corpStatusEl = document.getElementById('receipt-corp-status');
+            const corpThumbEl = document.getElementById('receipt-corp-thumb');
             const deleteCorpBtn = document.getElementById('delete-receipt-corp-btn');
             if (this.tempCorpReceiptImage) {
-                corpStatusEl.textContent = "✓ 영수증 첨부됨 (변경하려면 새 파일 선택)";
-                corpStatusEl.classList.remove('hidden');
+                if (corpThumbEl) {
+                    corpThumbEl.src = this.tempCorpReceiptImage;
+                    corpThumbEl.classList.remove('hidden');
+                }
+                if (corpStatusEl) corpStatusEl.classList.add('hidden');
                 if (deleteCorpBtn) deleteCorpBtn.classList.remove('hidden');
             } else {
-                corpStatusEl.classList.add('hidden');
+                if (corpThumbEl) {
+                    corpThumbEl.src = '';
+                    corpThumbEl.classList.add('hidden');
+                }
+                if (corpStatusEl) corpStatusEl.classList.add('hidden');
                 if (deleteCorpBtn) deleteCorpBtn.classList.add('hidden');
             }
             document.getElementById('expense-receipt-corp-input').value = '';
 
             const personalStatusEl = document.getElementById('receipt-personal-status');
+            const personalThumbEl = document.getElementById('receipt-personal-thumb');
             const deletePersonalBtn = document.getElementById('delete-receipt-personal-btn');
             if (this.tempPersonalReceiptImage) {
-                personalStatusEl.textContent = "✓ 영수증 첨부됨 (변경하려면 새 파일 선택)";
-                personalStatusEl.classList.remove('hidden');
+                if (personalThumbEl) {
+                    personalThumbEl.src = this.tempPersonalReceiptImage;
+                    personalThumbEl.classList.remove('hidden');
+                }
+                if (personalStatusEl) personalStatusEl.classList.add('hidden');
                 if (deletePersonalBtn) deletePersonalBtn.classList.remove('hidden');
             } else {
-                personalStatusEl.classList.add('hidden');
+                if (personalThumbEl) {
+                    personalThumbEl.src = '';
+                    personalThumbEl.classList.add('hidden');
+                }
+                if (personalStatusEl) personalStatusEl.classList.add('hidden');
                 if (deletePersonalBtn) deletePersonalBtn.classList.add('hidden');
             }
             document.getElementById('expense-receipt-personal-input').value = '';
@@ -1988,12 +2004,16 @@ const AppState = {
         document.getElementById('expense-receipt-corp-input').value = '';
         this.tempCorpReceiptImage = null;
         document.getElementById('receipt-corp-status').classList.add('hidden');
+        const corpThumbEl = document.getElementById('receipt-corp-thumb');
+        if (corpThumbEl) { corpThumbEl.src = ''; corpThumbEl.classList.add('hidden'); }
         const deleteCorpBtn = document.getElementById('delete-receipt-corp-btn');
         if (deleteCorpBtn) deleteCorpBtn.classList.add('hidden');
 
         document.getElementById('expense-receipt-personal-input').value = '';
         this.tempPersonalReceiptImage = null;
         document.getElementById('receipt-personal-status').classList.add('hidden');
+        const personalThumbEl = document.getElementById('receipt-personal-thumb');
+        if (personalThumbEl) { personalThumbEl.src = ''; personalThumbEl.classList.add('hidden'); }
         const deletePersonalBtn = document.getElementById('delete-receipt-personal-btn');
         if (deletePersonalBtn) deletePersonalBtn.classList.add('hidden');
 
@@ -3071,8 +3091,9 @@ const AppState = {
                         header,
                         window.createInlineClubUsageSummary(clubName, targetEntries, selectedUserYear === 'ALL' ? '전체' : Number(selectedUserYear), {
                             editableDates: canEditSharedHistory,
-                            // 작성자와 상관없이 모든 회원이 해당 건의 엑셀을 다시 다운로드 가능하도록 허용
-                            excelDownloads: true
+                            // 작성자와 상관없이 모든 회원이 해당 건의 엑셀을 다시 다운로드 및 삭제 가능 (삭제 시 감사 로그 자동 기록)
+                            excelDownloads: true,
+                            deleteEntries: Boolean(AppState.isLoggedIn)
                         })
                     );
                     historyContainer.appendChild(clubCard);
@@ -7707,33 +7728,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // clear-all-btn removed from UI (v1.6.83)
 
-    // 법인카드/개인카드 영수증 업로드
-    const setupSplitReceiptInput = (inputId, statusId, deleteBtnId, stateKey) => {
+    // 법인카드/개인카드 영수증 업로드 (첨부 완료 시 긴 안내 문구 대신 작은 썸네일 이미지 표시)
+    const setupSplitReceiptInput = (inputId, statusId, thumbId, deleteBtnId, stateKey, labelText) => {
         const input = document.getElementById(inputId);
         const status = document.getElementById(statusId);
+        const thumb = document.getElementById(thumbId);
         const deleteBtn = document.getElementById(deleteBtnId);
         if (!input || !status) return;
+
+        if (thumb) {
+            thumb.addEventListener('click', () => {
+                if (!AppState[stateKey]) return;
+                const modal = document.getElementById('receipt-modal');
+                const modalImg = document.getElementById('modal-img');
+                const captionText = document.getElementById('modal-caption');
+                if (modal && modalImg && captionText) {
+                    modalImg.src = AppState[stateKey];
+                    captionText.textContent = `${labelText} 영수증 미리보기`;
+                    modal.classList.remove('hidden');
+                }
+            });
+        }
 
         input.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                status.textContent = "⌛ 영수증 압축 중...";
+                status.textContent = "⌛ 압축 중...";
                 status.classList.remove('hidden');
-                compressReceiptImage(file, (compressedBase64, bytes) => {
+                if (thumb) thumb.classList.add('hidden');
+                compressReceiptImage(file, (compressedBase64) => {
                     if (!AppState.isDraftMediaWithinLimit({ [stateKey]: compressedBase64 })) {
-                        status.textContent = `⚠ 첨부 합계가 ${formatMediaSize(MediaStoragePolicy.maxSettlementBytes)}를 초과합니다.`;
+                        status.textContent = `⚠ 첨부 용량 초과`;
+                        if (thumb && AppState[stateKey]) {
+                            thumb.src = AppState[stateKey];
+                            thumb.classList.remove('hidden');
+                        }
                         if (deleteBtn) deleteBtn.classList.toggle('hidden', !AppState[stateKey]);
                         return;
                     }
                     AppState[stateKey] = compressedBase64;
-                    status.textContent = `✓ 저용량 변환 완료 (${formatMediaSize(bytes)}, 정산 완료 시 서버 보관)`;
+                    status.classList.add('hidden');
+                    if (thumb) {
+                        thumb.src = compressedBase64;
+                        thumb.classList.remove('hidden');
+                    }
                     if (deleteBtn) deleteBtn.classList.remove('hidden');
                 }, MediaStoragePolicy.receipt, err => {
-                    status.textContent = `⚠ ${err.message || '영수증 압축에 실패했습니다.'}`;
+                    status.textContent = `⚠ ${err.message || '압축 실패'}`;
                 });
             } else {
                 AppState[stateKey] = null;
                 status.classList.add('hidden');
+                if (thumb) { thumb.src = ''; thumb.classList.add('hidden'); }
                 if (deleteBtn) deleteBtn.classList.add('hidden');
             }
         });
@@ -7742,14 +7788,15 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteBtn.addEventListener('click', () => {
                 AppState[stateKey] = null;
                 status.classList.add('hidden');
+                if (thumb) { thumb.src = ''; thumb.classList.add('hidden'); }
                 input.value = '';
                 deleteBtn.classList.add('hidden');
             });
         }
     };
 
-    setupSplitReceiptInput('expense-receipt-corp-input', 'receipt-corp-status', 'delete-receipt-corp-btn', 'tempCorpReceiptImage');
-    setupSplitReceiptInput('expense-receipt-personal-input', 'receipt-personal-status', 'delete-receipt-personal-btn', 'tempPersonalReceiptImage');
+    setupSplitReceiptInput('expense-receipt-corp-input', 'receipt-corp-status', 'receipt-corp-thumb', 'delete-receipt-corp-btn', 'tempCorpReceiptImage', '법인카드');
+    setupSplitReceiptInput('expense-receipt-personal-input', 'receipt-personal-status', 'receipt-personal-thumb', 'delete-receipt-personal-btn', 'tempPersonalReceiptImage', '개인카드');
 
     // Lightbox modal close handler
     const receiptModal = document.getElementById('receipt-modal');
@@ -8768,6 +8815,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.20', date: '2026.11.24', items: ['사용자 [정산 이력] 탭에서도 정산 이력을 직접 삭제할 수 있도록 권한 확대 (삭제 시 감사 로그 자동 기록 및 클럽 예산·참석 횟수 동시 차감)', '비용 항목 입력 시 법인카드/개인카드 영수증 첨부 우측에 긴 안내 문구 대신 작은 영수증 썸네일 이미지가 표시되도록 개선 (클릭 시 확대 보기)'] },
         { ver: '1.7.19', date: '2026.11.24', items: ['[📋 중간 취합표] 100% 소진 클럽 상단 배치 및 소진율 높은 순 자동 정렬 적용, 하단 [연구소 예산 잔액] 우측 불필요한 설명 문구 제거'] },
         { ver: '1.7.18', date: '2026.11.24', items: ['[📋 중간 취합표] 하단에 [연구소 총 예산] 및 [연구소 예산 잔액] 행 추가 (엑셀 다운로드 동시 반영) 및 [잔여금액] 텍스트 색상을 눈이 편안한 차분한 톤으로 개선'] },
         { ver: '1.7.17', date: '2026.11.24', items: ['[📋 중간 취합표] 상단 타이틀 및 엑셀 첫 행에 조회 기간(예: 2026년 1월 ~ 현재 날짜 진행 내역)이 자동 표시되도록 개선'] },
@@ -8849,11 +8897,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { ver: '1.6.302', date: '2026.10.19', items: ['자동 정산 결과 화면 하단 메인 액션 버튼 문구를 "정산 완료"로 직관적 간소화 ("💾 파일 저장 및 정산 완료" → "💾 정산 완료")'] },
         { ver: '1.6.301', date: '2026.10.19', items: ['라이트 테마에서 "자동 정산 결과" 카드 배경색을 다른 카드(순백/연회색)와 완벽히 동일하게 일치화 (보라/푸른빛 틴트 제거)', '데스크톱 환경에서 우측 패널의 sticky/max-height 제한을 해제하여 자동 정산 결과 카드 하단부(자부담 비율, 총 소요 비용, 잔여 예산, 정산 완료 버튼)가 잘리지 않고 온전히 노출되도록 전체 스크롤 레이아웃 최적화'] },
         { ver: '1.6.300', date: '2026.10.19', items: ['정산 설정(⚙️) 패널 색상 및 비주얼 테마 일체화: 다크/라이트 테마 전용 스타일(순백색 배경·명확한 보더·섀도우 및 텍스트 가독성 최적화) 적용으로 주위 카드와 완벽한 조화 달성', '정산 설정 패널에서 불필요한 "보내는 사람 주소(공통)" 입력칸 및 안내 텍스트 완전 제거 (수신 회사 이메일 및 디바이스 엑셀 저장 옵션으로 화면 간소화)'] },
-        { ver: '1.6.299', date: '2026.10.19', items: ['정산 설정(⚙️) 패널 개편: 기존 불필요한 총예산·누적예산 입력란을 제거하고 회사 이메일 주소(수신자) 입력 및 작성 디바이스 엑셀파일 저장 체크박스 메뉴 신설', '공통 발신 이메일 주소(Gochujangs33@gmail.com) 고정 적용 및 정산 완료 시 설정된 수신 이메일로 정산 보고서 자동 발송 연동', '파일 저장 및 정산 완료(💾) 클릭 시 디바이스 저장 옵션 체크 여부에 따라 엑셀 다운로드 분기 처리(체크 해제 시 파일 다운로드 없이 이메일만 발송, 체크 시 디바이스 저장 및 이메일 동시 발송)', '정산서 이메일 발송 시 Web Share API(모바일 파일 첨부) 및 스마트 mailto 클라이언트 자동 연동 지원'] },
-        { ver: '1.6.298', date: '2026.10.19', items: ['연간 결산 PPT 보고서 클럽별 상세 타임라인 테이블 내 참석자 명단 요약 컬럼을 인원수(명) 전용으로 간소화(불필요한 "외 몇 명" 이름 나열 제거 및 테이블 가독성 향상)', '참석자 명단 인원 추가 후 정산 화면 참석자 수(memberCount)가 0으로 미반영되던 동기화 버그 전면 보완(클럽 최초 선택 시 초기화 방지, 탭 전환 시 자동 재렌더링 및 명부 동기화 보장)', '비용 항목 추가 폼 내 브라우저 이전 입력값 자동완성(autocomplete) 팝업 원천 차단 및 이전 카드 내역 오반영 방지', '비용 항목 입력 시 개인카드 하단에 실시간 예상 자부담 및 1인당 개인부담 안내 배너 추가(항목 추가 전 결제 참고용 실시간 계산 지원)'] },
-        { ver: '1.6.297', date: '2026.10.15', items: ['동명이인 사번 선택 팝업 글자색 시인성 버그 수정(어두운 배경과 텍스트 색상 겹침 해결)', '앱 내 전체 팝업/모달(동명이인·텍스트수정·회원정보수정·삭제확인·시설장비승인·초과승인·변경이력·PPT결산 등) 라이트/다크 테마 고대비 스타일 전면 보정', '하드코딩된 인라인 다크 배경 제거 및 테마별 카드·라벨·입력창·버튼 색상 최적화'] },
-        { ver: '1.6.296', date: '2026.10.15', items: ['요청사항 입력창(textarea) 및 이메일 보고서·총 자부담 입력창 인라인 다크 배경 제거', '라이트 테마 환경에서 모달 입력창 순백색 배경(#ffffff) 및 또렷한 글자색(#17243b)·플레이스홀더 일체화', '기본 폼 컨트롤 스타일에 textarea 통합으로 다크/라이트 테마 자동 동기화'] },
-        { ver: '1.6.295', date: '2026.10.15', items: ['상품비 안내 토스트 팝업 글자색 누락 버그 수정(라이트 테마에서 어두운 텍스트가 다크 배경에 묻혀 보이지 않던 현상 해결)', '상품비 안내 팝업 전용 스타일링 및 라이트 테마 카드 톤(순백색 배경·선명한 텍스트·연회색 버튼) 완벽 일체화', '상품비 안내 팝업 내 상태 아이콘(🎁/🚫/⚠️) 및 키보드(Enter/Esc) 닫기 편의 기능 지원'] },
         { ver: '1.6.294', date: '2026.10.14', items: ['관리자 클럽 및 예산 관리 목록 라이트 테마 색상 보정(어둡게 뜨던 예산·기존사용·상품비·잔여예산 타일 배경 및 인풋·버튼 스타일 라이트 테마 일체화)'] },
         { ver: '1.6.293', date: '2026.10.14', items: ['비용 항목 추가 폼 내 법인카드 결제 금액 입력 칸 너비 최적화 및 우측에 영수증 첨부 버튼 나란히 배치(줄바꿈 방지 및 데스크톱/모바일 칼정렬)'] },
         { ver: '1.6.292', date: '2026.10.14', items: ['라이트 테마 색상 매칭 보정(클럽별 정산 이력 카드·요약 타일·테이블 헤더 및 읽기전용 인풋 스타일 일체화)', '상단 클럽 선택창 배경 화살표(down-arrow) 중복 렌더링 제거로 깔끔한 타이틀 스타일 복원', '비용 항목 추가 폼 내 입력 필드(금액/카테고리/법인카드/개인카드) 수직 여백(gap/margin) 정돈으로 칸 달라붙음 해결'] },
@@ -9918,11 +9961,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (_) {}
     }
 
-    // 관리자 전용 이력 삭제: 공유 이력·작성자 개인 이력·참석 누적·클럽 누적액을 함께 갱신한다.
+    // 정산 이력 삭제 (일반 회원·관리자 공용): 공유 이력·작성자 개인 이력·참석 누적·클럽 누적액을 함께 갱신하고 감사 로그에 기록한다.
     function deleteAdminHistoryEntry(entry, triggerButton) {
-        if (!AppState.hasAdminAccess || !entry || !entry.id) return;
+        if (!AppState.isLoggedIn || !entry || !entry.id) return;
         showConfirmModal(
-            `이 정산 기록을 삭제하시겠습니까?\n참석자 ${entry.memberCount}명의 누적 참석 횟수도 함께 차감됩니다.`,
+            `이 정산 기록을 삭제하시겠습니까?\n참석자 ${entry.memberCount}명의 누적 참석 횟수도 함께 차감되며, 삭제 기록은 로그에 남습니다.`,
             async () => {
                 if (!firebaseDb) {
                     alert(t('alert.delete_failed_network'));
@@ -9932,8 +9975,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (triggerButton) triggerButton.disabled = true;
                 try {
                     const id = entry.id;
-                    const nextHistoryList = lastHistoryList.filter(historyEntry => String(historyEntry.id) !== String(id));
-                    // 관리자가 보는 누적 횟수는 삭제 후 남은 전체 공유 이력을 사번 기준으로 재집계한다.
+                    // 사용자/관리자 어느 화면에서 삭제하든 전체 globalHistory 기준으로 명부 누적 횟수를 정확히 재계산한다.
+                    const [historySnapshot, deletedSnapshot] = await Promise.all([
+                        firebaseDb.ref('globalHistory').once('value'),
+                        firebaseDb.ref('deletedHistoryIds').once('value')
+                    ]);
+                    const liveHistoryMap = historySnapshot.val() || {};
+                    const liveDeletedMap = deletedSnapshot.val() || {};
+                    const nextHistoryList = Object.values(liveHistoryMap)
+                        .filter(historyEntry => historyEntry && !liveDeletedMap[String(historyEntry.id)] && String(historyEntry.id) !== String(id))
+                        .sort(compareHistoryEntriesNewestFirst);
                     const nextAdminDirectory = AppState.buildDirectoryCountsForHistory(nextHistoryList);
                     let creatorHistory = null;
                     let creatorDirectory = null;
@@ -10010,6 +10061,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     cachedDeletedIds[String(id)] = true;
                     lastHistoryList = nextHistoryList;
                     AppState.directory = nextAdminDirectory;
+                    if (Array.isArray(AppState.clubHistory)) {
+                        AppState.clubHistory = AppState.clubHistory.filter(h => h && String(h.id) !== String(id));
+                    }
+                    if (Array.isArray(AppState.settlementHistory)) {
+                        AppState.settlementHistory = AppState.settlementHistory.filter(h => h && String(h.id) !== String(id));
+                    }
                     if (creatorHistory && String(entry.creatorPin) === String(AppState.currentPin)) {
                         AppState.settlementHistory = creatorHistory;
                     }
