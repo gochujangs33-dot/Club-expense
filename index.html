@@ -750,8 +750,14 @@
                                             id="attendee-list-count">0</span><span data-i18n="unit.person">명</span>)
                                     </h2>
                                 </div>
-                                <button id="clear-attendees-btn" class="btn-text-danger"
-                                    data-i18n="btn.clear_attendees">전체 비우기</button>
+                                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end;">
+                                    <button type="button" id="load-prev-attendees-btn" class="btn-secondary"
+                                        style="padding:0.28rem 0.65rem; font-size:0.78rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem;">
+                                        📋 이전 참석자 불러오기
+                                    </button>
+                                    <button id="clear-attendees-btn" class="btn-text-danger"
+                                        data-i18n="btn.clear_attendees">전체 비우기</button>
+                                </div>
                             </div>
                         </div>
                         <div class="card-body scroll-y" style="max-height: 400px;">
@@ -1909,6 +1915,35 @@
                     style="padding:0.5rem 1.6rem; background:rgba(99,102,241,0.25); border:2px solid rgba(99,102,241,0.6); color:#c7d2fe; border-radius:10px; font-size:0.9rem; font-weight:800; cursor:pointer;">저장</button>
                 <button id="edit-user-modal-cancel" class="edit-user-cancel-btn"
                     style="padding:0.5rem 1.6rem; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.75); border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 이전 참석자 불러오기 모달 -->
+    <div id="prev-attendees-modal" class="modal hidden" style="z-index:10350;">
+        <div class="modal-content-card" style="max-width:500px; width:calc(100% - 2rem); max-height:86vh; display:flex; flex-direction:column; padding:1.25rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                <div>
+                    <h3 style="margin:0; font-size:1.02rem; font-weight:700; color:var(--text-primary);">📋 이전 참석자 불러오기</h3>
+                    <p id="prev-attendees-club-label" style="margin:0.15rem 0 0; font-size:0.76rem; color:var(--text-secondary);">불러온 후 현재 명단에서 일부만 추가·삭제할 수 있습니다.</p>
+                </div>
+                <button type="button" id="prev-attendees-close-btn" class="close-btn" style="position:static; font-size:1.3rem; line-height:1;">&times;</button>
+            </div>
+            <div style="margin-bottom:0.75rem;">
+                <label for="prev-attendees-history-select" style="display:block; font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.3rem;">불러올 이전 정산 선택</label>
+                <select id="prev-attendees-history-select" style="width:100%; padding:0.48rem 0.65rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.86rem;"></select>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.45rem; font-size:0.78rem;">
+                <label style="display:inline-flex; align-items:center; gap:0.35rem; cursor:pointer; color:var(--text-primary); font-weight:600;">
+                    <input type="checkbox" id="prev-attendees-select-all" checked>
+                    전체 선택 / 해제
+                </label>
+                <span id="prev-attendees-selected-count" style="color:var(--color-secondary); font-weight:700;">0명 선택됨</span>
+            </div>
+            <div id="prev-attendees-checklist" class="scroll-y" style="flex:1; min-height:140px; max-height:300px; border:1px solid var(--card-border); border-radius:10px; padding:0.45rem; display:flex; flex-direction:column; gap:0.35rem;"></div>
+            <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.9rem;">
+                <button type="button" id="prev-attendees-cancel-btn" class="btn-secondary" style="padding:0.5rem 1rem; font-size:0.86rem; border-radius:8px;">취소</button>
+                <button type="button" id="prev-attendees-apply-btn" class="btn-primary" style="padding:0.5rem 1.2rem; font-size:0.86rem; font-weight:700; border-radius:8px; width:auto;">선택한 인원 불러오기</button>
             </div>
         </div>
     </div>
