@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.28';
+const APP_VERSION      = '1.7.29';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3467,7 +3467,7 @@ const AppState = {
         const EMAILJS_TEMPLATE_ID = 'template_t862eth';
         const EMAILJS_PUBLIC_KEY  = 'hx7DFf4XX6BP68qm7';
 
-        // 1. Google Apps Script 웹훅이 설정된 경우: 정산서 엑셀 + 사진 첨부파일을 동봉해 자동 발송
+        // 1. Google Apps Script 웹훅이 설정된 경우: 정산서 엑셀 파일(.xlsx, 내부에 행사·영수증 사진 포함)만 동봉해 빠르게 자동 발송
         let webhookUrl = String(this.emailWebhookUrl || '').trim();
         if (!webhookUrl && this.firebaseDb) {
             try {
@@ -3478,24 +3478,13 @@ const AppState = {
         }
         if (webhookUrl && /^https:\/\/script\.google\.com\/macros\//i.test(webhookUrl)) {
             try {
-                const files = await this.collectReportFiles();
-                const attachments = [];
-                let totalBytes = 0;
-                const MAX_TOTAL_BYTES = 18 * 1024 * 1024;
-                for (let i = 0; i < files.length; i++) {
-                    const f = files[i];
-                    if (i > 0 && totalBytes + f.size > MAX_TOTAL_BYTES) {
-                        console.warn('첨부파일 총 용량 제한으로 일부 파일 제외:', f.name);
-                        continue;
-                    }
-                    const base64 = await this.fileToBase64(f);
-                    attachments.push({
-                        name: f.name,
-                        mimeType: f.type || 'application/octet-stream',
-                        base64
-                    });
-                    totalBytes += f.size;
-                }
+                const excelFile = await this.generateExcelFile();
+                const base64 = await this.fileToBase64(excelFile);
+                const attachments = [{
+                    name: excelFile.name,
+                    mimeType: excelFile.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    base64
+                }];
                 const res = await fetch(webhookUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -3510,8 +3499,8 @@ const AppState = {
                 if (res.ok) {
                     const data = await res.json().catch(() => ({}));
                     if (data && data.success) {
-                        console.log(`[Apps Script] 첨부파일 ${attachments.length}개 포함 자동 발송 완료`);
-                        return { success: true, method: 'apps_script', attachmentCount: attachments.length };
+                        console.log(`[Apps Script] 정산서 엑셀 첨부(${excelFile.name}) 자동 발송 완료`);
+                        return { success: true, method: 'apps_script', attachmentCount: 1, fileName: excelFile.name };
                     }
                     console.warn('[Apps Script] 응답 오류, EmailJS로 폴백:', data);
                 } else {
@@ -8309,7 +8298,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         sendEmailBtn.innerHTML = `<span class='btn-icon'>✓</span> ${t('state.saved')}`;
 
                         const attachNotice = (emailResult && emailResult.method === 'apps_script')
-                            ? `📎 메일 첨부: 정산서 엑셀 등 ${emailResult.attachmentCount}개 파일 동봉 완료\n`
+                            ? `📎 메일 첨부: 정산서 엑셀 파일(${emailResult.fileName || '정산서.xlsx'}) 동봉 완료\n`
                             : '';
                         const saveNotice = willSaveExcel
                             ? `📂 ${todayStr} 정산 엑셀 파일이 디바이스(다운로드 폴더)에 저장되었습니다.\n`
@@ -9227,6 +9216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.29', date: '2026.11.24', items: ['정산 완료 메일 발송 시 정산서 엑셀 파일(.xlsx, 내부에 행사·영수증 사진 포함)만 첨부하고 별도 이미지 파일 중복 첨부를 제거해 발송 속도 및 메일함 용량 최적화'] },
         { ver: '1.7.28', date: '2026.11.24', items: ['로그인 인증 직후 globalSettings(메일 웹훅 URL·정산 규칙·비고 항목) 실시간 리스너 재연결 및 발송 시점 직접 조회 보강으로 첨부 메일 미발송 원인 해결'] },
         { ver: '1.7.27', date: '2026.11.24', items: ['정산 완료 시 Google Apps Script 연동을 통해 정산서 엑셀(.xlsx) 및 영수증/행사 사진이 이메일에 실제 파일로 자동 첨부·발송되도록 기능 추가 (관리자 페이지 웹 앱 URL 1회 등록)'] },
         { ver: '1.7.26', date: '2026.11.24', items: ['[📋 중간 결산] 엑셀 다운로드 시 전체 표 테마 디자인(제목 배너, 헤더, 테두리, 천 단위/퍼센트 서식, 총합계·연구소 예산 행) 및 100% 소진 클럽 강조 색상(노란 행 + 진녹색 소진율 배지) 적용'] },
