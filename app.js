@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.14';
+const APP_VERSION      = '1.7.15';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6552,6 +6552,291 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.id === 'year-end-ppt-modal') closeYearEndPptModal();
     });
 
+    // ── 중간 행사 진행 내역 취합표 모달 & 엑셀 다운로드 ───────────────────
+    function buildInterimSummaryData(selectedYear, historyList, clubRegistry) {
+        const yearStr = String(selectedYear || 'ALL');
+        const filteredEntries = (historyList || []).filter(e => {
+            if (!e) return false;
+            if (yearStr === 'ALL') return true;
+            return String(getHistoryEntryYear(e)) === yearStr;
+        });
+
+        const clubMap = new Map();
+        const seenNames = new Set();
+        Object.values(clubRegistry || {}).forEach(club => {
+            if (!club) return;
+            const name = String(club.name || '').trim();
+            const key = name.toLowerCase();
+            if (!name || seenNames.has(key)) return;
+            seenNames.add(key);
+            clubMap.set(key, {
+                name,
+                budget: Number(club.budget) || 0,
+                support: 0,
+                eventCount: 0,
+                regularMembers: 0,
+                nonMembers: 0,
+                noteCounts: new Map()
+            });
+        });
+
+        filteredEntries.forEach(entry => {
+            const name = String(entry.clubName || '기본 클럽').trim() || '기본 클럽';
+            const key = name.toLowerCase();
+            if (!clubMap.has(key)) {
+                clubMap.set(key, {
+                    name,
+                    budget: 0,
+                    support: 0,
+                    eventCount: 0,
+                    regularMembers: 0,
+                    nonMembers: 0,
+                    noteCounts: new Map()
+                });
+            }
+            const row = clubMap.get(key);
+            row.support += Math.max(0, parseAmount(entry.finalSupportAmount));
+            row.eventCount += 1;
+            const regCnt = Number(entry.memberCount) || (Array.isArray(entry.attendees) ? entry.attendees.length : 0);
+            const nonCnt = Math.max(0, parseInt(entry.nonMemberCount, 10) || 0);
+            row.regularMembers += regCnt;
+            row.nonMembers += nonCnt;
+
+            const note = String(entry.eventNote || '').trim();
+            if (note) {
+                row.noteCounts.set(note, (row.noteCounts.get(note) || 0) + 1);
+            }
+        });
+
+        const rows = Array.from(clubMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+        const totalBudget = rows.reduce((s, r) => s + r.budget, 0);
+        const totalSupport = rows.reduce((s, r) => s + r.support, 0);
+        const totalEvents = rows.reduce((s, r) => s + r.eventCount, 0);
+        const totalRegular = rows.reduce((s, r) => s + r.regularMembers, 0);
+        const totalNonMembers = rows.reduce((s, r) => s + r.nonMembers, 0);
+        const totalAllMembers = totalRegular + totalNonMembers;
+
+        const computedRows = rows.map(r => {
+            const totalClubMembers = r.regularMembers + r.nonMembers;
+            const budgetRatio = totalBudget > 0 ? (r.budget / totalBudget) * 100 : 0;
+            const memberRatio = totalAllMembers > 0 ? (totalClubMembers / totalAllMembers) * 100 : 0;
+            const burnRate = r.budget > 0 ? (r.support / r.budget) * 100 : 0;
+            const perPersonSupport = totalClubMembers > 0 ? Math.round(r.support / totalClubMembers) : 0;
+            const avgParticipants = r.eventCount > 0 ? Math.round(totalClubMembers / r.eventCount) : 0;
+            const noteText = Array.from(r.noteCounts.entries())
+                .map(([n, cnt]) => `${n} ${cnt}회`)
+                .join(', ');
+            return {
+                ...r,
+                totalMembers: totalClubMembers,
+                budgetRatio,
+                memberRatio,
+                burnRate,
+                perPersonSupport,
+                avgParticipants,
+                noteText
+            };
+        });
+
+        const totals = {
+            name: '총합계',
+            budget: totalBudget,
+            support: totalSupport,
+            eventCount: totalEvents,
+            regularMembers: totalRegular,
+            nonMembers: totalNonMembers,
+            totalMembers: totalAllMembers,
+            budgetRatio: totalBudget > 0 ? 100 : 0,
+            memberRatio: totalAllMembers > 0 ? 100 : 0,
+            burnRate: totalBudget > 0 ? (totalSupport / totalBudget) * 100 : 0,
+            perPersonSupport: totalAllMembers > 0 ? Math.round(totalSupport / totalAllMembers) : 0,
+            avgParticipants: totalEvents > 0 ? Math.round(totalAllMembers / totalEvents) : 0,
+            noteText: ''
+        };
+
+        return { year: yearStr, rows: computedRows, totals };
+    }
+
+    let currentInterimSummaryData = null;
+
+    async function openInterimSummaryModal() {
+        if (!AppState.hasAdminAccess) return;
+        const modal = document.getElementById('interim-summary-modal');
+        const yearSelect = document.getElementById('interim-summary-year-select');
+        const tableWrap = document.getElementById('interim-summary-table-wrap');
+        if (!modal || !yearSelect || !tableWrap) return;
+
+        modal.classList.remove('hidden');
+        tableWrap.innerHTML = '<div style="padding:2rem; text-align:center; color:var(--text-secondary);">데이터를 집계하는 중입니다...</div>';
+
+        let historyList = lastHistoryList;
+        if ((!historyList || historyList.length === 0) && firebaseDb) {
+            try {
+                const [snapshot, deletedSnap] = await Promise.all([
+                    firebaseDb.ref('globalHistory').once('value'),
+                    firebaseDb.ref('deletedHistoryIds').once('value')
+                ]);
+                const historyData = snapshot.val() || {};
+                const delIds = deletedSnap.val() || {};
+                historyList = Object.values(historyData)
+                    .filter(e => e && !delIds[String(e.id)])
+                    .sort(compareHistoryEntriesNewestFirst);
+                lastHistoryList = historyList;
+            } catch (e) {
+                console.error('중간 취합표 이력 로드 실패:', e);
+            }
+        }
+
+        const years = YearEndPptGenerator.getAvailableYears(historyList);
+        const defaultYear = String(_selectedQueryYear || new Date().getFullYear());
+        yearSelect.innerHTML = years.map(y => `<option value="${y}" ${String(y) === defaultYear ? 'selected' : ''}>${y}년</option>`).join('') +
+            `<option value="ALL" ${defaultYear === 'ALL' ? 'selected' : ''}>전체 연도</option>`;
+
+        const renderTable = () => {
+            const selYear = yearSelect.value || defaultYear;
+            const summary = buildInterimSummaryData(selYear, historyList, AppState.clubRegistry);
+            currentInterimSummaryData = summary;
+
+            const isLight = document.documentElement.getAttribute('data-app-theme') === 'light';
+            const thStyle = `padding:0.55rem 0.6rem; font-size:0.78rem; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--card-border); background:${isLight ? '#e2e8f0' : 'rgba(15,23,42,0.92)'}; color:var(--text-primary); position:sticky; top:0; z-index:2;`;
+            const tdBase = `padding:0.48rem 0.6rem; font-size:0.8rem; border-bottom:1px solid var(--card-border); white-space:nowrap;`;
+
+            const bodyHtml = summary.rows.map(r => {
+                const isExhausted = r.budget > 0 && r.burnRate >= 99.5;
+                const rowHighlight = isExhausted
+                    ? (isLight ? 'background:rgba(250,204,21,0.22);' : 'background:rgba(250,204,21,0.12);')
+                    : '';
+                const burnBg = isExhausted
+                    ? (isLight ? 'background:#15803d; color:#ffffff; font-weight:700;' : 'background:rgba(22,163,74,0.85); color:#ffffff; font-weight:700;')
+                    : '';
+                return `
+                    <tr style="${rowHighlight}">
+                        <td style="${tdBase} font-weight:700; text-align:left;">${AppState.escapeHtml(r.name)}</td>
+                        <td style="${tdBase} text-align:right;">${formatAmount(r.budget)}</td>
+                        <td style="${tdBase} text-align:right;">${formatAmount(r.support)}</td>
+                        <td style="${tdBase} text-align:right;">${r.eventCount}</td>
+                        <td style="${tdBase} text-align:right;">${r.regularMembers}</td>
+                        <td style="${tdBase} text-align:right;">${r.nonMembers}</td>
+                        <td style="${tdBase} text-align:right;">${r.budgetRatio.toFixed(1)}%</td>
+                        <td style="${tdBase} text-align:right;">${r.memberRatio.toFixed(1)}%</td>
+                        <td style="${tdBase} text-align:right; ${burnBg}">${Math.round(r.burnRate)}%</td>
+                        <td style="${tdBase} text-align:right;">${formatAmount(r.perPersonSupport)}</td>
+                        <td style="${tdBase} text-align:right;">${r.avgParticipants}</td>
+                        <td style="${tdBase} text-align:left; color:${r.noteText ? 'var(--color-secondary)' : 'var(--text-muted)'}; font-weight:${r.noteText ? '600' : '400'};">${AppState.escapeHtml(r.noteText || '-')}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const t = summary.totals;
+            const totalRowBg = isLight ? 'background:#e2e8f0; color:#0f172a;' : 'background:rgba(30,41,59,0.95); color:#f8fafc;';
+            const footHtml = `
+                <tr style="${totalRowBg} font-weight:800;">
+                    <td style="${tdBase} text-align:left; border-top:2px solid var(--card-border);">${t.name}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.budget)}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.support)}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.eventCount}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.regularMembers}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.nonMembers}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.budgetRatio.toFixed(1)}%</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.memberRatio.toFixed(1)}%</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${Math.round(t.burnRate)}%</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.perPersonSupport)}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.avgParticipants}</td>
+                    <td style="${tdBase} text-align:left; border-top:2px solid var(--card-border);"></td>
+                </tr>
+            `;
+
+            tableWrap.innerHTML = `
+                <table style="width:100%; border-collapse:collapse; min-width:860px;">
+                    <thead>
+                        <tr>
+                            <th style="${thStyle} text-align:left;">클럽명</th>
+                            <th style="${thStyle} text-align:right;">예산</th>
+                            <th style="${thStyle} text-align:right;">지원금</th>
+                            <th style="${thStyle} text-align:right;">행사수</th>
+                            <th style="${thStyle} text-align:right;">정회원</th>
+                            <th style="${thStyle} text-align:right;">비회원</th>
+                            <th style="${thStyle} text-align:right;">예산 비율</th>
+                            <th style="${thStyle} text-align:right;">인원 비율</th>
+                            <th style="${thStyle} text-align:right;">소진율</th>
+                            <th style="${thStyle} text-align:right;">인당 지원금</th>
+                            <th style="${thStyle} text-align:right;">평균 참여 인원수</th>
+                            <th style="${thStyle} text-align:left;">비고</th>
+                        </tr>
+                    </thead>
+                    <tbody>${bodyHtml}</tbody>
+                    <tfoot>${footHtml}</tfoot>
+                </table>
+            `;
+        };
+
+        yearSelect.onchange = renderTable;
+        renderTable();
+    }
+
+    function closeInterimSummaryModal() {
+        document.getElementById('interim-summary-modal')?.classList.add('hidden');
+    }
+
+    function downloadInterimSummaryExcel() {
+        if (!currentInterimSummaryData || typeof XLSX === 'undefined') {
+            alert('엑셀 라이브러리가 준비되지 않았습니다.');
+            return;
+        }
+        const { year, rows, totals } = currentInterimSummaryData;
+        const headers = ['클럽명', '예산', '지원금', '행사수', '정회원', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
+        const aoa = [headers];
+        rows.forEach(r => {
+            aoa.push([
+                r.name,
+                r.budget,
+                r.support,
+                r.eventCount,
+                r.regularMembers,
+                r.nonMembers,
+                Number(r.budgetRatio.toFixed(1)),
+                Number(r.memberRatio.toFixed(1)),
+                Math.round(r.burnRate),
+                r.perPersonSupport,
+                r.avgParticipants,
+                r.noteText || ''
+            ]);
+        });
+        aoa.push([
+            totals.name,
+            totals.budget,
+            totals.support,
+            totals.eventCount,
+            totals.regularMembers,
+            totals.nonMembers,
+            Number(totals.budgetRatio.toFixed(1)),
+            Number(totals.memberRatio.toFixed(1)),
+            Math.round(totals.burnRate),
+            totals.perPersonSupport,
+            totals.avgParticipants,
+            ''
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [
+            { wch: 16 }, { wch: 13 }, { wch: 13 }, { wch: 8 },
+            { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 12 },
+            { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 24 }
+        ];
+        const wb = XLSX.utils.book_new();
+        const sheetName = year === 'ALL' ? '전체_중간취합' : `${year}년_중간취합`;
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        const fileName = year === 'ALL' ? '중간_행사_취합표_전체.xlsx' : `중간_행사_취합표_${year}년.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    document.getElementById('admin-interim-summary-btn')?.addEventListener('click', openInterimSummaryModal);
+    document.getElementById('close-interim-summary-modal')?.addEventListener('click', closeInterimSummaryModal);
+    document.getElementById('download-interim-excel-btn')?.addEventListener('click', downloadInterimSummaryExcel);
+    document.getElementById('interim-summary-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'interim-summary-modal') closeInterimSummaryModal();
+    });
+
     ['audit-log-month-filter', 'audit-log-action-filter', 'audit-log-type-filter', 'audit-log-search-input'].forEach(id => {
         const element = document.getElementById(id);
         if (element) element.addEventListener(id === 'audit-log-search-input' ? 'input' : 'change', renderAuditLogList);
@@ -8273,7 +8558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const clubNameWrapperEl = document.querySelector('.club-name-wrapper');
         if (clubNameWrapperEl) clubNameWrapperEl.classList.toggle('hidden', allowAdmin);
 
-        const adminOnlyIds = ['admin-tab-btn', 'club-history-tab-btn', 'charts-tab-btn', 'admin-audit-log-btn', 'admin-export-ppt-btn', 'history-export-ppt-btn'];
+        const adminOnlyIds = ['admin-tab-btn', 'club-history-tab-btn', 'charts-tab-btn', 'admin-audit-log-btn', 'admin-interim-summary-btn', 'admin-export-ppt-btn', 'history-export-ppt-btn'];
         const memberOnlyIds = ['settlement-tab-btn', 'attendees-tab-btn', 'history-tab-btn'];
         adminOnlyIds.forEach(id => {
             const el = document.getElementById(id);
@@ -8423,6 +8708,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.15', date: '2026.11.24', items: ['정회원·비회원 참석자 수 라벨에서 불필요한 [(명)] 표기 제거', '관리자 대시보드에 [📋 중간 취합표] 팝업 및 엑셀(.xlsx) 다운로드 기능 신설: 클럽별 예산·지원금·행사수·정회원·비회원·예산비율·인원비율·소진율·인당지원금·평균참여인원·비고(온라인/가족행사 자동 카운트) 및 총합계 자동 집계'] },
         { ver: '1.7.14', date: '2026.11.24', items: ['정산 입력 화면 [참석자 및 기존 누적 정보] 카드 개편: 좌측 [정회원 참석자 수(자동 반영)] / 우측 [비회원 참석자 수(수동 기입, 정산 금액 미반영)] 2열 분리 및 [비고(온라인·가족 행사·새 항목 추가)] 드롭다운 신설'] },
         { ver: '1.7.13', date: '2026.11.24', items: ['관리자 [가입 회원 관리 > 수정] 모달에서 회원의 회사 이메일(@mmm.com) 수정 기능 추가 (정산 수신 메일 자동 동기화 포함)'] },
         { ver: '1.7.12', date: '2026.11.24', items: ['상단 [+ 새 클럽 직접 등록] 입력창에 [취소] 버튼 및 Esc 닫기 지원 추가 (등록을 취소하고 기존 클럽 선택 화면으로 즉시 복귀 가능)'] },

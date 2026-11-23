@@ -365,13 +365,13 @@
                         <div class="card-body">
                             <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.65rem;">
                                 <div class="input-group" style="margin-bottom:0;">
-                                    <label for="member-count-input" data-i18n="label.member_count">정회원 참석자 수 (명)</label>
+                                    <label for="member-count-input" data-i18n="label.member_count">정회원 참석자 수</label>
                                     <input type="number" id="member-count-input" min="0" placeholder="예: 20" value="0"
                                         readonly class="readonly-input">
                                     <small class="input-hint" data-i18n="hint.member_count">💡 '참석자 명부' 탭 인원 자동 반영</small>
                                 </div>
                                 <div class="input-group" style="margin-bottom:0;">
-                                    <label for="non-member-count-input">비회원 참석자 수 (명)</label>
+                                    <label for="non-member-count-input">비회원 참석자 수</label>
                                     <input type="number" id="non-member-count-input" min="0" placeholder="예: 0" value="0">
                                     <small class="input-hint">💡 수동 기입 (정산 금액 미반영)</small>
                                 </div>
@@ -1123,6 +1123,9 @@
                 style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
                 <h2 class="admin-mode-title" data-i18n="admin.mode_title" style="margin-bottom:0;">👑 전체 관리자 모드</h2>
                 <div class="admin-mode-header-actions">
+                    <button type="button" id="admin-interim-summary-btn" class="btn-secondary"
+                        style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(16,185,129,0.42); background:rgba(16,185,129,0.12); color:#34d399; border-radius:8px; cursor:pointer;">📋
+                        중간 취합표</button>
                     <button type="button" id="admin-export-ppt-btn" class="btn-secondary"
                         style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12); color:#fbbf24; border-radius:8px; cursor:pointer;">📊
                         연간 결산 PPT</button>
@@ -1491,6 +1494,24 @@
                     <button type="button" id="dismiss-club-usage-summary-btn" class="btn-secondary">닫기</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 중간 행사 진행 내역 취합표 모달 (관리자 전용) -->
+    <div id="interim-summary-modal" class="modal hidden" role="dialog" aria-modal="true" style="z-index:10360;">
+        <div class="modal-content-card" style="max-width:1160px; width:calc(100% - 1.5rem); max-height:88vh; display:flex; flex-direction:column; padding:1.25rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.85rem;">
+                <div>
+                    <h3 style="margin:0; font-size:1.08rem; font-weight:800; color:var(--text-primary);">📋 중간 행사 진행 내역 취합표</h3>
+                    <p style="margin:0.18rem 0 0; font-size:0.76rem; color:var(--text-secondary);">클럽별 예산·지원금·행사수·정회원·비회원·소진율·비고가 자동 집계됩니다.</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <select id="interim-summary-year-select" style="padding:0.38rem 0.65rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.82rem; font-weight:600;"></select>
+                    <button type="button" id="download-interim-excel-btn" class="btn-primary" style="padding:0.42rem 0.9rem; font-size:0.82rem; font-weight:700; border-radius:8px; width:auto; display:inline-flex; align-items:center; gap:0.35rem;">📥 엑셀 다운로드</button>
+                    <button type="button" id="close-interim-summary-modal" class="close-btn" style="position:static; font-size:1.35rem; line-height:1;">&times;</button>
+                </div>
+            </div>
+            <div id="interim-summary-table-wrap" class="scroll-y" style="flex:1; overflow:auto; border:1px solid var(--card-border); border-radius:10px;"></div>
         </div>
     </div>
 
