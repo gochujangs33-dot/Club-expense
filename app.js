@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.23';
+const APP_VERSION      = '1.7.24';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1161,6 +1161,9 @@ const AppState = {
                                 this.eventNote = data.eventNote ? String(data.eventNote) : '';
                                 if (data.reportEmail !== undefined && data.reportEmail) {
                                     this.reportEmail = data.reportEmail;
+                                    if (!userData.email) {
+                                        this.firebaseDb.ref(`users/${pin}/email`).set(data.reportEmail).catch(() => {});
+                                    }
                                 } else if (userData.email) {
                                     this.reportEmail = userData.email;
                                     this.firebaseDb.ref(`settlements/${pin}/reportEmail`).set(userData.email).catch(() => {});
@@ -7408,7 +7411,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-settings-btn').addEventListener('click', () => {
         const emailEl = document.getElementById('setting-report-email');
         const checkEl = document.getElementById('setting-save-device-check');
-        if (emailEl) AppState.reportEmail = emailEl.value.trim();
+        if (emailEl) {
+            AppState.reportEmail = emailEl.value.trim();
+            if (AppState.isLoggedIn && AppState.firebaseDb && AppState.currentPin) {
+                AppState.firebaseDb.ref(`users/${AppState.currentPin}/email`).set(AppState.reportEmail).catch(() => {});
+            }
+        }
         if (checkEl) AppState.saveExcelToDevice = checkEl.checked;
         AppState.save();
         AppState.render();
@@ -7859,6 +7867,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (prompted && prompted.trim()) {
                     recipientEmail = prompted.trim();
                     AppState.reportEmail = recipientEmail;
+                    if (AppState.isLoggedIn && AppState.firebaseDb && AppState.currentPin) {
+                        AppState.firebaseDb.ref(`users/${AppState.currentPin}/email`).set(recipientEmail).catch(() => {});
+                    }
                     AppState.save();
                     const emailEl = document.getElementById('setting-report-email');
                     if (emailEl) emailEl.value = recipientEmail;
@@ -8833,6 +8844,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.24', date: '2026.11.24', items: ['정산 및 발송 설정 등에서 회사 이메일을 등록·수정한 회원의 경우 관리자 [회원 정보 수정] 모달 및 회원 목록에 등록된 이메일이 자동 표시되고 수정 가능하도록 동기화 보강'] },
         { ver: '1.7.23', date: '2026.11.24', items: ['관리자 페이지 상단 요약 카드 4종 구성을 [총 등록 클럽 / 클럽 총 예산 / 전체 누적 지원금 / 잔여 금액]으로 개편'] },
         { ver: '1.7.22', date: '2026.11.24', items: ['관리자 페이지의 [📋 중간 취합표] 버튼 및 관련 표기(안내 문구, 엑셀 시트·파일명)를 [📋 중간 결산]으로 변경'] },
         { ver: '1.7.21', date: '2026.11.24', items: ['전체 코드 정밀 점검 및 안정화: 정산 확정·이력 수정 시 공유 전사원 명부(settlements/000000/directory) 누적 횟수 실시간 재계산 보강, 수정 모드 엑셀 다운로드 시 비회원 수·비고·정산일 동기화, 정산 초기화 시 영수증 썸네일 클린업 및 중간 취합표 실시간 최신 이력 조회 보강'] },
@@ -9393,13 +9405,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         nameInput.value = currentName;
         pinInput.value  = oldPin;
+        let emailTouched = false;
+        const onEmailInput = () => { emailTouched = true; };
         if (emailPrefixInput) {
             emailPrefixInput.value = String(currentEmail || '').trim().replace(/@.*$/, '');
+            emailPrefixInput.addEventListener('input', onEmailInput);
         }
         if (roleSelect) roleSelect.value = ['president', 'developer', 'admin', 'member'].includes(currentRole) ? currentRole : 'member';
         errEl.style.display = 'none';
         overlay.style.display = 'flex';
         nameInput.focus();
+
+        // users/{pin}/email이 비어있는 기존 회원은 settlements/{pin}/reportEmail에서 자동 조회해 표시
+        if (!currentEmail && firebaseDb && oldPin) {
+            firebaseDb.ref(`settlements/${oldPin}/reportEmail`).once('value').then(snap => {
+                const fallbackEmail = String(snap.val() || '').trim();
+                if (!fallbackEmail) return;
+                if (overlay.style.display === 'flex' && emailPrefixInput && !emailTouched && !emailPrefixInput.value.trim()) {
+                    emailPrefixInput.value = fallbackEmail.replace(/@.*$/, '');
+                }
+                firebaseDb.ref(`users/${oldPin}/email`).set(fallbackEmail).catch(() => {});
+            }).catch(() => {});
+        }
 
         const close = () => { overlay.style.display = 'none'; cleanup(); };
         const handleOk = () => {
@@ -9482,20 +9509,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         [`users/${oldPin}/email`]: userData.email,
                         [`users/${oldPin}/role`]: userData.role,
                         [`users/${oldPin}/isAdmin`]: userData.isAdmin,
-                        [`users/${oldPin}/roleUpdatedAt`]: nowTs
+                        [`users/${oldPin}/roleUpdatedAt`]: nowTs,
+                        [`settlements/${oldPin}/reportEmail`]: newEmail
                     };
-                    if (newEmail) {
-                        updates[`settlements/${oldPin}/reportEmail`] = newEmail;
-                    }
                     applyRoleDisplacement(updates);
                     AppState.appendAuditUpdate(updates, auditEvent);
                     return firebaseDb.ref().update(updates).then(() => {
                         if (String(AppState.currentPin) === String(oldPin)) {
                             AppState.userName = newName;
-                            if (newEmail) {
-                                AppState.reportEmail = newEmail;
-                                setSettingsFormValues(AppState.rules);
-                            }
+                            AppState.reportEmail = newEmail;
+                            setSettingsFormValues(AppState.rules);
                         }
                     });
                 }
@@ -9547,6 +9570,7 @@ document.addEventListener('DOMContentLoaded', () => {
             okBtn.removeEventListener('click', handleOk);
             cancelBtn.removeEventListener('click', handleCancel);
             overlay.removeEventListener('keydown', handleKey);
+            if (emailPrefixInput) emailPrefixInput.removeEventListener('input', onEmailInput);
         };
         okBtn.addEventListener('click', handleOk);
         cancelBtn.addEventListener('click', handleCancel);
