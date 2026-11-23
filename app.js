@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.10';
+const APP_VERSION      = '1.7.11';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1138,6 +1138,7 @@ const AppState = {
                                     this.reportEmail = data.reportEmail;
                                 } else if (userData.email) {
                                     this.reportEmail = userData.email;
+                                    this.firebaseDb.ref(`settlements/${pin}/reportEmail`).set(userData.email).catch(() => {});
                                 }
                                 if (data.saveExcelToDevice !== undefined) this.saveExcelToDevice = data.saveExcelToDevice !== false;
                                 this.settlementHistory = data.settlementHistory || [];
@@ -1160,6 +1161,7 @@ const AppState = {
                                 this.clubName = '';
                                 this.settlementHistory = [];
                                 this.eventPhotos = [];
+                                this.reportEmail = userData.email || '';
                                 this.isLoggedIn = true;
                                 this.currentPin = pin;
                                 this.save();
@@ -8241,6 +8243,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.11', date: '2026.11.24', items: ['신규 회원 가입 시 입력한 회사 이메일(@mmm.com)이 [정산 및 발송 설정 > 회사 이메일 주소 (받는 사람)]에 즉시 자동 저장·연동되도록 보강 (재로그인 시에도 자동 유지)'] },
         { ver: '1.7.10', date: '2026.11.24', items: ['신규 회원 등록 기입 항목을 [이름 / PIN 번호 / 회사 이메일(@mmm.com)] 3가지로 정돈 (연락처 입력란 제거)'] },
         { ver: '1.7.9', date: '2026.11.24', items: ['신규 회원 가입 화면에 [연락처] 및 [@mmm.com 고정 회사 이메일] 입력란 추가 (가입 시 정산 수신 메일 자동 연동 및 관리자 회원 목록에 연락처·이메일 표시)'] },
         { ver: '1.7.8', date: '2026.11.23', items: ['[현재 참석자] 탭 버튼 명칭을 [📋 종전 참석자 불러오기]로 변경하고, 버튼 클릭 시 별도 팝업 없이 가장 최근 정산 참석자 명단이 아래 [현재 참석자 명단]에 즉시 일괄 추가되도록 개선'] },
@@ -8612,7 +8615,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const initialRole = AppState.normalizeUserRole(null, pin);
                 const initialAdmin = AppState.checkHasAdminAccess(null, pin);
                 const registrationUpdates = {
-                    [`users/${pin}`]: { name, email, registeredAt, role: initialRole, isAdmin: initialAdmin }
+                    [`users/${pin}`]: { name, email, registeredAt, role: initialRole, isAdmin: initialAdmin },
+                    [`settlements/${pin}/reportEmail`]: email
                 };
                 AppState.appendAuditUpdate(registrationUpdates, {
                     action: 'CREATE',
