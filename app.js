@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.25';
+const APP_VERSION      = '1.7.26';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6878,7 +6878,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('interim-summary-modal')?.classList.add('hidden');
     }
 
-    function downloadInterimSummaryExcel() {
+    async function downloadInterimSummaryExcel() {
         if (!currentInterimSummaryData || typeof XLSX === 'undefined') {
             alert('엑셀 라이브러리가 준비되지 않았습니다.');
             return;
@@ -6922,20 +6922,233 @@ document.addEventListener('DOMContentLoaded', () => {
             totals.avgParticipants,
             ''
         ]);
-        aoa.push(['연구소 총 예산', labTotalBudget]);
-        aoa.push(['연구소 예산 잔액', labRemainingBudget]);
+        aoa.push(['연구소 총 예산', labTotalBudget, '', '', '', '', '', '', '', '', '', '', '']);
+        aoa.push(['연구소 예산 잔액', labRemainingBudget, '', '', '', '', '', '', '', '', '', '', '']);
 
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         ws['!cols'] = [
-            { wch: 16 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 8 },
-            { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 12 },
-            { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 24 }
+            { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 9 },
+            { wch: 9 }, { wch: 9 }, { wch: 13 }, { wch: 13 },
+            { wch: 11 }, { wch: 13 }, { wch: 17 }, { wch: 24 }
         ];
+        const totalRow1 = 4 + rows.length;
+        const labTotalRow1 = totalRow1 + 1;
+        const labRemainRow1 = totalRow1 + 2;
+        ws['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+            { s: { r: labTotalRow1 - 1, c: 1 }, e: { r: labTotalRow1 - 1, c: 12 } },
+            { s: { r: labRemainRow1 - 1, c: 1 }, e: { r: labRemainRow1 - 1, c: 12 } }
+        ];
+        ws['!rows'] = [
+            { hpt: 28 },
+            { hpt: 8 },
+            { hpt: 24 },
+            ...rows.map(() => ({ hpt: 21 })),
+            { hpt: 23 },
+            { hpt: 22 },
+            { hpt: 22 }
+        ];
+
         const wb = XLSX.utils.book_new();
         const sheetName = year === 'ALL' ? '전체_중간결산' : `${year}년_중간결산`;
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
         const fileName = year === 'ALL' ? '중간_결산_전체.xlsx' : `중간_결산_${year}년.xlsx`;
-        XLSX.writeFile(wb, fileName);
+
+        if (typeof JSZip === 'undefined') {
+            XLSX.writeFile(wb, fileName);
+            return;
+        }
+
+        try {
+            const rawBytes = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const zip = await JSZip.loadAsync(rawBytes);
+
+            // 테마 스타일 XML 생성 (타이틀, 헤더, 100% 소진 강조, 소진율 100% 녹색 배지, 총합계, 연구소 예산 행)
+            const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="3">
+    <numFmt numFmtId="164" formatCode="#,##0"/>
+    <numFmt numFmtId="165" formatCode="0.0&quot;%&quot;"/>
+    <numFmt numFmtId="166" formatCode="0&quot;%&quot;"/>
+  </numFmts>
+  <fonts count="10">
+    <font><sz val="10"/><color rgb="FF0F172A"/><name val="맑은 고딕"/></font>
+    <font><b/><sz val="13"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/></font>
+    <font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/></font>
+    <font><b/><sz val="10"/><color rgb="FF0F172A"/><name val="맑은 고딕"/></font>
+    <font><b/><sz val="10"/><color rgb="FF1E40AF"/><name val="맑은 고딕"/></font>
+    <font><b/><sz val="10"/><color rgb="FFDC2626"/><name val="맑은 고딕"/></font>
+    <font><sz val="10"/><color rgb="FF64748B"/><name val="맑은 고딕"/></font>
+    <font><b/><sz val="10"/><color rgb="FF4F46E5"/><name val="맑은 고딕"/></font>
+    <font><sz val="10"/><color rgb="FF1E40AF"/><name val="맑은 고딕"/></font>
+    <font><b/><sz val="10"/><color rgb="FF1E40AF"/><name val="맑은 고딕"/></font>
+  </fonts>
+  <fills count="7">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF1E293B"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF334155"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF8FAFC"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF15803D"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFEF9C3"/></patternFill></fill>
+  </fills>
+  <borders count="3">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border>
+      <left style="thin"><color rgb="FFCBD5E1"/></left>
+      <right style="thin"><color rgb="FFCBD5E1"/></right>
+      <top style="thin"><color rgb="FFCBD5E1"/></top>
+      <bottom style="thin"><color rgb="FFCBD5E1"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="thin"><color rgb="FF94A3B8"/></left>
+      <right style="thin"><color rgb="FF94A3B8"/></right>
+      <top style="medium"><color rgb="FF475569"/></top>
+      <bottom style="thin"><color rgb="FF94A3B8"/></bottom>
+      <diagonal/>
+    </border>
+  </borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="28">
+    <!-- 0: 기본 -->
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <!-- 1: 타이틀 (A1:M1) -->
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 2: 테이블 헤더 좌측 -->
+    <xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 3: 테이블 헤더 우측/중앙 -->
+    <xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 4: 일반 클럽명 (흰 배경, bold) -->
+    <xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 5: 일반 클럽명 (줄무늬 #F8FAFC, bold) -->
+    <xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 6: 일반 숫자 #,##0 (흰 배경) -->
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 7: 일반 숫자 #,##0 (줄무늬) -->
+    <xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 8: 일반 비율 0.0% (흰 배경) -->
+    <xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 9: 일반 비율 0.0% (줄무늬) -->
+    <xf numFmtId="165" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 10: 일반 소진율 0% (흰 배경) -->
+    <xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 11: 일반 소진율 0% (줄무늬) -->
+    <xf numFmtId="166" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 12: 잔여금액 양수 (파란색, 흰 배경) -->
+    <xf numFmtId="164" fontId="8" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 13: 잔여금액 양수 (파란색, 줄무늬) -->
+    <xf numFmtId="164" fontId="8" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 14: 잔여금액 음수 (빨간색 bold, 흰 배경) -->
+    <xf numFmtId="164" fontId="5" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 15: 100% 소진 행 클럽명 (노란 강조 배경, bold) -->
+    <xf numFmtId="0" fontId="3" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 16: 100% 소진 행 숫자 #,##0 (노란 강조 배경) -->
+    <xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 17: 100% 소진 행 비율 0.0% (노란 강조 배경) -->
+    <xf numFmtId="165" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 18: 100% 소진율 배지 셀 (진녹색 배경, 흰 bold) -->
+    <xf numFmtId="166" fontId="2" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 19: 비고 텍스트 (흰 배경) -->
+    <xf numFmtId="0" fontId="7" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 20: 비고 텍스트 (줄무늬) -->
+    <xf numFmtId="0" fontId="7" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 21: 비고 텍스트 (100% 소진 노란 배경) -->
+    <xf numFmtId="0" fontId="7" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 22: 총합계 텍스트 (회색 배경, 상단 굵은 테두리) -->
+    <xf numFmtId="0" fontId="3" fillId="7" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 23: 총합계 숫자 #,##0 -->
+    <xf numFmtId="164" fontId="3" fillId="7" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 24: 총합계 비율 0.0% -->
+    <xf numFmtId="165" fontId="3" fillId="7" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 25: 총합계 소진율 0% -->
+    <xf numFmtId="166" fontId="3" fillId="7" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 26: 연구소 예산 행 라벨/빈셀 (연노랑 배경) -->
+    <xf numFmtId="0" fontId="3" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 27: 연구소 예산 행 금액 (연노랑 배경, bold 파랑) -->
+    <xf numFmtId="164" fontId="4" fillId="8" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+            // fills count 속성 정확히 9개로 보정
+            const fixedStylesXml = stylesXml.replace('<fills count="7">', '<fills count="9">');
+            zip.file('xl/styles.xml', fixedStylesXml);
+
+            // 행/열별 스타일 인덱스 매핑
+            const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'];
+            const styleMap = new Map();
+            cols.forEach(c => styleMap.set(`${c}1`, 1));
+            cols.forEach((c, idx) => styleMap.set(`${c}3`, (idx === 0 || idx === 12) ? 2 : 3));
+
+            rows.forEach((r, i) => {
+                const rowNum = 4 + i;
+                const isExhausted = r.budget > 0 && r.burnRate >= 99.5;
+                const zebra = i % 2 === 1;
+                if (isExhausted) {
+                    cols.forEach((c, idx) => {
+                        let s = 16;
+                        if (idx === 0) s = 15;
+                        else if (idx === 7 || idx === 8) s = 17;
+                        else if (idx === 9) s = 18; // 100% 소진율 진녹색 배지
+                        else if (idx === 12) s = 21;
+                        styleMap.set(`${c}${rowNum}`, s);
+                    });
+                } else {
+                    cols.forEach((c, idx) => {
+                        let s = zebra ? 7 : 6;
+                        if (idx === 0) s = zebra ? 5 : 4;
+                        else if (idx === 3) {
+                            s = r.remaining < 0 ? 14 : (r.remaining > 0 ? (zebra ? 13 : 12) : (zebra ? 7 : 6));
+                        } else if (idx === 7 || idx === 8) s = zebra ? 9 : 8;
+                        else if (idx === 9) s = zebra ? 11 : 10;
+                        else if (idx === 12) s = zebra ? 20 : 19;
+                        styleMap.set(`${c}${rowNum}`, s);
+                    });
+                }
+            });
+
+            cols.forEach((c, idx) => {
+                let s = 23;
+                if (idx === 0 || idx === 12) s = 22;
+                else if (idx === 7 || idx === 8) s = 24;
+                else if (idx === 9) s = 25;
+                styleMap.set(`${c}${totalRow1}`, s);
+            });
+            cols.forEach((c, idx) => {
+                styleMap.set(`${c}${labTotalRow1}`, idx === 1 ? 23 : 26);
+                styleMap.set(`${c}${labRemainRow1}`, idx === 1 ? 27 : 26);
+            });
+            // 연구소 총 예산 금액은 검정 bold(23) 대신 연노랑 배경(#FEF9C3) 위 검정 bold를 위해 27(파랑) vs 16(노랑검정) 구분
+            styleMap.set(`B${labTotalRow1}`, 16);
+            if (labRemainingBudget < 0) styleMap.set(`B${labRemainRow1}`, 14);
+
+            let sheet1 = await zip.file('xl/worksheets/sheet1.xml').async('string');
+            sheet1 = sheet1.replace(/<c r="([A-Z]+\d+)"([^>]*)>/g, (full, ref, attrs) => {
+                const sIdx = styleMap.get(ref);
+                if (sIdx === undefined) return full;
+                const cleanAttrs = attrs.replace(/\s*s="\d+"/, '');
+                return `<c r="${ref}" s="${sIdx}"${cleanAttrs}>`;
+            });
+            zip.file('xl/worksheets/sheet1.xml', sheet1);
+
+            const styledBlob = await zip.generateAsync({
+                type: 'blob',
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            const url = URL.createObjectURL(styledBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (err) {
+            console.warn('스타일 적용 엑셀 생성 실패, 기본 다운로드로 폴백:', err);
+            XLSX.writeFile(wb, fileName);
+        }
     }
 
     document.getElementById('admin-interim-summary-btn')?.addEventListener('click', openInterimSummaryModal);
@@ -8844,6 +9057,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.26', date: '2026.11.24', items: ['[📋 중간 결산] 엑셀 다운로드 시 전체 표 테마 디자인(제목 배너, 헤더, 테두리, 천 단위/퍼센트 서식, 총합계·연구소 예산 행) 및 100% 소진 클럽 강조 색상(노란 행 + 진녹색 소진율 배지) 적용'] },
         { ver: '1.7.25', date: '2026.11.24', items: ['기존 회원의 정산 수신 이메일(이현준 hjlee@mmm.com 등)을 회원 목록 및 수정 화면에 자동 동기화하고 구버전 기본값(finance@club.com) 제외 처리'] },
         { ver: '1.7.24', date: '2026.11.24', items: ['정산 및 발송 설정 등에서 회사 이메일을 등록·수정한 회원의 경우 관리자 [회원 정보 수정] 모달 및 회원 목록에 등록된 이메일이 자동 표시되고 수정 가능하도록 동기화 보강'] },
         { ver: '1.7.23', date: '2026.11.24', items: ['관리자 페이지 상단 요약 카드 4종 구성을 [총 등록 클럽 / 클럽 총 예산 / 전체 누적 지원금 / 잔여 금액]으로 개편'] },
