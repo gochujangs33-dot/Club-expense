@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.20';
+const APP_VERSION      = '1.7.21';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3666,6 +3666,8 @@ const AppState = {
             sheet2 = setCellValue(sheet2, 'L25', '', true);
         }
         sheet2 = setCellValue(sheet2, 'K30', calcResult.totalCost - finalSelfPay, false);
+        // GridCraft 등 외부 엑셀 뷰어에서 Excel 2010 확장 조건부서식(<extLst>) 경고 팝업이 뜨지 않도록 제거
+        sheet2 = sheet2.replace(/<extLst>[\s\S]*?<\/extLst>/g, '');
 
         zip.file('xl/worksheets/sheet2.xml', sheet2);
 
@@ -3830,12 +3832,17 @@ const AppState = {
 
             // 수정 모드: 이력 항목 갱신
             if (this.editingHistoryId) {
+                const _sdi = document.getElementById('settlement-date-input');
+                const settlementDate = (_sdi && _sdi.value)
+                    ? _sdi.value : (this._editingHistoryOriginal?.settlementDate || new Date().toISOString().slice(0, 10));
                 const result = SettlementCalculator.calculate(
                     this.memberCount, this.expenseItems, this.previousPrizeTotal, this.rules
                 );
                 const finalTotalSelfPay = this.selfPayManuallyOverridden ? this.lastCalculatedSelfPay : Math.round(result.itemSelfPay);
                 const updatedFields = {
                     memberCount: this.memberCount,
+                    nonMemberCount: this.nonMemberCount || 0,
+                    eventNote: this.eventNote || '',
                     totalCost: result.totalCost,
                     prizeCost: result.prizeCost,
                     finalSupportAmount: result.totalCost - finalTotalSelfPay,
@@ -3847,10 +3854,11 @@ const AppState = {
                     eventPhotos: JSON.parse(JSON.stringify(this.eventPhotos || [])),
                     clubName: this.clubName,
                     clubId: this.clubId || '',
+                    settlementDate,
                 };
                 await this.updateHistoryEntry(this.editingHistoryId, updatedFields);
                 this.cancelEditMode();
-                this.render();
+                resetSettlementSession();
             }
         } catch (err) {
             console.error("엑셀 파일 다운로드 실패:", err);
@@ -4018,31 +4026,29 @@ const AppState = {
         const deltaPrize = newPrize - oldPrize;
         const creatorPin = merged.creatorPin || oldEntry.creatorPin;
         let persistedClub = null;
-        let nextDirectory = nextSettlementHistory
+        const ownPersonalDirectory = nextSettlementHistory
             ? this.buildDirectoryCountsForHistory(nextSettlementHistory)
             : null;
+        let nextGlobalDirectory = null;
         let creatorHistory = null;
         let creatorDirectory = null;
 
         try {
             if (this.firebaseDb) {
-                // 관리자는 개인 이력이 아닌 전체 공유 이력을 기준으로 명부 누적 횟수를 계산한다.
-                if (this.hasAdminAccess) {
-                    const [historySnapshot, deletedSnapshot] = await Promise.all([
-                        this.firebaseDb.ref('globalHistory').once('value'),
-                        this.firebaseDb.ref('deletedHistoryIds').once('value')
-                    ]);
-                    const deletedIds = new Set(Object.keys(deletedSnapshot.val() || {}));
-                    const globalHistory = [];
-                    historySnapshot.forEach(child => {
-                        if (deletedIds.has(String(child.key))) return;
-                        const historyEntry = child.val();
-                        if (!historyEntry) return;
-                        globalHistory.push(String(historyEntry.id) === String(id) ? merged : historyEntry);
-                    });
-                    nextDirectory = this.buildDirectoryCountsForHistory(globalHistory);
-
-                }
+                // 일반 회원·관리자 어느 화면에서 수정하든 전체 공유 이력(globalHistory) 기준으로 공유 명부 누적 횟수를 정확히 재계산한다.
+                const [historySnapshot, deletedSnapshot] = await Promise.all([
+                    this.firebaseDb.ref('globalHistory').once('value'),
+                    this.firebaseDb.ref('deletedHistoryIds').once('value')
+                ]);
+                const deletedIds = new Set(Object.keys(deletedSnapshot.val() || {}));
+                const globalHistory = [];
+                historySnapshot.forEach(child => {
+                    if (deletedIds.has(String(child.key))) return;
+                    const historyEntry = child.val();
+                    if (!historyEntry) return;
+                    globalHistory.push(String(historyEntry.id) === String(id) ? merged : historyEntry);
+                });
+                nextGlobalDirectory = this.buildDirectoryCountsForHistory(globalHistory);
 
                 // 다른 회원이 공유 이력을 수정해도 원 작성자의 개인 이력과 참석 누적 횟수는
                 // 함께 갱신한다. 현재 로그인 계정의 명부에 타인의 이력을 섞지 않는다.
@@ -4077,11 +4083,11 @@ const AppState = {
                 if (nextSettlementHistory && this.currentPin) {
                     firebaseUpdates[`settlements/${this.currentPin}/settlementHistory`] = this.buildPersonalHistoryForSync(nextSettlementHistory);
                 }
-                if (nextDirectory && this.currentPin) {
-                    firebaseUpdates[`settlements/${this.currentPin}/directory`] = nextDirectory;
-                    if (this.hasAdminAccess) {
-                        firebaseUpdates['settlements/000000/directory'] = nextDirectory;
-                    }
+                if (ownPersonalDirectory && this.currentPin) {
+                    firebaseUpdates[`settlements/${this.currentPin}/directory`] = ownPersonalDirectory;
+                }
+                if (nextGlobalDirectory) {
+                    firebaseUpdates['settlements/000000/directory'] = nextGlobalDirectory;
                 }
                 if (creatorHistory && creatorPin) {
                     firebaseUpdates[`settlements/${creatorPin}/settlementHistory`] = this.buildPersonalHistoryForSync(creatorHistory);
@@ -4135,7 +4141,8 @@ const AppState = {
             // 원격 저장이 끝난 뒤에만 로컬 캐시를 갱신한다.
             if (clubIdx >= 0) this.clubHistory[clubIdx] = merged;
             if (ownIdx >= 0) this.settlementHistory = nextSettlementHistory;
-            if (nextDirectory) this.directory = nextDirectory;
+            if (nextGlobalDirectory) this.directory = nextGlobalDirectory;
+            else if (ownPersonalDirectory) this.directory = ownPersonalDirectory;
             if (club) {
                 if (persistedClub) {
                     this.clubRegistry[clubId] = { ...club, ...persistedClub };
@@ -4420,7 +4427,8 @@ const AppState = {
                 settlementYear: parseInt(settlementDate.slice(0, 4), 10) || new Date().getFullYear(),
             };
             const nextSettlementHistory = [newHistoryItem, ...(this.settlementHistory || [])];
-            const nextDirectory = this.buildDirectoryCountsForHistory(nextSettlementHistory);
+            const nextPersonalDirectory = this.buildDirectoryCountsForHistory(nextSettlementHistory);
+            let nextGlobalDirectory = null;
             if (this.getHistoryMediaBytes(newHistoryItem) > MediaStoragePolicy.maxSettlementBytes) {
                 throw new Error('첨부 사진·영수증 용량이 너무 큽니다. 일부 파일을 삭제한 뒤 다시 시도해 주세요.');
             }
@@ -4431,9 +4439,30 @@ const AppState = {
             // 공유 이력·개인 이력·세션 초기화·클럽 누적액을 한 번에 저장한다.
             // 쓰기가 실패하면 아래 로컬 초기화 구간에 도달하지 않으므로 입력 내용이 그대로 유지된다.
             if (this.isLoggedIn && this.firebaseDb) {
+                try {
+                    const [historySnapshot, deletedSnapshot] = await Promise.all([
+                        this.firebaseDb.ref('globalHistory').once('value'),
+                        this.firebaseDb.ref('deletedHistoryIds').once('value')
+                    ]);
+                    const deletedIds = new Set(Object.keys(deletedSnapshot.val() || {}));
+                    const globalHistoryWithNew = [newHistoryItem];
+                    historySnapshot.forEach(child => {
+                        if (deletedIds.has(String(child.key))) return;
+                        const historyEntry = child.val();
+                        if (!historyEntry || String(historyEntry.id) === String(newHistoryItem.id)) return;
+                        globalHistoryWithNew.push(historyEntry);
+                    });
+                    nextGlobalDirectory = this.buildDirectoryCountsForHistory(globalHistoryWithNew);
+                } catch (dirErr) {
+                    console.warn('정산 확정 시 공유 명부 누적 재계산 실패, 개인 명부로 폴백:', dirErr);
+                }
+
                 const firebaseUpdates = {
                     [`globalHistory/${newHistoryItem.id}`]: newHistoryItem,
                 };
+                if (nextGlobalDirectory) {
+                    firebaseUpdates['settlements/000000/directory'] = nextGlobalDirectory;
+                }
                 if (this.currentPin) {
                     const settlementPath = `settlements/${this.currentPin}`;
                     firebaseUpdates[`${settlementPath}/memberCount`] = 0;
@@ -4441,7 +4470,7 @@ const AppState = {
                     firebaseUpdates[`${settlementPath}/eventNote`] = '';
                     firebaseUpdates[`${settlementPath}/expenseItems`] = [];
                     firebaseUpdates[`${settlementPath}/attendees`] = [];
-                    firebaseUpdates[`${settlementPath}/directory`] = nextDirectory;
+                    firebaseUpdates[`${settlementPath}/directory`] = nextPersonalDirectory;
                     firebaseUpdates[`${settlementPath}/settlementHistory`] = this.buildPersonalHistoryForSync(nextSettlementHistory);
                     firebaseUpdates[`${settlementPath}/eventPhotos`] = null;
                     firebaseUpdates[`${settlementPath}/lastUpdated`] = firebase.database.ServerValue.TIMESTAMP;
@@ -4487,8 +4516,8 @@ const AppState = {
             this.settlementHistory = nextSettlementHistory;
             if (this.clubHistory.length > 0) this.clubHistory.unshift(newHistoryItem);
 
-            // 명부 누적 카운트는 정산 이력 기준으로 재계산 (잘못된 잔여 카운트가 누적되지 않도록)
-            this.directory = nextDirectory;
+            // 명부 누적 카운트는 전체 공유 정산 이력 기준으로 반영 (오프라인 시 개인 이력 폴백)
+            this.directory = nextGlobalDirectory || nextPersonalDirectory;
 
             // Update used budget (사용자가 수정한 자부담 기준 실제 지원금과 동일한 값 사용)
             this.usedBudget = Math.max(0, this.usedBudget + newHistoryItem.finalSupportAmount);
@@ -4562,13 +4591,8 @@ function resetSettlementSession(auditEvent = null) {
     AppState.lastCalculatedSelfPay = 0;
     AppState.selfPayManuallyOverridden = false;
     AppState.eventPhotos = [];
-    document.getElementById('expense-desc-input').value = '';
-    document.getElementById('expense-amount-input').value = '';
-    document.getElementById('expense-category-select').selectedIndex = 0;
-    document.getElementById('expense-corp-check').checked = true;
-    document.getElementById('expense-personal-check').checked = false;
-    document.getElementById('expense-corporate-amount-input').value = '';
-    document.getElementById('expense-personal-amount-input').value = '';
+    AppState.cancelEdit();
+    if (typeof AppState.cancelEditAttendee === 'function') AppState.cancelEditAttendee();
     document.getElementById('prev-prize-input').value = formatAmount(AppState.previousPrizeTotal);
     if (typeof updateCardTypeUI === 'function') updateCardTypeUI();
     const settleDateEl = document.getElementById('settlement-date-input');
@@ -6704,7 +6728,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableWrap.innerHTML = '<div style="padding:2rem; text-align:center; color:var(--text-secondary);">데이터를 집계하는 중입니다...</div>';
 
         let historyList = lastHistoryList;
-        if ((!historyList || historyList.length === 0) && firebaseDb) {
+        if (firebaseDb) {
             try {
                 const [snapshot, deletedSnap] = await Promise.all([
                     firebaseDb.ref('globalHistory').once('value'),
@@ -7939,16 +7963,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const completed = await AppState.finalizeSettlement(skipConfirm);
         if (!completed) return false;
         if (emailReportModal) emailReportModal.classList.add('hidden');
-        // Reset form UI state
-        document.getElementById('expense-desc-input').value = '';
-        document.getElementById('expense-amount-input').value = '';
-        document.getElementById('expense-category-select').selectedIndex = 0;
-        document.getElementById('expense-corp-check').checked = true;
-        document.getElementById('expense-personal-check').checked = false;
-        document.getElementById('expense-corporate-amount-input').value = '';
-        document.getElementById('expense-personal-amount-input').value = '';
-        updateCardTypeUI();
-        document.getElementById('prev-prize-input').value = 0;
+        // Reset form UI state (영수증 썸네일·임시 이미지·입력란 일괄 초기화)
+        AppState.cancelEdit();
+        if (typeof AppState.cancelEditAttendee === 'function') AppState.cancelEditAttendee();
+        document.getElementById('prev-prize-input').value = formatAmount(AppState.previousPrizeTotal);
         // Switch to history tab
         document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
@@ -8815,6 +8833,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.21', date: '2026.11.24', items: ['전체 코드 정밀 점검 및 안정화: 정산 확정·이력 수정 시 공유 전사원 명부(settlements/000000/directory) 누적 횟수 실시간 재계산 보강, 수정 모드 엑셀 다운로드 시 비회원 수·비고·정산일 동기화, 정산 초기화 시 영수증 썸네일 클린업 및 중간 취합표 실시간 최신 이력 조회 보강'] },
         { ver: '1.7.20', date: '2026.11.24', items: ['사용자 [정산 이력] 탭에서도 정산 이력을 직접 삭제할 수 있도록 권한 확대 (삭제 시 감사 로그 자동 기록 및 클럽 예산·참석 횟수 동시 차감)', '비용 항목 입력 시 법인카드/개인카드 영수증 첨부 우측에 긴 안내 문구 대신 작은 영수증 썸네일 이미지가 표시되도록 개선 (클릭 시 확대 보기)'] },
         { ver: '1.7.19', date: '2026.11.24', items: ['[📋 중간 취합표] 100% 소진 클럽 상단 배치 및 소진율 높은 순 자동 정렬 적용, 하단 [연구소 예산 잔액] 우측 불필요한 설명 문구 제거'] },
         { ver: '1.7.18', date: '2026.11.24', items: ['[📋 중간 취합표] 하단에 [연구소 총 예산] 및 [연구소 예산 잔액] 행 추가 (엑셀 다운로드 동시 반영) 및 [잔여금액] 텍스트 색상을 눈이 편안한 차분한 톤으로 개선'] },
