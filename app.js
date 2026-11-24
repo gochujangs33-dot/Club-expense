@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.32';
+const APP_VERSION      = '1.7.33';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -5356,6 +5356,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const years = new Set();
             const currentYear = new Date().getFullYear();
             years.add(currentYear);
+            years.add(currentYear + 1);
+            Object.keys(AppState.yearlyRules || {}).forEach(k => {
+                const y = Number(k);
+                if (!Number.isNaN(y) && y >= 2020 && y <= 2040) years.add(y);
+            });
             (historyList || []).forEach(e => {
                 const y = getHistoryEntryYear(e);
                 if (!Number.isNaN(y) && y >= 2020 && y <= 2040) {
@@ -6697,8 +6702,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const years = YearEndPptGenerator.getAvailableYears(historyList);
         const currentYear = new Date().getFullYear();
+        const defaultPptYear = (_selectedQueryYear && _selectedQueryYear !== 'ALL')
+            ? (Number(_selectedQueryYear) || currentYear)
+            : currentYear;
 
-        yearSelect.innerHTML = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}년 결산</option>`).join('');
+        yearSelect.innerHTML = years.map(y => `<option value="${y}" ${y === defaultPptYear ? 'selected' : ''}>${y}년 결산</option>`).join('');
 
         function updatePreview() {
             const selYear = parseInt(yearSelect.value, 10) || currentYear;
@@ -7869,26 +7877,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('settings-panel').classList.add('hidden');
     });
 
-    // Admin: 정산 구간/비율 설정 연도별 관리 및 폼 값 채우기
-    const adminRulesYearSelect = document.getElementById('admin-rules-year-select');
+    // Admin: 정산 구간/비율 설정 — 상단 전역 조회 연도(_selectedQueryYear)와 1:1 연동
     const adminRulesYearHint = document.getElementById('admin-rules-year-hint');
     const getSelectedAdminRulesYear = () => {
         const curY = new Date().getFullYear();
-        return adminRulesYearSelect ? (Number(adminRulesYearSelect.value) || curY) : curY;
-    };
-    const renderAdminRulesYearOptions = () => {
-        if (!adminRulesYearSelect) return;
-        const curY = new Date().getFullYear();
-        const prevSelected = adminRulesYearSelect.value ? Number(adminRulesYearSelect.value) : curY;
-        const years = new Set([curY - 1, curY, curY + 1]);
-        Object.keys(AppState.yearlyRules || {}).forEach(y => {
-            const num = Number(y);
-            if (!Number.isNaN(num) && num >= 2020 && num <= 2040) years.add(num);
-        });
-        const sorted = Array.from(years).sort((a, b) => b - a);
-        adminRulesYearSelect.innerHTML = sorted.map(y =>
-            `<option value="${y}" ${y === prevSelected ? 'selected' : ''}>${y}년</option>`
-        ).join('');
+        return (_selectedQueryYear && _selectedQueryYear !== 'ALL')
+            ? (Number(_selectedQueryYear) || curY)
+            : curY;
     };
     const setAdminRulesFormValues = (rules) => {
         const r = { ...DefaultRules, ...(rules || {}) };
@@ -7906,21 +7901,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const selY = getSelectedAdminRulesYear();
             const curY = new Date().getFullYear();
             adminRulesYearHint.textContent = selY === curY
-                ? `📌 ${selY}년(올해) 기준 — 저장 시 현재 진행 중인 모든 정산 계산 및 ${selY}년 결산 PPT에 즉시 적용됩니다.`
-                : `📌 ${selY}년 전용 기준 — 올해(${curY}년) 정산 규칙과는 분리 저장되며 ${selY}년 결산 PPT에 반영됩니다.`;
+                ? `📌 상단 조회 연도 [${selY}년] 적용 중 — 저장 시 ${selY}년 정산 계산 및 ${selY}년 결산 PPT에 반영됩니다.`
+                : `📌 상단 조회 연도 [${selY}년] 전용 기준 — ${selY}년 정산 및 ${selY}년 결산 PPT에 별도 저장·적용됩니다.`;
         }
     };
-    renderAdminRulesYearOptions();
-    setAdminRulesFormValues(AppState.getRulesForYear(getSelectedAdminRulesYear()));
-    window._onYearlyRulesUpdate = () => {
-        renderAdminRulesYearOptions();
-        setAdminRulesFormValues(AppState.getRulesForYear(getSelectedAdminRulesYear()));
+    const syncActiveRulesForQueryYear = () => {
+        const targetYear = getSelectedAdminRulesYear();
+        const yearRules = AppState.getRulesForYear(targetYear);
+        AppState.rules = { ...yearRules };
+        setAdminRulesFormValues(yearRules);
     };
-    if (adminRulesYearSelect) {
-        adminRulesYearSelect.addEventListener('change', () => {
-            setAdminRulesFormValues(AppState.getRulesForYear(getSelectedAdminRulesYear()));
-        });
-    }
+    syncActiveRulesForQueryYear();
+    window._onYearlyRulesUpdate = syncActiveRulesForQueryYear;
 
     // Admin: 정산 비율 저장 (연도별 관리)
     const adminSaveRulesBtn = document.getElementById('admin-save-rules-btn');
@@ -9408,6 +9400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.33', date: '2026.11.24', items: ['상단 [조회 연도] 선택과 [정산 구간 및 비율 설정] 및 [연간 결산 PPT]를 1:1로 자동 연동 (조회 연도 변경 시 해당 연도의 구간·비율 설정값 자동 불러오기·저장 및 PPT 기준표 반영)'] },
         { ver: '1.7.32', date: '2026.11.24', items: ['정산 구간·비율·한도를 연도별로 분리 관리(globalSettings/yearlyRules/{연도})할 수 있도록 관리자 설정에 연도 선택 기능 추가', '연간 결산 PPT 보고서 생성 시 해당 연도의 정산 구간 및 한도 기준표 슬라이드를 자동 포함하도록 개선'] },
         { ver: '1.7.31', date: '2026.11.24', items: ['[📋 중간 결산] 팝업 표 및 엑셀 다운로드의 [소진율]을 소수점 첫째 자리(예: 63.2%, 100.0%)까지 표시하도록 개선'] },
         { ver: '1.7.30', date: '2026.11.24', items: ['비용 항목 [내역 (항목명)] 입력란에 한글 입력 우선 속성(lang="ko", inputmode="text", ime-mode: active) 적용'] },
@@ -13149,12 +13142,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const effectiveList = (historyList && historyList.length ? historyList : (_cachedChartHistoryList && _cachedChartHistoryList.length ? _cachedChartHistoryList : (window.AppState && window.AppState.globalHistory ? window.AppState.globalHistory : []))) || [];
         const cleanList = effectiveList.filter(e => e && !cachedDeletedIds[String(e.id)]);
 
-        // DB에 등록된 실제 연도 추출
+        // DB에 등록된 실제 연도 + 차년도(예: 2027년) + yearlyRules 등록 연도 추출
         const yearsSet = new Set(
             cleanList.map(e => getHistoryEntryYear(e)).filter(y => y && !isNaN(y))
         );
         const thisYear = new Date().getFullYear();
         yearsSet.add(thisYear);
+        yearsSet.add(thisYear + 1);
+        Object.keys((window.AppState && window.AppState.yearlyRules) || {}).forEach(k => {
+            const y = Number(k);
+            if (!Number.isNaN(y) && y >= 2020 && y <= 2040) yearsSet.add(y);
+        });
 
         _availableQueryYears = Array.from(yearsSet).sort((a, b) => b - a);
 
@@ -13192,6 +13190,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function selectQueryYear(year) {
         updateGlobalYearPickerUI(year);
         closeYearPickerModal();
+        if (typeof window._onYearlyRulesUpdate === 'function') {
+            window._onYearlyRulesUpdate();
+        }
         const listToRender = (_cachedChartHistoryList && _cachedChartHistoryList.length)
             ? _cachedChartHistoryList
             : (window.AppState && window.AppState.globalHistory ? window.AppState.globalHistory : []);
