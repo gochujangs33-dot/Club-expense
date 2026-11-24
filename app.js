@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.43';
+const APP_VERSION      = '1.7.44';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1316,7 +1316,8 @@ const AppState = {
                 priorUsed: 0,
                 usedBudget: 0,
                 prizeUsed: 0,
-                allowOverLimitSupport: false
+                allowOverLimitSupport: false,
+                allowFacilityFullBudget: false
             };
         });
         return cloned;
@@ -1612,7 +1613,9 @@ const AppState = {
             // 관리자 차트의 클럽 고유 색상 — 이름·예산 수정 시에도 유지
             chartColor: existing.chartColor || '',
             // 인당 85,000원 초과 지원 승인 여부(관리자 전용 토글) — 이름/예산 수정 시 유실되지 않도록 보존
-            allowOverLimitSupport: existing.allowOverLimitSupport || false
+            allowOverLimitSupport: existing.allowOverLimitSupport || false,
+            // 시설·장비 1회 배정(잔여) 예산 전액 사용 승인 여부 — 이름/예산 수정 시 유실되지 않도록 보존
+            allowFacilityFullBudget: existing.allowFacilityFullBudget || false
         };
         if (this.firebaseDb) {
             const targetY = this.getActiveQueryYear();
@@ -1721,6 +1724,31 @@ const AppState = {
                 }
             });
             this.firebaseDb.ref().update(updates).catch(err => console.error("승인 설정 저장 실패:", err));
+        }
+    },
+
+    // 관리자 전용: 이 클럽의 시설·장비 이용료 1회 배정(잔여) 예산 전액 사용 승인 여부 토글
+    setClubFacilityFullBudgetApproval(clubId, allowed) {
+        if (!this.clubRegistry[clubId]) return;
+        const clubName = this.clubRegistry[clubId].name || '';
+        this.clubRegistry[clubId].allowFacilityFullBudget = !!allowed;
+        if (this.firebaseDb) {
+            const updates = {};
+            this._buildYearlyClubUpdates(updates, clubId, !!allowed, 'allowFacilityFullBudget');
+            this.appendAuditUpdate(updates, {
+                action: 'UPDATE',
+                targetType: '시설비 전액 승인',
+                targetId: clubId,
+                targetLabel: clubName,
+                summary: `클럽 '${clubName}' 시설·장비 배정예산 전액 1회 ${allowed ? '승인' : '승인 취소'}`,
+                clubId,
+                clubName,
+                details: {
+                    승인여부: allowed ? '시설 전액 승인' : '시설 전액 미승인',
+                    설명: allowed ? '다음 정산 1건에 한해 시설·장비 이용료를 잔여 예산 전액까지 법인카드 사용 허용 (초과분 개인카드)' : '시설비 전액 승인 취소'
+                }
+            });
+            this.firebaseDb.ref().update(updates).catch(err => console.error("시설비 전액 승인 저장 실패:", err));
         }
     },
 
@@ -4807,16 +4835,19 @@ const AppState = {
                 if (registryClub) {
                     firebaseUpdates[`clubRegistry/${this.clubId}/usedBudget`] = firebase.database.ServerValue.increment(newHistoryItem.finalSupportAmount);
                     firebaseUpdates[`clubRegistry/${this.clubId}/prizeUsed`] = firebase.database.ServerValue.increment(prizeThisSession);
-                    // 85,000원 초과 승인은 정산 1건마다 무조건 해제한다.
+                    // 85,000원 초과 승인 및 시설비 전액 승인은 정산 1건마다 무조건 해제한다.
                     firebaseUpdates[`clubRegistry/${this.clubId}/allowOverLimitSupport`] = false;
+                    firebaseUpdates[`clubRegistry/${this.clubId}/allowFacilityFullBudget`] = false;
                     const settleYearKey = String(newHistoryItem.settlementYear || new Date().getFullYear());
                     if (this.yearlyClubRegistry && this.yearlyClubRegistry[settleYearKey] && this.yearlyClubRegistry[settleYearKey][this.clubId]) {
                         firebaseUpdates[`yearlyClubRegistry/${settleYearKey}/${this.clubId}/usedBudget`] = firebase.database.ServerValue.increment(newHistoryItem.finalSupportAmount);
                         firebaseUpdates[`yearlyClubRegistry/${settleYearKey}/${this.clubId}/prizeUsed`] = firebase.database.ServerValue.increment(prizeThisSession);
                         firebaseUpdates[`yearlyClubRegistry/${settleYearKey}/${this.clubId}/allowOverLimitSupport`] = false;
+                        firebaseUpdates[`yearlyClubRegistry/${settleYearKey}/${this.clubId}/allowFacilityFullBudget`] = false;
                         this.yearlyClubRegistry[settleYearKey][this.clubId].usedBudget = (this.yearlyClubRegistry[settleYearKey][this.clubId].usedBudget || 0) + newHistoryItem.finalSupportAmount;
                         this.yearlyClubRegistry[settleYearKey][this.clubId].prizeUsed = (this.yearlyClubRegistry[settleYearKey][this.clubId].prizeUsed || 0) + prizeThisSession;
                         this.yearlyClubRegistry[settleYearKey][this.clubId].allowOverLimitSupport = false;
+                        this.yearlyClubRegistry[settleYearKey][this.clubId].allowFacilityFullBudget = false;
                     }
                 }
                 this.appendAuditUpdate(firebaseUpdates, {
@@ -4862,12 +4893,13 @@ const AppState = {
 
             if (registryClub) {
                 if (persistedClub) {
-                    this.clubRegistry[this.clubId] = { ...registryClub, ...persistedClub, allowOverLimitSupport: false };
+                    this.clubRegistry[this.clubId] = { ...registryClub, ...persistedClub, allowOverLimitSupport: false, allowFacilityFullBudget: false };
                 } else {
                     const currentClub = this.clubRegistry[this.clubId] || registryClub;
                     currentClub.usedBudget = (currentClub.usedBudget || 0) + newHistoryItem.finalSupportAmount;
                     currentClub.prizeUsed = (currentClub.prizeUsed || 0) + prizeThisSession;
                     currentClub.allowOverLimitSupport = false;
+                    currentClub.allowFacilityFullBudget = false;
                 }
             }
 
@@ -8542,9 +8574,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // ⓪-2 시설·장비: 법인카드 지정액이 인당 한도(facilityLimit × 인원수)를 초과하면 차단 (v1.6.233)
-            // 자동 제안값은 _calcCorpForItem이 이미 한도를 지키지만, 수동 입력으로 초과하는 경우를 막는다.
-            // 한도는 정산 1건 전체 기준 — 같은 세션의 다른 시설비 항목 법인카드와 합산해 검사.
-            if (category === ExpenseCategory.FACILITY && _requestedCorp > 0) {
+            // 단, 관리자가 [클럽 관리 > 시설 전액] 1회 승인을 활성화한 클럽은 잔여 예산 전액까지 허용 (v1.7.44)
+            const _facilityClubEntry = (AppState.clubId && AppState.clubRegistry[AppState.clubId])
+                ? AppState.clubRegistry[AppState.clubId]
+                : (AppState.clubName ? Object.values(AppState.clubRegistry || {}).find(c => c.name === AppState.clubName) : null);
+            const _facilityFullApproved = Boolean(_facilityClubEntry && _facilityClubEntry.allowFacilityFullBudget);
+            if (category === ExpenseCategory.FACILITY && _requestedCorp > 0 && !_facilityFullApproved) {
                 const _fMemberCount = AppState.memberCount || 0;
                 if (_fMemberCount > 0) {
                     const _fLimit = (AppState.rules || DefaultRules).facilityLimit || 85000;
@@ -9250,63 +9285,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 요청사항(피드백) 모달
-    const feedbackOpenBtn = document.getElementById('feedback-open-btn');
-    const feedbackModal = document.getElementById('feedback-modal');
-    const closeFeedbackModalBtn = document.getElementById('close-feedback-modal');
-    const feedbackMessageInput = document.getElementById('feedback-message-input');
-    const feedbackPhotoInput = document.getElementById('feedback-photo-input');
-    const feedbackPhotoPreview = document.getElementById('feedback-photo-preview');
-    const feedbackPhotoImg = document.getElementById('feedback-photo-img');
-    const feedbackPhotoRemoveBtn = document.getElementById('feedback-photo-remove-btn');
-    const feedbackSubmitBtn = document.getElementById('feedback-submit-btn');
-    const feedbackStatus = document.getElementById('feedback-status');
-    let feedbackPhotoData = null;
-
-    if (feedbackOpenBtn) {
-        feedbackOpenBtn.addEventListener('click', () => {
-            feedbackMessageInput.value = '';
-            feedbackPhotoData = null;
-            feedbackPhotoPreview.classList.add('hidden');
-            feedbackPhotoImg.src = '';
-            feedbackPhotoInput.value = '';
-            feedbackStatus.textContent = '';
-            feedbackModal.classList.remove('hidden');
-        });
-    }
-
-    if (closeFeedbackModalBtn) {
-        closeFeedbackModalBtn.addEventListener('click', () => {
-            feedbackModal.classList.add('hidden');
-        });
-    }
-
-    if (feedbackPhotoInput) {
-        feedbackPhotoInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                compressReceiptImage(file, (compressed) => {
-                    feedbackPhotoData = compressed;
-                    feedbackPhotoImg.src = compressed;
-                    feedbackPhotoPreview.classList.remove('hidden');
-                }, MediaStoragePolicy.feedback);
-            }
-        });
-    }
-
-    if (feedbackPhotoRemoveBtn) {
-        feedbackPhotoRemoveBtn.addEventListener('click', () => {
-            feedbackPhotoData = null;
-            feedbackPhotoInput.value = '';
-            feedbackPhotoPreview.classList.add('hidden');
-            feedbackPhotoImg.src = '';
-        });
-    }
-
-    if (feedbackSubmitBtn) {
-        feedbackSubmitBtn.addEventListener('click', () => {
-            const message = feedbackMessageInput.value.trim();
-            if (!message && !feedbackPhotoData) {
-                feedbackStatus.textContent = '메시지나 사진을 입력해주세요.';
                 return;
             }
             if (!firebaseDb) {
@@ -9812,6 +9790,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.44', date: '2026.11.25', items: ['관리자 [클럽 관리]에 시설·장비 이용료를 1회에 한해 클럽 잔여(배정) 예산 전액까지 법인카드로 결제하고 초과분은 개인카드로 자동 분배할 수 있는 [🔓 시설 전액 승인] 버튼 추가 (정산 1건 확정 시 자동 미승인 복원)'] },
         { ver: '1.7.43', date: '2026.11.25', items: ['[전사원 명부] 마우스 오버 클럽별 참석 횟수 툴팁 및 상세 팝업 내 우측 횟수("N회") 색상도 라이트/다크 테마 고대비 색상(#0369a1 / #38bdf8)으로 통일 개선'] },
         { ver: '1.7.42', date: '2026.11.25', items: ['[전사원 명부]의 "(올해 누적: N회)" 및 입력 횟수 글자 색상을 라이트/다크 테마 모두에서 선명하게 잘 보이도록 고대비 색상(#0369a1 / #b45309 등)으로 개선'] },
         { ver: '1.7.41', date: '2026.11.25', items: ['관리자 [클럽 관리] 필터·정렬을 별도 상단 바 대신 엑셀(Excel) 스타일 컬럼 제목줄 드롭다운 필터로 개편: [클럽명 / 배정예산 / 상품비 / 잔여 예산] 제목 클릭 시 오름차순·내림차순(높은순·낮은순) 정렬과 항목별 체크박스 다중 선택 필터 팝오버 제공'] },
@@ -11642,6 +11621,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             filteredClubRows.forEach(({ clubId, club, budget, displayPrizeUsed, remaining }, idx) => {
                 const overLimitApproved = !!club.allowOverLimitSupport;
+                const facilityFullApproved = !!club.allowFacilityFullBudget;
                 const chartColor = clubColorMap[club.name] || resolveClubBaseColor(clubId, club);
                 const row = document.createElement('div');
                 row.className = 'expense-row club-item-row';
@@ -11672,6 +11652,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="btn-toggle-overlimit ${overLimitApproved ? 'is-approved' : ''}" data-id="${AppState.escapeHtml(clubId)}" data-current="${overLimitApproved ? '1' : '0'}"
                             data-tooltip="이사진 승인 시 이 클럽의 다음 정산 1건에 한해 인당 85,000원 초과 지원을 허용합니다 (클럽 잔여 예산은 여전히 초과 불가). 정산이 확정되면 사용 여부와 관계없이 자동으로 미승인 상태로 되돌아갑니다."
                             style="width:100%; padding:0.22rem 0.35rem; font-size:0.66rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${overLimitApproved ? '🔓 85K 승인됨' : '🔒 85K 미승인'}</button>
+                    </div>
+                    <div class="club-cell-btn club-cell-facility-full">
+                        <button class="btn-toggle-facility-full ${facilityFullApproved ? 'is-approved' : ''}" data-id="${AppState.escapeHtml(clubId)}" data-current="${facilityFullApproved ? '1' : '0'}"
+                            data-tooltip="연간 시설·장비 이용료 등 특수 사유 시, 이 클럽의 다음 정산 1건에 한해 인당 85,000원 제한 없이 배정(잔여) 예산 전액까지 법인카드 결제를 허용하고 초과분은 개인카드로 분배합니다. 정산 확정 시 자동으로 미승인 상태로 되돌아갑니다."
+                            style="width:100%; padding:0.22rem 0.35rem; font-size:0.66rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${facilityFullApproved ? '🔓 시설 승인됨' : '🔒 시설 미승인'}</button>
                     </div>
                     <div class="expense-row-right club-cell-actions">
                         <button class="btn-edit-club btn-secondary" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.5rem; font-size:0.78rem;">${t('btn.edit')}</button>
@@ -11708,6 +11693,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         : `'${club.name}' 클럽의 인당 85,000원 초과 지원 승인을 취소하시겠습니까?`;
                     showConfirmModal(msg, () => {
                         AppState.setClubOverLimitApproval(clubId, willAllow);
+                        renderClubManagement();
+                    }, willAllow ? '승인' : '승인 취소');
+                });
+            });
+            clubListContainer.querySelectorAll('.btn-toggle-facility-full').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const clubId = btn.getAttribute('data-id');
+                    const club = AppState.clubRegistry[clubId];
+                    if (!club) return;
+                    const willAllow = btn.getAttribute('data-current') !== '1';
+                    const msg = willAllow
+                        ? `'${club.name}' 클럽의 다음 정산 1건에 한해 시설·장비 이용료를 인당 한도 제한 없이 배정(잔여) 예산 전액까지 법인카드 사용으로 승인하시겠습니까?\n(잔여 예산 초과 금액은 자동으로 개인카드 자부담 처리되며, 정산 확정 시 자동으로 미승인 상태로 돌아갑니다)`
+                        : `'${club.name}' 클럽의 시설·장비 이용료 전액 사용 승인을 취소하시겠습니까?`;
+                    showConfirmModal(msg, () => {
+                        AppState.setClubFacilityFullBudgetApproval(clubId, willAllow);
                         renderClubManagement();
                     }, willAllow ? '승인' : '승인 취소');
                 });
@@ -15211,6 +15211,13 @@ function _calcCorpForItem(amount, category) {
     // (카테고리 선택 시 뜨는 안내 팝업은 단순 알림일 뿐 이 계산 자체에는 영향을 주지 않는다. v1.6.232)
     // 한도는 정산 1건 전체 기준 — 같은 세션의 다른 시설비 항목에 이미 배정된 법인카드만큼 차감 (v1.6.233)
     if (category === ExpenseCategory.FACILITY) {
+        const currentClubEntry = (AppState.clubId && AppState.clubRegistry && AppState.clubRegistry[AppState.clubId])
+            ? AppState.clubRegistry[AppState.clubId]
+            : (AppState.clubName && AppState.clubRegistry ? Object.values(AppState.clubRegistry).find(c => c.name === AppState.clubName) : null);
+        // 관리자 [클럽 관리 > 시설 전액] 1회 승인된 클럽만 인당 85,000원 캡을 해제하고 잔여 예산 전액까지 법인카드 제안 (초과분은 개인카드 분배)
+        if (currentClubEntry && currentClubEntry.allowFacilityFullBudget) {
+            return Math.max(0, Math.min(amount, realRemaining));
+        }
         const facilityCapTotal = memberCount * (rules.facilityLimit || 85000);
         const existingFacilityCorp = existingItems
             .filter(it => it.category === ExpenseCategory.FACILITY)

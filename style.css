@@ -1381,12 +1381,12 @@ html[data-app-theme="light"] .dir-club-count-text {
 }
 
 .club-table-content {
-    min-width: 790px;
+    min-width: 885px;
 }
 
 .club-list-header {
     display: grid;
-    grid-template-columns: minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 80px 90px 105px;
+    grid-template-columns: minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 80px 90px 95px 105px;
     align-items: center;
     gap: 0.5rem;
     padding: 0.45rem 0.75rem;
@@ -1635,11 +1635,12 @@ html[data-app-theme="light"] .club-excel-check-item:hover {
 .club-th-remaining { text-align: center; }
 .club-th-add { text-align: center; }
 .club-th-overlimit { text-align: center; }
+.club-th-facility-full { text-align: center; }
 .club-th-actions { text-align: center; }
 
 #club-list-container .expense-row.club-item-row {
     display: grid !important;
-    grid-template-columns: minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 80px 90px 105px !important;
+    grid-template-columns: minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 80px 90px 95px 105px !important;
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 0.75rem;
@@ -1685,7 +1686,8 @@ html[data-app-theme="light"] .club-amount-cell {
     gap: 0.3rem;
 }
 
-#club-list-container .btn-toggle-overlimit {
+#club-list-container .btn-toggle-overlimit,
+#club-list-container .btn-toggle-facility-full {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.18);
     color: var(--text-secondary);
@@ -1695,6 +1697,12 @@ html[data-app-theme="light"] .club-amount-cell {
     background: rgba(239, 68, 68, 0.18);
     border: 1px solid rgba(239, 68, 68, 0.55);
     color: #fca5a5;
+}
+
+#club-list-container .btn-toggle-facility-full.is-approved {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.58);
+    color: #6ee7b7;
 }
 
 /* 정산 결과 카드 내 클럽 예산 프로그레스 바 위젯 */
@@ -5042,7 +5050,8 @@ html[data-app-theme="light"] #club-list-container .btn-edit-club:hover {
     background: #e2e8f0 !important;
 }
 
-html[data-app-theme="light"] #club-list-container .btn-toggle-overlimit {
+html[data-app-theme="light"] #club-list-container .btn-toggle-overlimit,
+html[data-app-theme="light"] #club-list-container .btn-toggle-facility-full {
     background: #f8fafc !important;
     border: 1px solid rgba(72, 91, 128, 0.24) !important;
     color: #475569 !important;
@@ -5052,6 +5061,12 @@ html[data-app-theme="light"] #club-list-container .btn-toggle-overlimit.is-appro
     background: #fef2f2 !important;
     border: 1px solid rgba(239, 68, 68, 0.45) !important;
     color: #dc2626 !important;
+}
+
+html[data-app-theme="light"] #club-list-container .btn-toggle-facility-full.is-approved {
+    background: #ecfdf5 !important;
+    border: 1px solid rgba(16, 185, 129, 0.5) !important;
+    color: #047857 !important;
 }
 
 html[data-app-theme="light"] #club-list-container .btn-delete-club {
