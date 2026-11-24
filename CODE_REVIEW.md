@@ -17,6 +17,7 @@
 | 3 | `renderAdminDashboard` step 3 — `renderAllCharts` **호출 없음** (rAF 핸들러 + `.then()` 2경로가 담당) | 차트 3중 렌더 제거 | 차트 탭 클릭마다 전 차트 3회 파괴/재생성 → 깜빡임 |
 | 4 | `_countAttendeesByEmpId` 상단 주석 | "이름 폴백" 설명 제거, 재도입 금지 경고로 교체 | 주석을 근거로 이름 폴백 "복원" → 동명이인 카운트 오귀속 재발 |
 | 5 | `clubTotalBudget` 리스너 (`.on('value')`) (v1.6.284) | 총 클럽예산을 실시간 리스너로 등록해 관리자 예산 수정 시 전 클라이언트 즉시 동기화 보장 | 새로고침 전까지 변경된 총예산 미반영 |
+| 6 | `renderClubManagement` — DOM `forEach` 루프 중 Firebase `update()` 호출 금지 + `DocumentFragment` 원자적 교체 + `_isRenderingClubManagement` 재진입 가드 + `yearlyClubRegistry` 동시 동기화 (v1.7.39) | `clubs.forEach` 루프 내부에서는 절대 `firebaseDb.ref().update()`를 호출하지 않고 `rowsFragment`에 행을 모두 조립한 뒤 `listContainer.replaceChildren(rowsFragment)` 완료 후에 `pendingSyncUpdates`를 일괄 전송하며, 재진입 호출(`_isRenderingClubManagement`)을 차단하고 `usedBudget`/`prizeUsed` 변경 시 `yearlyClubRegistry/{연도}`도 함께 갱신 | 추가 배정/금액 수정 시 루프 도중 동기적 Firebase `.on('value')` 리스너가 `renderClubManagement()`를 중첩 호출해 `11. Next mile` 아래에 바깥 루프의 나머지 행(`2. 넷짱`, `3. 당구클럽`, `4. 멀리건`...)이 중복으로 이어 붙는 버그 재발 |
 
 > v1.6.197~200의 수정 사항(사번 기준 카운트, `.off` 후 `.on`, step 3 loadClubRegistry 재호출 금지 등)은
 > [`CLAUDE.md`](CLAUDE.md) §1-6 재수정 금지 표 참조.

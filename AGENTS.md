@@ -61,7 +61,7 @@
    | `recalculateDirectoryCountsFromGlobal` | 비동기 처리 완료 후 `if (this.isLoggedIn) this.render()` 호출 필수 + `cur.count` 집계합 동기화 | v1.6.197 | 전사원 명부 카운트 0회 표시 |
    | `loadClubRegistry` | `.on('value', ...)` 등록 **직전** 반드시 `.off('value')` 호출 | v1.6.200 | 탭 전환마다 리스너 누적 → 클럽 중복 생성 |
    | `renderAdminDashboard` step 3 | `AppState.loadClubRegistry().then(...)` **재호출 금지** — UI 함수 직접 호출, `renderAllCharts`는 호출하지 않음(rAF+`.then()` 담당) | v1.6.200~201 | 리스너 누적 / 차트 3중 렌더 깜빡임 |
-   | `renderClubManagement` | Firebase 동기화 쓰기는 `historyLoaded === true`일 때만 (`needsUpdate && firebaseDb && historyLoaded`) | v1.6.201 | 이력 로드 전 0원이 공유 clubRegistry를 덮어씀 → 전 접속자 잔여예산 오표시 |
+   | `renderClubManagement` | Firebase 동기화 쓰기는 `historyLoaded === true`일 때만 (`needsUpdate && firebaseDb && historyLoaded`) + **DOM `forEach` 루프 안에서 `firebaseDb.ref().update()` 직접 호출 절대 금지** (반드시 `DocumentFragment` 조립 및 `listContainer.replaceChildren()` 완료 후에 일괄 `update()` 호출 + `_isRenderingClubManagement` 재진입 가드 유지 + `yearlyClubRegistry` 동시 동기화) | v1.6.201, v1.7.39 | 이력 로드 전 0원이 공유 clubRegistry를 덮어씀 / 루프 도중 동기적 Firebase `.on('value')` 리스너가 `renderClubManagement()`를 재진입 호출해 `11. Next mile` 아래에 바깥 루프의 나머지 행(`2. 넷짱`~`11. Next mile`)이 중복으로 이어 붙음 |
    | `renderAdminDashboard` globalHistory `.then()` | `historyLoaded = true` 세팅 + `renderClubManagement()`·`updateChartsBudgetStats()` 호출 유지 | v1.6.199~201 | 잔여예산·차트 통계 타일 0원 표시 |
    | `updateHistoryEntry` | 이력 금액 수정 시 `clubRegistry.usedBudget`/`.prizeUsed`를 **차액(delta)만큼만** 보정 (전체 재계산 아님, 새 값 통째로 더하기 아님) | v1.6.213 | 이력 수정 시 예산이 새 금액만큼 추가된 것처럼 잘못 반영 |
    | `getClubUsedBudget` | `editingHistoryId`가 설정된 동안 이 이력 자신의 기존 지원금(`_editingOriginalSupport`)을 "이미 사용한 금액"에서 반드시 제외 | v1.6.214 | 이력 수정 화면에서 자기 자신과 비교돼 잔여 예산 초과 오탐 |
@@ -84,7 +84,7 @@
 ```
 1. 파일 수정 (app.js / index.html / style.css 등)
 2. node --check app.js   ← 문법 오류 확인
-3. 버전 상수 2곳을 함께 1 증가 (현재 1.7.38) — **아래 두 곳 모두 빠짐없이 bump**:
+3. 버전 상수 2곳을 함께 1 증가 (현재 1.7.39) — **아래 두 곳 모두 빠짐없이 bump**:
    - `sw.js` 의 `APP_VERSION`
    - `app.js` 최상단의 `APP_VERSION`/`APP_VERSION_DATE` (로그인 화면 버전 라벨의 즉시 표시값 +
      "업데이트 내역" 모달이 이 값을 기준으로 그룹핑함 — v1.6.187~223 구간에서 이 상수만 37개
@@ -179,7 +179,7 @@
 - [`CHANGES.md`](CHANGES.md) — 버전별 변경 이력
 - [`CODE_REVIEW.md`](CODE_REVIEW.md) — **매 작업 시작 전 필독**: v1.6.201 검증 결과, 재수정 금지 항목 상세, 승인된 백로그(사용자 명시 요청 시에만 착수)
 
-현재 버전: **v1.7.38** (`sw.js` `APP_VERSION`)
+현재 버전: **v1.7.39** (`sw.js` `APP_VERSION`)
 
 ---
 
