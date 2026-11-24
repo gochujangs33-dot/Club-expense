@@ -1353,13 +1353,37 @@
                                 </div>
                             </form>
 
+                            <div id="club-mgmt-filter-bar" class="club-mgmt-filter-bar">
+                                <div class="club-mgmt-filter-left">
+                                    <label for="club-mgmt-filter-select" class="club-mgmt-filter-label">🔍 클럽 필터</label>
+                                    <select id="club-mgmt-filter-select" class="club-mgmt-select" aria-label="클럽 선택 필터">
+                                        <option value="ALL">전체 클럽 보기</option>
+                                    </select>
+                                    <input type="text" id="club-mgmt-search-input" class="club-mgmt-search-input" placeholder="클럽명 검색..." aria-label="클럽명 검색" autocomplete="off">
+                                </div>
+                                <div class="club-mgmt-filter-right">
+                                    <label for="club-mgmt-sort-select" class="club-mgmt-filter-label">↕ 정렬</label>
+                                    <select id="club-mgmt-sort-select" class="club-mgmt-select" aria-label="정렬 기준 및 방향">
+                                        <option value="name:asc">클럽명 (가나다 오름차순 ↑)</option>
+                                        <option value="name:desc">클럽명 (가나다 내림차순 ↓)</option>
+                                        <option value="budget:desc">배정예산 (높은순 ↓)</option>
+                                        <option value="budget:asc">배정예산 (낮은순 ↑)</option>
+                                        <option value="prize:desc">상품비 (높은순 ↓)</option>
+                                        <option value="prize:asc">상품비 (낮은순 ↑)</option>
+                                        <option value="remaining:desc">잔여 예산 (많은순 ↓)</option>
+                                        <option value="remaining:asc">잔여 예산 (적은순 ↑)</option>
+                                    </select>
+                                    <button type="button" id="club-mgmt-filter-reset-btn" class="btn-secondary club-mgmt-reset-btn hidden" title="필터 및 정렬 초기화">↺ 초기화</button>
+                                </div>
+                            </div>
+
                             <div id="club-table-wrapper" class="club-table-wrapper">
                                 <div class="club-table-content">
                                     <div id="club-list-header" class="club-list-header">
-                                        <div class="club-th club-th-name">클럽명</div>
-                                        <div class="club-th club-th-budget">배정예산</div>
-                                        <div class="club-th club-th-prize">상품비(한도 50만원)</div>
-                                        <div class="club-th club-th-remaining">잔여 예산</div>
+                                        <div class="club-th club-th-name club-th-sortable is-active-sort" data-sort-col="name" role="button" tabindex="0" title="클릭하여 클럽명 오름차순/내림차순 정렬">클럽명 <span class="club-sort-indicator" data-sort-ind="name">↑</span></div>
+                                        <div class="club-th club-th-budget club-th-sortable" data-sort-col="budget" role="button" tabindex="0" title="클릭하여 배정예산 내림차순/오름차순 정렬">배정예산 <span class="club-sort-indicator" data-sort-ind="budget">↕</span></div>
+                                        <div class="club-th club-th-prize club-th-sortable" data-sort-col="prize" role="button" tabindex="0" title="클릭하여 상품비 내림차순/오름차순 정렬">상품비(한도 50만원) <span class="club-sort-indicator" data-sort-ind="prize">↕</span></div>
+                                        <div class="club-th club-th-remaining club-th-sortable" data-sort-col="remaining" role="button" tabindex="0" title="클릭하여 잔여 예산 내림차순/오름차순 정렬">잔여 예산 <span class="club-sort-indicator" data-sort-ind="remaining">↕</span></div>
                                         <div class="club-th club-th-add">추가 배정</div>
                                         <div class="club-th club-th-overlimit">85k</div>
                                         <div class="club-th club-th-actions">관리</div>

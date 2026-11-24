@@ -1331,6 +1331,85 @@ html[data-app-theme="light"] #dir-search-input {
     transform: none;
 }
 
+/* 클럽 관리 필터 & 정렬 바 */
+.club-mgmt-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+    padding: 0.5rem 0.65rem;
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+}
+
+html[data-app-theme="light"] .club-mgmt-filter-bar {
+    background: #f8fafc;
+    border-color: rgba(72, 91, 128, 0.16);
+}
+
+.club-mgmt-filter-left,
+.club-mgmt-filter-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.club-mgmt-filter-label {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    margin: 0;
+}
+
+.club-mgmt-select {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(15, 23, 42, 0.65);
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.club-mgmt-select:focus,
+.club-mgmt-search-input:focus {
+    border-color: var(--color-secondary);
+    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+}
+
+html[data-app-theme="light"] .club-mgmt-select,
+html[data-app-theme="light"] .club-mgmt-search-input {
+    background: #ffffff;
+    border-color: rgba(72, 91, 128, 0.22);
+    color: #1e293b;
+}
+
+.club-mgmt-search-input {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.78rem;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(15, 23, 42, 0.65);
+    color: var(--text-primary);
+    width: 125px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.club-mgmt-reset-btn {
+    padding: 0.28rem 0.55rem !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap;
+}
+
 /* 클럽 관리 테이블 레이아웃 */
 .club-table-wrapper {
     margin-top: 0.5rem;
@@ -1369,6 +1448,44 @@ html[data-app-theme="light"] .club-list-header {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.club-th-sortable {
+    cursor: pointer;
+    padding: 0.2rem 0.35rem;
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+.club-th-name.club-th-sortable {
+    justify-content: flex-start;
+}
+.club-th-sortable:hover {
+    background: rgba(139, 92, 246, 0.16);
+    color: var(--text-primary);
+}
+html[data-app-theme="light"] .club-th-sortable:hover {
+    background: rgba(99, 102, 241, 0.12);
+    color: #1e293b;
+}
+.club-th-sortable.is-active-sort {
+    color: var(--color-secondary);
+    background: rgba(6, 182, 212, 0.12);
+}
+html[data-app-theme="light"] .club-th-sortable.is-active-sort {
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.12);
+}
+.club-sort-indicator {
+    font-size: 0.72rem;
+    opacity: 0.55;
+    line-height: 1;
+}
+.club-th-sortable.is-active-sort .club-sort-indicator {
+    opacity: 1;
+    font-weight: 800;
 }
 .club-th-name { text-align: left; padding-left: 0.2rem; }
 .club-th-budget { text-align: center; }

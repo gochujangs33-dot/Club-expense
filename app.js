@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.39';
+const APP_VERSION      = '1.7.40';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -9812,6 +9812,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.40', date: '2026.11.25', items: ['관리자 [클럽 관리]에 클럽 필터(특정 클럽 선택 및 실시간 이름 검색) 및 [클럽명 / 배정예산 / 상품비 / 잔여 예산] 오름차순·내림차순 정렬 기능(상단 정렬 드롭다운 및 테이블 컬럼 헤더 클릭 정렬) 추가'] },
         { ver: '1.7.39', date: '2026.11.25', items: ['관리자 [클럽 관리]에서 추가 배정 또는 금액 수정 시 목록 하단에 중복 클럽 행이 이어 붙어 표시되던 동기적 재진입(Re-entrant DOM 렌더링) 버그 수정: DOM 루프 중 Firebase update 호출을 루프 종료 후 일괄 처리로 분리하고 DocumentFragment 원자적 교체 및 재진입 방지 가드 적용'] },
         { ver: '1.7.38', date: '2026.11.24', items: ['연도별 클럽 목록·배정 예산·총 클럽비용 완전 분리 저장(yearlyClubRegistry/{연도}, yearlyClubTotalBudget/{연도}) 구현 — 다른 연도에서 클럽을 삭제·수정해도 2026년 등 기존 연도 데이터 100% 보존'] },
         { ver: '1.7.37', date: '2026.11.24', items: ['상단 [조회 연도]를 2027년 등 다른 연도로 선택 시 관리자 [클럽 관리] 테이블의 [상품비] 및 [잔여 예산]도 배정 예산은 유지한 채 해당 연도 기준(0원 사용)으로 표시되도록 보강'] },
@@ -11145,6 +11146,113 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let _isRenderingClubManagement = false;
     let _pendingClubManagementRender = false;
+    let _clubMgmtFilterClubId = 'ALL';
+    let _clubMgmtSearchText = '';
+    let _clubMgmtSortKey = 'name'; // 'name' | 'budget' | 'prize' | 'remaining'
+    let _clubMgmtSortDir = 'asc';  // 'asc' | 'desc'
+
+    const clubMgmtFilterSelect = document.getElementById('club-mgmt-filter-select');
+    const clubMgmtSearchInput = document.getElementById('club-mgmt-search-input');
+    const clubMgmtSortSelect = document.getElementById('club-mgmt-sort-select');
+    const clubMgmtResetBtn = document.getElementById('club-mgmt-filter-reset-btn');
+
+    function syncClubMgmtFilterControls(allClubsSortedByName) {
+        if (clubMgmtFilterSelect) {
+            const prevVal = _clubMgmtFilterClubId;
+            const existsInList = prevVal === 'ALL' || allClubsSortedByName.some(([cid]) => String(cid) === String(prevVal));
+            if (!existsInList) {
+                _clubMgmtFilterClubId = 'ALL';
+            }
+            const frag = document.createDocumentFragment();
+            const allOpt = document.createElement('option');
+            allOpt.value = 'ALL';
+            allOpt.textContent = `전체 클럽 보기 (${allClubsSortedByName.length}개)`;
+            frag.appendChild(allOpt);
+            allClubsSortedByName.forEach(([cid, c]) => {
+                const opt = document.createElement('option');
+                opt.value = cid;
+                opt.textContent = c.name || cid;
+                frag.appendChild(opt);
+            });
+            clubMgmtFilterSelect.replaceChildren(frag);
+            clubMgmtFilterSelect.value = _clubMgmtFilterClubId;
+        }
+        if (clubMgmtSortSelect) {
+            const sortVal = `${_clubMgmtSortKey}:${_clubMgmtSortDir}`;
+            if (clubMgmtSortSelect.value !== sortVal) {
+                clubMgmtSortSelect.value = sortVal;
+            }
+        }
+        document.querySelectorAll('#club-list-header .club-th-sortable').forEach(th => {
+            const col = th.getAttribute('data-sort-col');
+            const ind = th.querySelector('.club-sort-indicator');
+            const isActive = col === _clubMgmtSortKey;
+            th.classList.toggle('is-active-sort', isActive);
+            if (ind) {
+                ind.textContent = isActive ? (_clubMgmtSortDir === 'asc' ? '↑' : '↓') : '↕';
+            }
+        });
+        if (clubMgmtResetBtn) {
+            const isFilteredOrCustomSorted =
+                _clubMgmtFilterClubId !== 'ALL' ||
+                Boolean(_clubMgmtSearchText.trim()) ||
+                _clubMgmtSortKey !== 'name' ||
+                _clubMgmtSortDir !== 'asc';
+            clubMgmtResetBtn.classList.toggle('hidden', !isFilteredOrCustomSorted);
+        }
+    }
+
+    if (clubMgmtFilterSelect) {
+        clubMgmtFilterSelect.addEventListener('change', () => {
+            _clubMgmtFilterClubId = clubMgmtFilterSelect.value || 'ALL';
+            renderClubManagement();
+        });
+    }
+    if (clubMgmtSearchInput) {
+        clubMgmtSearchInput.addEventListener('input', () => {
+            _clubMgmtSearchText = clubMgmtSearchInput.value || '';
+            renderClubManagement();
+        });
+    }
+    if (clubMgmtSortSelect) {
+        clubMgmtSortSelect.addEventListener('change', () => {
+            const [key, dir] = (clubMgmtSortSelect.value || 'name:asc').split(':');
+            _clubMgmtSortKey = key || 'name';
+            _clubMgmtSortDir = dir === 'desc' ? 'desc' : 'asc';
+            renderClubManagement();
+        });
+    }
+    if (clubMgmtResetBtn) {
+        clubMgmtResetBtn.addEventListener('click', () => {
+            _clubMgmtFilterClubId = 'ALL';
+            _clubMgmtSearchText = '';
+            _clubMgmtSortKey = 'name';
+            _clubMgmtSortDir = 'asc';
+            if (clubMgmtSearchInput) clubMgmtSearchInput.value = '';
+            renderClubManagement();
+        });
+    }
+    document.querySelectorAll('#club-list-header .club-th-sortable').forEach(th => {
+        const toggleSort = () => {
+            const col = th.getAttribute('data-sort-col');
+            if (!col) return;
+            if (_clubMgmtSortKey === col) {
+                _clubMgmtSortDir = _clubMgmtSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                _clubMgmtSortKey = col;
+                // 금액 컬럼(배정예산/상품비/잔여예산) 첫 클릭은 높은순(내림차순), 클럽명은 가나다(오름차순) 우선
+                _clubMgmtSortDir = col === 'name' ? 'asc' : 'desc';
+            }
+            renderClubManagement();
+        };
+        th.addEventListener('click', toggleSort);
+        th.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleSort();
+            }
+        });
+    });
 
     function renderClubManagement() {
         // ⛔ 재진입 방지 가드 (v1.7.39):
@@ -11209,13 +11317,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const listContainer = document.getElementById('club-list-container');
             const headerEl = document.getElementById('club-list-header');
+            const filterBarEl = document.getElementById('club-mgmt-filter-bar');
             if (!listContainer) return;
             if (clubs.length === 0) {
                 if (headerEl) headerEl.style.display = 'none';
+                if (filterBarEl) filterBarEl.style.display = 'none';
                 listContainer.innerHTML = `<div class="empty-state"><span class="empty-icon">🏷️</span><p>${t('empty.no_clubs')}</p></div>`;
                 return;
             }
             if (headerEl) headerEl.style.display = 'grid';
+            if (filterBarEl) filterBarEl.style.display = 'flex';
             const clubColorMap = getClubColorMap();
             // ⛔ DOM 루프 내부에서 firebaseDb.ref().update()를 직접 호출하거나 listContainer.appendChild()를
             // 개별 호출하지 않는다 (v1.7.39):
@@ -11226,9 +11337,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const pendingSyncUpdates = {};
             let hasPendingSync = false;
 
-            clubs.sort((a, b) => a[1].name.localeCompare(b[1].name)).forEach(([clubId, club], idx) => {
-                const _thisYear = new Date().getFullYear();
-                const _thisYearKey = String(_thisYear);
+            const allClubsSortedByName = [...clubs].sort((a, b) => (a[1].name || '').localeCompare(b[1].name || '', 'ko-KR'));
+            syncClubMgmtFilterControls(allClubsSortedByName);
+
+            const _thisYear = new Date().getFullYear();
+            const _thisYearKey = String(_thisYear);
+
+            // 1단계: 모든 클럽의 표시 금액(배정예산/상품비/잔여예산) 계산 및 동기화 데이터 수집
+            const preparedClubRows = allClubsSortedByName.map(([clubId, club]) => {
                 // 상품비: globalHistory 기준으로 올해 실제 사용액 계산 후 Firebase에도 동기화
                 const prizeUsed = lastHistoryList
                     .filter(entry => {
@@ -11294,6 +11410,52 @@ document.addEventListener('DOMContentLoaded', () => {
                         : lastHistoryList.filter(e => historyMatchesClub(e, clubId, club.name) && getHistoryEntryYear(e) === targetQueryYearNum).reduce((s, e) => s + (e.finalSupportAmount || 0), 0));
                 const displayPriorUsed = (isAllQueryYears || targetQueryYearNum === _thisYear) ? priorUsed : 0;
                 const remaining = budget - displayPriorUsed - displayUsedBudget;
+                return {
+                    clubId,
+                    club,
+                    budget,
+                    displayPrizeUsed,
+                    remaining
+                };
+            });
+
+            // 2단계: 클럽 필터(특정 클럽 선택 + 검색어) 및 정렬(클럽명/배정예산/상품비/잔여예산 오름차순·내림차순) 적용
+            const searchKeyword = (_clubMgmtSearchText || '').trim().toLowerCase();
+            const filteredClubRows = preparedClubRows.filter(item => {
+                if (_clubMgmtFilterClubId !== 'ALL' && String(item.clubId) !== String(_clubMgmtFilterClubId)) {
+                    return false;
+                }
+                if (searchKeyword && !(item.club.name || '').toLowerCase().includes(searchKeyword)) {
+                    return false;
+                }
+                return true;
+            });
+
+            const dirFactor = _clubMgmtSortDir === 'desc' ? -1 : 1;
+            filteredClubRows.sort((a, b) => {
+                let cmp = 0;
+                if (_clubMgmtSortKey === 'budget') {
+                    cmp = (a.budget || 0) - (b.budget || 0);
+                } else if (_clubMgmtSortKey === 'prize') {
+                    cmp = (a.displayPrizeUsed || 0) - (b.displayPrizeUsed || 0);
+                } else if (_clubMgmtSortKey === 'remaining') {
+                    cmp = (a.remaining || 0) - (b.remaining || 0);
+                } else {
+                    cmp = (a.club.name || '').localeCompare(b.club.name || '', 'ko-KR');
+                }
+                if (cmp !== 0) return cmp * dirFactor;
+                return (a.club.name || '').localeCompare(b.club.name || '', 'ko-KR');
+            });
+
+            if (filteredClubRows.length === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'empty-state';
+                emptyDiv.style.padding = '1.25rem 0.5rem';
+                emptyDiv.innerHTML = `<span class="empty-icon">🔍</span><p>조건에 일치하는 클럽이 없습니다.</p>`;
+                rowsFragment.appendChild(emptyDiv);
+            }
+
+            filteredClubRows.forEach(({ clubId, club, budget, displayPrizeUsed, remaining }, idx) => {
                 const overLimitApproved = !!club.allowOverLimitSupport;
                 const chartColor = clubColorMap[club.name] || resolveClubBaseColor(clubId, club);
                 const row = document.createElement('div');
