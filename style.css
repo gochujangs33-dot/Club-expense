@@ -1353,6 +1353,13 @@ html[data-app-theme="light"] .dir-year-count-badge.is-top,
 html[data-app-theme="light"] .dir-year-count-badge.is-top .dir-count-input {
     color: #b45309 !important;
 }
+.dir-club-count-text {
+    font-weight: 800;
+    color: #38bdf8;
+}
+html[data-app-theme="light"] .dir-club-count-text {
+    color: #0369a1 !important;
+}
 
 /* Scroll Container */
 .scroll-y {

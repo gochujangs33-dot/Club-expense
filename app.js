@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.42';
+const APP_VERSION      = '1.7.43';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -7111,7 +7111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span style="width:7px; height:7px; border-radius:50%; background:${dotColor}; display:inline-block;"></span>
                             ${AppState.escapeHtml(c.clubName)}
                         </span>
-                        <span style="font-weight:800; color:var(--color-secondary);">${c.count}회</span>
+                        <span class="dir-club-count-text">${c.count}회</span>
                     </div>`;
                 }).join('');
         }
@@ -7229,7 +7229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span style="width:9px; height:9px; border-radius:50%; background:${dotColor}; display:inline-block; flex-shrink:0;"></span>
                             ${AppState.escapeHtml(item.clubName)}
                         </span>
-                        <span style="font-weight:800; font-size:0.88rem; color:var(--color-secondary);">${item.count}회</span>
+                        <span class="dir-club-count-text" style="font-size:0.88rem;">${item.count}회</span>
                     </div>
                     ${item.dates.length ? `<div style="display:flex; flex-wrap:wrap; gap:0.3rem;">${dateBadges}</div>` : ''}
                 </div>
@@ -9812,6 +9812,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.43', date: '2026.11.25', items: ['[전사원 명부] 마우스 오버 클럽별 참석 횟수 툴팁 및 상세 팝업 내 우측 횟수("N회") 색상도 라이트/다크 테마 고대비 색상(#0369a1 / #38bdf8)으로 통일 개선'] },
         { ver: '1.7.42', date: '2026.11.25', items: ['[전사원 명부]의 "(올해 누적: N회)" 및 입력 횟수 글자 색상을 라이트/다크 테마 모두에서 선명하게 잘 보이도록 고대비 색상(#0369a1 / #b45309 등)으로 개선'] },
         { ver: '1.7.41', date: '2026.11.25', items: ['관리자 [클럽 관리] 필터·정렬을 별도 상단 바 대신 엑셀(Excel) 스타일 컬럼 제목줄 드롭다운 필터로 개편: [클럽명 / 배정예산 / 상품비 / 잔여 예산] 제목 클릭 시 오름차순·내림차순(높은순·낮은순) 정렬과 항목별 체크박스 다중 선택 필터 팝오버 제공'] },
         { ver: '1.7.40', date: '2026.11.25', items: ['관리자 [클럽 관리]에 클럽 필터(특정 클럽 선택 및 실시간 이름 검색) 및 [클럽명 / 배정예산 / 상품비 / 잔여 예산] 오름차순·내림차순 정렬 기능(상단 정렬 드롭다운 및 테이블 컬럼 헤더 클릭 정렬) 추가'] },
