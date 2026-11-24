@@ -1814,6 +1814,15 @@ html[data-app-theme="light"] .club-progress-subtext {
     font-weight: 700;
 }
 
+#send-email-btn:disabled,
+#finalize-settlement-btn:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(0.55);
+    box-shadow: none !important;
+    transform: none !important;
+}
+
 .scroll-y::-webkit-scrollbar {
     width: 6px;
 }

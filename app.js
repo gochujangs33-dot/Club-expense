@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.46';
+const APP_VERSION      = '1.7.47';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -2834,6 +2834,19 @@ const AppState = {
                 budgetSection.classList.add('hidden');
                 this.updateClubBudgetProgress(0, 0, 0);
             }
+        }
+
+        // 클럽 미선택 시 정산 완료 / 정산 확정 버튼 비활성화
+        const hasClubSelected = this.hasSelectedClub();
+        const sendEmailBtn = document.getElementById('send-email-btn');
+        if (sendEmailBtn) {
+            sendEmailBtn.disabled = !hasClubSelected;
+            sendEmailBtn.title = hasClubSelected ? '' : '먼저 상단에서 정산할 클럽을 선택해 주세요.';
+        }
+        const finalizeSettlementBtn = document.getElementById('finalize-settlement-btn');
+        if (finalizeSettlementBtn) {
+            finalizeSettlementBtn.disabled = !hasClubSelected;
+            finalizeSettlementBtn.title = hasClubSelected ? '' : '먼저 상단에서 정산할 클럽을 선택해 주세요.';
         }
 
         // Event photo display
@@ -9878,6 +9891,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.47', date: '2026.11.25', items: ['상단에서 클럽을 선택하지 않은 상태("클럽을 선택하세요")에서는 [정산 완료] 및 [정산 확정] 버튼이 자동으로 비활성화(disabled)되도록 개선'] },
         { ver: '1.7.46', date: '2026.11.25', items: ['상단에서 클럽을 선택하지 않은 상태("클럽을 선택하세요")에서는 우측 하단 클럽 잔여 예산·이전 잔여 예산·예산 소진 프로그레스 바가 표시되지 않도록 숨김 처리하고, 클럽 선택 전에는 비용 항목 추가·정산 확정·엑셀 저장 등 비용 처리를 차단하도록 보강'] },
         { ver: '1.7.45', date: '2026.11.25', items: ['로그인 화면 PIN 입력 불능 원인이었던 app.js 요청사항 모달 영역 구문 유실 긴급 복구 및 재발 방지 절대규칙(동일 파일 병렬 edit 금지 · 배포 전 PIN 클릭/키보드 로그인 및 pageerror=0 필수 검수) AGENTS.md 지정'] },
         { ver: '1.7.44', date: '2026.11.25', items: ['관리자 [클럽 관리]에 시설·장비 이용료를 1회에 한해 클럽 잔여(배정) 예산 전액까지 법인카드로 결제하고 초과분은 개인카드로 자동 분배할 수 있는 [🔓 시설 전액 승인] 버튼 추가 (정산 1건 확정 시 자동 미승인 복원)'] },
