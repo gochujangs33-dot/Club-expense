@@ -1482,6 +1482,27 @@
         <div id="modal-caption"></div>
     </div>
 
+    <!-- 전사원 명부 회원별 클럽 참석 내역 모달 -->
+    <div id="dir-club-history-modal" class="modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="dir-club-history-title" style="z-index:10370; padding:1rem; align-items:center; justify-content:center;">
+        <div class="modal-content-card card" style="width:100%; max-width:540px; max-height:calc(100dvh - 2rem); display:flex; flex-direction:column;">
+            <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.45rem; min-width:0;">
+                    <span class="card-icon">🏅</span>
+                    <h2 id="dir-club-history-title" style="margin:0; font-size:1.02rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">클럽별 참석 내역</h2>
+                </div>
+                <button type="button" id="close-dir-club-history-modal" class="close-btn" style="position:static; font-size:1.35rem; line-height:1; flex-shrink:0;" aria-label="닫기">&times;</button>
+            </div>
+            <div class="card-body" style="overflow-y:auto; min-height:0;">
+                <p id="dir-club-history-summary" style="margin:0 0 0.75rem; font-size:0.84rem; color:var(--text-secondary);"></p>
+                <div id="dir-club-history-list" style="display:flex; flex-direction:column; gap:0.55rem;"></div>
+            </div>
+            <div class="form-actions" style="padding:0.75rem 1.25rem 1rem; border-top:1px solid var(--card-border); margin:0;">
+                <button type="button" id="dismiss-dir-club-history-modal" class="btn-secondary" style="width:100%;">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 차트 참석자 명단 모달 -->
     <div id="attendance-roster-modal" class="modal hidden" role="dialog" aria-modal="true"
         aria-labelledby="attendance-roster-title">

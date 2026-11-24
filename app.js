@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.33';
+const APP_VERSION      = '1.7.34';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3029,7 +3029,7 @@ const AppState = {
                     row.innerHTML = `
                         <div class="expense-row-left">
                             <span class="expense-row-title" style="font-size: 0.88rem; display: inline-flex; align-items: center;">
-                                ${crownHtml}<strong>${this.escapeHtml(name)}</strong>
+                                ${crownHtml}<button type="button" class="btn-dir-member-history" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" data-count="${countValue}" title="클릭하여 클럽별 참석 내역 보기" style="background:none; border:none; padding:0; margin:0; font:inherit; font-weight:700; color:inherit; cursor:pointer; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px;">${this.escapeHtml(name)}</button>
                                 <span style="font-size: 0.72rem; color: ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; font-weight: 700; margin-left: 0.3rem;">(올해 누적: ${this.hasAdminAccess ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0" style="width:34px; padding:0 2px; font-size:0.72rem; font-weight:700; color:${isTopRank ? '#d97706' : 'var(--color-secondary)'}; background:transparent; border:none; border-bottom:1px dashed ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; outline:none; text-align:center; -moz-appearance:textfield; appearance:textfield;">` : countValue}회)</span>
                             </span>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">EMP ID: ${this.escapeHtml(id)}</span>
@@ -3079,6 +3079,19 @@ const AppState = {
                                 details: { 이전횟수: previousCount, 변경횟수: newCount }
                             });
                             this.render();
+                        }
+                    });
+                });
+
+                // Bind click handlers for member name -> show club attendance breakdown modal
+                directoryContainer.querySelectorAll('.btn-dir-member-history').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const mName = btn.getAttribute('data-name');
+                        const mId = btn.getAttribute('data-id');
+                        const mCount = Number(btn.getAttribute('data-count')) || 0;
+                        if (typeof window.openDirMemberClubHistoryModal === 'function') {
+                            window.openDirMemberClubHistoryModal(mName, mId, mCount);
                         }
                     });
                 });
@@ -6838,6 +6851,110 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.id === 'year-end-ppt-modal') closeYearEndPptModal();
     });
 
+    // ── 전사원 명부 회원별 클럽 참석 내역 모달 ──────────────────────────
+    async function openDirMemberClubHistoryModal(memberName, memberEmpId, cachedCount = 0) {
+        const modal = document.getElementById('dir-club-history-modal');
+        const titleEl = document.getElementById('dir-club-history-title');
+        const summaryEl = document.getElementById('dir-club-history-summary');
+        const listEl = document.getElementById('dir-club-history-list');
+        if (!modal || !titleEl || !summaryEl || !listEl) return;
+
+        const targetYear = new Date().getFullYear();
+        const empIdStr = String(memberEmpId || '').trim();
+        titleEl.textContent = `${memberName}${empIdStr ? ` (${empIdStr})` : ''} — ${targetYear}년 참석 내역`;
+        summaryEl.textContent = '클럽별 참석 내역을 불러오는 중입니다...';
+        listEl.innerHTML = '';
+        modal.classList.remove('hidden');
+
+        let historyList = [];
+        if (firebaseDb) {
+            try {
+                const [histSnap, delSnap] = await Promise.all([
+                    firebaseDb.ref('globalHistory').once('value'),
+                    firebaseDb.ref('deletedHistoryIds').once('value')
+                ]);
+                const delMap = delSnap.val() || {};
+                historyList = Object.values(histSnap.val() || {}).filter(e => e && !delMap[String(e.id)]);
+            } catch (e) {
+                console.warn('회원별 클럽 참석 내역 조회 실패:', e);
+            }
+        }
+        if (historyList.length === 0) {
+            historyList = (lastHistoryList && lastHistoryList.length)
+                ? lastHistoryList
+                : (AppState.settlementHistory || []);
+        }
+
+        // 사번(employeeId) 일치 기준으로만 집계 (동명이인 오귀속 방지 불변량 준수)
+        const seenIds = new Set();
+        const clubCounts = new Map();
+        let totalMatched = 0;
+
+        historyList.forEach(entry => {
+            if (!entry || !entry.id || seenIds.has(entry.id)) return;
+            seenIds.add(entry.id);
+            if (getHistoryEntryYear(entry) !== targetYear) return;
+            const attendees = Array.isArray(entry.attendees) ? entry.attendees : [];
+            const matched = empIdStr
+                ? attendees.some(a => a && a.employeeId && String(a.employeeId).trim() === empIdStr)
+                : false;
+            if (!matched) return;
+
+            totalMatched++;
+            const clubName = String(entry.clubName || '기본 클럽').trim() || '기본 클럽';
+            if (!clubCounts.has(clubName)) clubCounts.set(clubName, []);
+            const dStr = entry.settlementDate || (entry.date ? String(entry.date).slice(0, 10) : '');
+            clubCounts.get(clubName).push(dStr);
+        });
+
+        const clubList = Array.from(clubCounts.entries())
+            .map(([clubName, dates]) => ({
+                clubName,
+                count: dates.length,
+                dates: dates.filter(Boolean).sort((a, b) => b.localeCompare(a))
+            }))
+            .sort((a, b) => b.count - a.count || a.clubName.localeCompare(b.clubName, 'ko'));
+
+        const colorMap = (typeof getClubColorMap === 'function') ? getClubColorMap() : {};
+        summaryEl.innerHTML = totalMatched > 0
+            ? `<b>${targetYear}년 총 ${totalMatched}회</b> 참석 · <b>${clubList.length}개</b> 클럽`
+            : `${targetYear}년 등록된 클럽 참석 기록이 없습니다.${cachedCount > 0 ? ` (명부 누적 ${cachedCount}회)` : ''}`;
+
+        if (clubList.length === 0) {
+            listEl.innerHTML = `<div style="padding:1.25rem; text-align:center; color:var(--text-muted); font-size:0.84rem; border:1px dashed var(--card-border); border-radius:10px;">참석한 클럽 이력이 없습니다.</div>`;
+            return;
+        }
+
+        listEl.innerHTML = clubList.map(item => {
+            const dotColor = colorMap[item.clubName] || '#8b5cf6';
+            const dateBadges = item.dates.map(d =>
+                `<span style="display:inline-block; padding:0.15rem 0.45rem; font-size:0.72rem; border-radius:5px; background:rgba(148,163,184,0.14); color:var(--text-secondary);">${AppState.escapeHtml(d)}</span>`
+            ).join('');
+            return `
+                <div style="padding:0.7rem 0.85rem; border:1px solid var(--card-border); border-radius:10px; background:rgba(255,255,255,0.03);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:${item.dates.length ? '0.45rem' : '0'};">
+                        <span style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.9rem; color:var(--text-primary);">
+                            <span style="width:9px; height:9px; border-radius:50%; background:${dotColor}; display:inline-block; flex-shrink:0;"></span>
+                            ${AppState.escapeHtml(item.clubName)}
+                        </span>
+                        <span style="font-weight:800; font-size:0.88rem; color:var(--color-secondary);">${item.count}회</span>
+                    </div>
+                    ${item.dates.length ? `<div style="display:flex; flex-wrap:wrap; gap:0.3rem;">${dateBadges}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+    window.openDirMemberClubHistoryModal = openDirMemberClubHistoryModal;
+
+    function closeDirMemberClubHistoryModal() {
+        document.getElementById('dir-club-history-modal')?.classList.add('hidden');
+    }
+    document.getElementById('close-dir-club-history-modal')?.addEventListener('click', closeDirMemberClubHistoryModal);
+    document.getElementById('dismiss-dir-club-history-modal')?.addEventListener('click', closeDirMemberClubHistoryModal);
+    document.getElementById('dir-club-history-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'dir-club-history-modal') closeDirMemberClubHistoryModal();
+    });
+
     // ── 중간 결산 모달 & 엑셀 다운로드 ───────────────────
     function buildInterimSummaryData(selectedYear, historyList, clubRegistry) {
         const yearStr = String(selectedYear || 'ALL');
@@ -9213,143 +9330,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 headerAdminModeBtn.style.color = '#059669';
             } else {
                 headerAdminModeBtn.innerHTML = '👑 관리자 페이지';
-                headerAdminModeBtn.title = '관리자 대시보드 페이지로 이동';
-                headerAdminModeBtn.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.12))';
-                headerAdminModeBtn.style.borderColor = 'rgba(245, 158, 11, 0.45)';
-                headerAdminModeBtn.style.color = '#d97706';
-            }
-        } else {
-            headerAdminModeBtn.classList.add('hidden');
-            headerAdminModeBtn.style.display = 'none';
-        }
-        if (AppState.isLoggedIn && statusBadge && AppState.currentPin) {
-            const roleBadgeText = AppState.userRole === 'president' ? ' 👑회장' : (AppState.userRole === 'developer' ? ' 💻개발자' : (AppState.hasAdminAccess ? ' 🛡️관리자' : ''));
-            statusBadge.innerHTML = `${t('status.online')} (${AppState.userName || t('status.unknown') || '?'}${roleBadgeText} / PIN: ${AppState.currentPin})`;
-        }
-    }
-    window._syncHeaderAdminButton = syncHeaderAdminButton;
-    window._forceUserModeOnRevoke = () => {
-        setAdminMode(false);
-        syncHeaderAdminButton();
-    };
-
-    if (headerAdminModeBtn) {
-        headerAdminModeBtn.addEventListener('click', () => {
-            if (!AppState.isLoggedIn || !AppState.hasAdminAccess) return;
-            setAdminMode(!AppState.isAdminMode);
-        });
-    }
-
-    function setAdminMode(isAdmin) {
-        const allowAdmin = Boolean(isAdmin && AppState.isLoggedIn && AppState.hasAdminAccess);
-        AppState.isAdminMode = allowAdmin;
-
-        // 관리자 모드: 헤더 문구 변경 및 클럽 선택 영역 숨김
-        const headerTitleEl = document.querySelector('.logo-area h1');
-        if (headerTitleEl) headerTitleEl.textContent = allowAdmin ? '총 클럽 비용 관리' : '클럽 비용 정산';
-        const clubNameWrapperEl = document.querySelector('.club-name-wrapper');
-        if (clubNameWrapperEl) clubNameWrapperEl.classList.toggle('hidden', allowAdmin);
-
-        const adminOnlyIds = ['admin-tab-btn', 'club-history-tab-btn', 'charts-tab-btn', 'admin-audit-log-btn', 'admin-interim-summary-btn', 'admin-export-ppt-btn', 'history-export-ppt-btn'];
-        const memberOnlyIds = ['settlement-tab-btn', 'attendees-tab-btn', 'history-tab-btn'];
-        adminOnlyIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.toggle('hidden', !allowAdmin);
-        });
-        memberOnlyIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.toggle('hidden', allowAdmin);
-        });
-
-        // 일반 회원 모드: 요청사항 보내기 버튼 표시 / 관리자 모드: 요청사항 리스트 버튼 표시
-        const feedbackOpenBtnEl = document.getElementById('feedback-open-btn');
-        const feedbackListOpenBtnEl = document.getElementById('feedback-list-open-btn');
-        if (feedbackOpenBtnEl) feedbackOpenBtnEl.classList.toggle('hidden', allowAdmin);
-        if (feedbackListOpenBtnEl && !allowAdmin) feedbackListOpenBtnEl.classList.add('hidden');
-
-        syncHeaderAdminButton();
-
-        // 관리자 모드에서는 새 요청사항이 도착하면 알림 팝업을 띄우고, 리스트 버튼을 표시
-        if (allowAdmin && firebaseDb) {
-            firebaseDb.ref('requests').off('value');
-            firebaseDb.ref('requests').on('value', snapshot => {
-                const requestsData = snapshot.val() || {};
-                const requestList = Object.keys(requestsData)
-                    .map(key => ({ key, ...requestsData[key] }))
-                    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-                const unreadCount = requestList.filter(r => !r.read).length;
-
-                const badge = document.getElementById('feedback-list-badge');
-                if (badge) {
-                    if (unreadCount > 0) {
-                        badge.textContent = unreadCount;
-                        badge.classList.remove('hidden');
-                    } else {
-                        badge.classList.add('hidden');
-                    }
-                }
-
-                // 새로 도착한(아직 본 적 없는) 안읽은 요청은 팝업 큐에 추가
-                requestList.forEach(req => {
-                    if (!req.read && !seenFeedbackKeys.has(req.key)) {
-                        seenFeedbackKeys.add(req.key);
-                        feedbackPopupQueue.push(req);
-                    }
-                });
-                showNextFeedbackPopup();
-
-                // 안읽은 요청이 있으면(팝업 확인 전이라도) 리스트 버튼 노출
-                if (feedbackListOpenBtnEl && unreadCount > 0) {
-                    feedbackListOpenBtnEl.classList.remove('hidden');
-                }
-            });
-        } else if (!allowAdmin && firebaseDb) {
-            firebaseDb.ref('requests').off('value');
-        }
-
-        // 활성 탭이 더 이상 보이지 않으면 기본 탭으로 전환
-        const activeBtn = document.querySelector('.tab-nav .tab-btn.active');
-        if (!activeBtn || activeBtn.classList.contains('hidden')) {
-            const fallbackId = allowAdmin ? 'tab-admin' : 'tab-settlement';
-            document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-            const fallbackBtn = document.querySelector(`[data-tab="${fallbackId}"]`);
-            if (fallbackBtn) fallbackBtn.classList.add('active');
-            const fallbackPane = document.getElementById(fallbackId);
-            if (fallbackPane) fallbackPane.classList.remove('hidden');
-            if (allowAdmin && typeof renderAdminDashboard === 'function') {
-                renderAdminDashboard();
-            } else if (!allowAdmin) {
-                AppState.render();
-            }
-        }
-    }
-
-    function switchToOfflineMode() {
-        AppState._unbindUserRoleListener();
-        AppState.userRole = 'member';
-        AppState.hasAdminAccess = false;
-        AppState.isAdminMode = false;
-        pinModal.classList.add('hidden');
-        statusBadge.className = 'badge-offline';
-        statusBadge.textContent = t('header.offline');
-        logoutBtn.style.display = 'none';
-        loginBtn.style.display = 'inline-block';
-        document.getElementById('admin-tab-btn').classList.add('hidden');
-        setAdminMode(false);
-        syncHeaderAdminButton();
-
-        // If we were on admin tab, switch back to settlement
-        if (document.getElementById('admin-tab-btn').classList.contains('active')) {
-            document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-            const sTab = document.querySelector('[data-tab="tab-settlement"]');
-            if (sTab) sTab.classList.add('active');
-            document.getElementById('tab-settlement').classList.remove('hidden');
-        }
-
-        AppState.cancelEditMode(); // 수정 모드 중 로그아웃 시 상태 초기화
-        AppState.clubHistory = [];
         AppState.isLoggedIn = false;
         AppState.currentPin = null;
         AppState.userName = null;
@@ -9400,6 +9380,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.34', date: '2026.11.24', items: ['[전사원 명부]에서 회원 이름을 클릭하면 올해 어느 클럽에 몇 번·언제 참석했는지 한눈에 확인하는 팝업창 추가'] },
         { ver: '1.7.33', date: '2026.11.24', items: ['상단 [조회 연도] 선택과 [정산 구간 및 비율 설정] 및 [연간 결산 PPT]를 1:1로 자동 연동 (조회 연도 변경 시 해당 연도의 구간·비율 설정값 자동 불러오기·저장 및 PPT 기준표 반영)'] },
         { ver: '1.7.32', date: '2026.11.24', items: ['정산 구간·비율·한도를 연도별로 분리 관리(globalSettings/yearlyRules/{연도})할 수 있도록 관리자 설정에 연도 선택 기능 추가', '연간 결산 PPT 보고서 생성 시 해당 연도의 정산 구간 및 한도 기준표 슬라이드를 자동 포함하도록 개선'] },
         { ver: '1.7.31', date: '2026.11.24', items: ['[📋 중간 결산] 팝업 표 및 엑셀 다운로드의 [소진율]을 소수점 첫째 자리(예: 63.2%, 100.0%)까지 표시하도록 개선'] },
