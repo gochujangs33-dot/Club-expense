@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.40';
+const APP_VERSION      = '1.7.41';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -9812,6 +9812,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.41', date: '2026.11.25', items: ['관리자 [클럽 관리] 필터·정렬을 별도 상단 바 대신 엑셀(Excel) 스타일 컬럼 제목줄 드롭다운 필터로 개편: [클럽명 / 배정예산 / 상품비 / 잔여 예산] 제목 클릭 시 오름차순·내림차순(높은순·낮은순) 정렬과 항목별 체크박스 다중 선택 필터 팝오버 제공'] },
         { ver: '1.7.40', date: '2026.11.25', items: ['관리자 [클럽 관리]에 클럽 필터(특정 클럽 선택 및 실시간 이름 검색) 및 [클럽명 / 배정예산 / 상품비 / 잔여 예산] 오름차순·내림차순 정렬 기능(상단 정렬 드롭다운 및 테이블 컬럼 헤더 클릭 정렬) 추가'] },
         { ver: '1.7.39', date: '2026.11.25', items: ['관리자 [클럽 관리]에서 추가 배정 또는 금액 수정 시 목록 하단에 중복 클럽 행이 이어 붙어 표시되던 동기적 재진입(Re-entrant DOM 렌더링) 버그 수정: DOM 루프 중 Firebase update 호출을 루프 종료 후 일괄 처리로 분리하고 DocumentFragment 원자적 교체 및 재진입 방지 가드 적용'] },
         { ver: '1.7.38', date: '2026.11.24', items: ['연도별 클럽 목록·배정 예산·총 클럽비용 완전 분리 저장(yearlyClubRegistry/{연도}, yearlyClubTotalBudget/{연도}) 구현 — 다른 연도에서 클럽을 삭제·수정해도 2026년 등 기존 연도 데이터 100% 보존'] },
@@ -11146,112 +11147,282 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let _isRenderingClubManagement = false;
     let _pendingClubManagementRender = false;
-    let _clubMgmtFilterClubId = 'ALL';
-    let _clubMgmtSearchText = '';
     let _clubMgmtSortKey = 'name'; // 'name' | 'budget' | 'prize' | 'remaining'
     let _clubMgmtSortDir = 'asc';  // 'asc' | 'desc'
+    // 엑셀 스타일 컬럼별 체크박스 필터 상태 (null이면 해당 컬럼 '전체 선택', Set이면 선택된 값들만 표시)
+    const _clubMgmtColFilters = {
+        name: null,
+        budget: null,
+        prize: null,
+        remaining: null
+    };
+    let _lastPreparedClubRows = [];
+    let _activeClubFilterPopover = null;
+    let _activeClubFilterCol = null;
 
-    const clubMgmtFilterSelect = document.getElementById('club-mgmt-filter-select');
-    const clubMgmtSearchInput = document.getElementById('club-mgmt-search-input');
-    const clubMgmtSortSelect = document.getElementById('club-mgmt-sort-select');
-    const clubMgmtResetBtn = document.getElementById('club-mgmt-filter-reset-btn');
-
-    function syncClubMgmtFilterControls(allClubsSortedByName) {
-        if (clubMgmtFilterSelect) {
-            const prevVal = _clubMgmtFilterClubId;
-            const existsInList = prevVal === 'ALL' || allClubsSortedByName.some(([cid]) => String(cid) === String(prevVal));
-            if (!existsInList) {
-                _clubMgmtFilterClubId = 'ALL';
-            }
-            const frag = document.createDocumentFragment();
-            const allOpt = document.createElement('option');
-            allOpt.value = 'ALL';
-            allOpt.textContent = `전체 클럽 보기 (${allClubsSortedByName.length}개)`;
-            frag.appendChild(allOpt);
-            allClubsSortedByName.forEach(([cid, c]) => {
-                const opt = document.createElement('option');
-                opt.value = cid;
-                opt.textContent = c.name || cid;
-                frag.appendChild(opt);
-            });
-            clubMgmtFilterSelect.replaceChildren(frag);
-            clubMgmtFilterSelect.value = _clubMgmtFilterClubId;
-        }
-        if (clubMgmtSortSelect) {
-            const sortVal = `${_clubMgmtSortKey}:${_clubMgmtSortDir}`;
-            if (clubMgmtSortSelect.value !== sortVal) {
-                clubMgmtSortSelect.value = sortVal;
-            }
-        }
-        document.querySelectorAll('#club-list-header .club-th-sortable').forEach(th => {
-            const col = th.getAttribute('data-sort-col');
-            const ind = th.querySelector('.club-sort-indicator');
-            const isActive = col === _clubMgmtSortKey;
-            th.classList.toggle('is-active-sort', isActive);
-            if (ind) {
-                ind.textContent = isActive ? (_clubMgmtSortDir === 'asc' ? '↑' : '↓') : '↕';
-            }
-        });
-        if (clubMgmtResetBtn) {
-            const isFilteredOrCustomSorted =
-                _clubMgmtFilterClubId !== 'ALL' ||
-                Boolean(_clubMgmtSearchText.trim()) ||
-                _clubMgmtSortKey !== 'name' ||
-                _clubMgmtSortDir !== 'asc';
-            clubMgmtResetBtn.classList.toggle('hidden', !isFilteredOrCustomSorted);
-        }
+    function getClubColValueKey(row, col) {
+        if (col === 'name') return String(row.club.name || '');
+        if (col === 'budget') return String(row.budget || 0);
+        if (col === 'prize') return String(row.displayPrizeUsed || 0);
+        if (col === 'remaining') return String(row.remaining || 0);
+        return '';
     }
 
-    if (clubMgmtFilterSelect) {
-        clubMgmtFilterSelect.addEventListener('change', () => {
-            _clubMgmtFilterClubId = clubMgmtFilterSelect.value || 'ALL';
-            renderClubManagement();
+    function getClubColValueLabel(row, col) {
+        if (col === 'name') return String(row.club.name || '');
+        if (col === 'budget') return SettlementCalculator.formatCurrency(row.budget || 0);
+        if (col === 'prize') return SettlementCalculator.formatCurrency(row.displayPrizeUsed || 0);
+        if (col === 'remaining') return SettlementCalculator.formatCurrency(row.remaining || 0);
+        return '';
+    }
+
+    function syncClubMgmtHeaderIndicators() {
+        document.querySelectorAll('#club-list-header .club-th-filterable').forEach(th => {
+            const col = th.getAttribute('data-filter-col');
+            const iconEl = th.querySelector('.club-th-filter-btn');
+            const isSorted = col === _clubMgmtSortKey;
+            const filterSet = _clubMgmtColFilters[col];
+            const isFiltered = filterSet instanceof Set;
+            th.classList.toggle('is-active-sort', isSorted);
+            th.classList.toggle('is-filtered', isFiltered);
+            if (iconEl) {
+                const sortArrow = isSorted ? (_clubMgmtSortDir === 'asc' ? '↑ ' : '↓ ') : '';
+                const filterMark = isFiltered ? '⏳' : '▾';
+                iconEl.textContent = `${sortArrow}${filterMark}`;
+            }
         });
     }
-    if (clubMgmtSearchInput) {
-        clubMgmtSearchInput.addEventListener('input', () => {
-            _clubMgmtSearchText = clubMgmtSearchInput.value || '';
-            renderClubManagement();
-        });
+
+    function closeClubExcelFilterPopover() {
+        if (_activeClubFilterPopover && _activeClubFilterPopover.parentNode) {
+            _activeClubFilterPopover.parentNode.removeChild(_activeClubFilterPopover);
+        }
+        _activeClubFilterPopover = null;
+        _activeClubFilterCol = null;
     }
-    if (clubMgmtSortSelect) {
-        clubMgmtSortSelect.addEventListener('change', () => {
-            const [key, dir] = (clubMgmtSortSelect.value || 'name:asc').split(':');
-            _clubMgmtSortKey = key || 'name';
-            _clubMgmtSortDir = dir === 'desc' ? 'desc' : 'asc';
-            renderClubManagement();
+
+    function openClubExcelFilterPopover(col, anchorEl) {
+        if (_activeClubFilterPopover && _activeClubFilterCol === col) {
+            closeClubExcelFilterPopover();
+            return;
+        }
+        closeClubExcelFilterPopover();
+        _activeClubFilterCol = col;
+
+        // 다른 컬럼의 필터가 적용된 상태를 기준으로 현재 컬럼에서 선택 가능한 고유 값 목록을 생성 (엑셀 방식)
+        const baseRows = (_lastPreparedClubRows || []).filter(item => {
+            for (const otherCol of ['name', 'budget', 'prize', 'remaining']) {
+                if (otherCol === col) continue;
+                const set = _clubMgmtColFilters[otherCol];
+                if (set instanceof Set && !set.has(getClubColValueKey(item, otherCol))) {
+                    return false;
+                }
+            }
+            return true;
         });
-    }
-    if (clubMgmtResetBtn) {
-        clubMgmtResetBtn.addEventListener('click', () => {
-            _clubMgmtFilterClubId = 'ALL';
-            _clubMgmtSearchText = '';
-            _clubMgmtSortKey = 'name';
-            _clubMgmtSortDir = 'asc';
-            if (clubMgmtSearchInput) clubMgmtSearchInput.value = '';
-            renderClubManagement();
-        });
-    }
-    document.querySelectorAll('#club-list-header .club-th-sortable').forEach(th => {
-        const toggleSort = () => {
-            const col = th.getAttribute('data-sort-col');
-            if (!col) return;
-            if (_clubMgmtSortKey === col) {
-                _clubMgmtSortDir = _clubMgmtSortDir === 'asc' ? 'desc' : 'asc';
+        const sourceRows = baseRows.length > 0 ? baseRows : (_lastPreparedClubRows || []);
+
+        const valueMap = new Map(); // key -> { key, label, numVal, count }
+        sourceRows.forEach(row => {
+            const key = getClubColValueKey(row, col);
+            const label = getClubColValueLabel(row, col);
+            const numVal = col === 'name' ? 0 : Number(key) || 0;
+            if (!valueMap.has(key)) {
+                valueMap.set(key, { key, label, numVal, count: 1 });
             } else {
-                _clubMgmtSortKey = col;
-                // 금액 컬럼(배정예산/상품비/잔여예산) 첫 클릭은 높은순(내림차순), 클럽명은 가나다(오름차순) 우선
-                _clubMgmtSortDir = col === 'name' ? 'asc' : 'desc';
+                valueMap.get(key).count += 1;
             }
-            renderClubManagement();
+        });
+        // 현재 필터에 이미 체크되어 있던 값도 누락되지 않도록 포함
+        const existingSet = _clubMgmtColFilters[col];
+        if (existingSet instanceof Set) {
+            (_lastPreparedClubRows || []).forEach(row => {
+                const key = getClubColValueKey(row, col);
+                if (existingSet.has(key) && !valueMap.has(key)) {
+                    valueMap.set(key, {
+                        key,
+                        label: getClubColValueLabel(row, col),
+                        numVal: col === 'name' ? 0 : Number(key) || 0,
+                        count: 0
+                    });
+                }
+            });
+        }
+
+        const uniqueItems = Array.from(valueMap.values()).sort((a, b) => {
+            if (col === 'name') return a.label.localeCompare(b.label, 'ko-KR');
+            return b.numVal - a.numVal; // 금액 목록은 기본적으로 높은 금액부터 보기 좋게 나열
+        });
+
+        const colTitleMap = {
+            name: '클럽명',
+            budget: '배정예산',
+            prize: '상품비',
+            remaining: '잔여 예산'
         };
-        th.addEventListener('click', toggleSort);
+        const ascLabel = col === 'name' ? '↑ 가나다순 정렬 (오름차순)' : '↑ 낮은순 정렬 (오름차순)';
+        const descLabel = col === 'name' ? '↓ 가나다 역순 정렬 (내림차순)' : '↓ 높은순 정렬 (내림차순)';
+
+        const popover = document.createElement('div');
+        popover.className = 'club-excel-filter-popover';
+        popover.setAttribute('role', 'dialog');
+        popover.setAttribute('aria-label', `${colTitleMap[col] || col} 정렬 및 필터`);
+
+        const isAscActive = _clubMgmtSortKey === col && _clubMgmtSortDir === 'asc';
+        const isDescActive = _clubMgmtSortKey === col && _clubMgmtSortDir === 'desc';
+
+        popover.innerHTML = `
+            <div class="club-excel-filter-section-title">${AppState.escapeHtml(colTitleMap[col] || '')} 정렬</div>
+            <button type="button" class="club-excel-sort-btn ${isDescActive ? 'is-active' : ''}" data-sort-dir="desc">${descLabel}</button>
+            <button type="button" class="club-excel-sort-btn ${isAscActive ? 'is-active' : ''}" data-sort-dir="asc">${ascLabel}</button>
+            <div class="club-excel-divider"></div>
+            <div class="club-excel-filter-section-title">목록 필터 (체크 선택)</div>
+            <input type="text" class="club-excel-search-input" placeholder="${col === 'name' ? '클럽명 검색...' : '금액 검색...'}" autocomplete="off">
+            <div class="club-excel-checklist"></div>
+            <div class="club-excel-actions">
+                <button type="button" class="btn-secondary club-excel-clear-btn">전체 해제/초기화</button>
+                <button type="button" class="btn-primary-sm club-excel-apply-btn">확인</button>
+            </div>
+        `;
+
+        const checklistEl = popover.querySelector('.club-excel-checklist');
+        const searchInputEl = popover.querySelector('.club-excel-search-input');
+
+        // 현재 선택 상태 복사본
+        const selectedKeys = new Set(
+            existingSet instanceof Set
+                ? Array.from(existingSet)
+                : uniqueItems.map(it => it.key)
+        );
+
+        function renderChecklist(keyword = '') {
+            const kw = keyword.trim().toLowerCase();
+            const visibleItems = kw
+                ? uniqueItems.filter(it => it.label.toLowerCase().includes(kw) || it.key.toLowerCase().includes(kw))
+                : uniqueItems;
+
+            const frag = document.createDocumentFragment();
+
+            const allRow = document.createElement('label');
+            allRow.className = 'club-excel-check-item select-all-row';
+            const allChecked = visibleItems.length > 0 && visibleItems.every(it => selectedKeys.has(it.key));
+            const someChecked = visibleItems.some(it => selectedKeys.has(it.key));
+            allRow.innerHTML = `
+                <input type="checkbox" class="club-excel-check-all" ${allChecked ? 'checked' : ''}>
+                <span class="club-excel-check-label">(전체 선택)</span>
+                <span class="club-excel-check-count">${visibleItems.length}개</span>
+            `;
+            const allCheckbox = allRow.querySelector('.club-excel-check-all');
+            if (allCheckbox && !allChecked && someChecked) {
+                allCheckbox.indeterminate = true;
+            }
+            allCheckbox.addEventListener('change', () => {
+                if (allCheckbox.checked) {
+                    visibleItems.forEach(it => selectedKeys.add(it.key));
+                } else {
+                    visibleItems.forEach(it => selectedKeys.delete(it.key));
+                }
+                renderChecklist(searchInputEl.value);
+            });
+            frag.appendChild(allRow);
+
+            visibleItems.forEach(it => {
+                const itemLabel = document.createElement('label');
+                itemLabel.className = 'club-excel-check-item';
+                const checked = selectedKeys.has(it.key);
+                itemLabel.innerHTML = `
+                    <input type="checkbox" class="club-excel-check-val" data-val-key="${AppState.escapeHtml(it.key)}" ${checked ? 'checked' : ''}>
+                    <span class="club-excel-check-label" title="${AppState.escapeHtml(it.label)}">${AppState.escapeHtml(it.label)}</span>
+                    ${it.count > 1 ? `<span class="club-excel-check-count">(${it.count})</span>` : ''}
+                `;
+                const cb = itemLabel.querySelector('.club-excel-check-val');
+                cb.addEventListener('change', () => {
+                    if (cb.checked) selectedKeys.add(it.key);
+                    else selectedKeys.delete(it.key);
+                    const nowAll = visibleItems.length > 0 && visibleItems.every(v => selectedKeys.has(v.key));
+                    const nowSome = visibleItems.some(v => selectedKeys.has(v.key));
+                    allCheckbox.checked = nowAll;
+                    allCheckbox.indeterminate = !nowAll && nowSome;
+                });
+                frag.appendChild(itemLabel);
+            });
+
+            checklistEl.replaceChildren(frag);
+        }
+
+        renderChecklist('');
+
+        searchInputEl.addEventListener('input', () => {
+            renderChecklist(searchInputEl.value);
+        });
+
+        popover.querySelectorAll('.club-excel-sort-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const dir = btn.getAttribute('data-sort-dir') === 'desc' ? 'desc' : 'asc';
+                _clubMgmtSortKey = col;
+                _clubMgmtSortDir = dir;
+                closeClubExcelFilterPopover();
+                renderClubManagement();
+            });
+        });
+
+        popover.querySelector('.club-excel-clear-btn').addEventListener('click', () => {
+            _clubMgmtColFilters[col] = null;
+            closeClubExcelFilterPopover();
+            renderClubManagement();
+        });
+
+        popover.querySelector('.club-excel-apply-btn').addEventListener('click', () => {
+            if (selectedKeys.size === 0 || selectedKeys.size >= uniqueItems.length) {
+                // 전체 선택이거나 아무것도 체크하지 않은 경우 필터 해제(전체 표시)
+                _clubMgmtColFilters[col] = selectedKeys.size === 0 ? new Set() : null;
+            } else {
+                _clubMgmtColFilters[col] = new Set(selectedKeys);
+            }
+            closeClubExcelFilterPopover();
+            renderClubManagement();
+        });
+
+        document.body.appendChild(popover);
+        _activeClubFilterPopover = popover;
+
+        // 위치 계산 (제목줄 셀 바로 아래, 화면 밖으로 넘치지 않게 보정)
+        const rect = anchorEl.getBoundingClientRect();
+        const popRect = popover.getBoundingClientRect();
+        let left = rect.left;
+        let top = rect.bottom + 4;
+        if (left + popRect.width > window.innerWidth - 10) {
+            left = Math.max(10, window.innerWidth - popRect.width - 10);
+        }
+        if (top + popRect.height > window.innerHeight - 10) {
+            top = Math.max(10, rect.top - popRect.height - 4);
+        }
+        popover.style.left = `${Math.round(left)}px`;
+        popover.style.top = `${Math.round(top)}px`;
+    }
+
+    document.querySelectorAll('#club-list-header .club-th-filterable').forEach(th => {
+        th.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const col = th.getAttribute('data-filter-col');
+            if (!col) return;
+            openClubExcelFilterPopover(col, th);
+        });
         th.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                toggleSort();
+                e.stopPropagation();
+                const col = th.getAttribute('data-filter-col');
+                if (col) openClubExcelFilterPopover(col, th);
             }
         });
+    });
+
+    document.addEventListener('pointerdown', (e) => {
+        if (!_activeClubFilterPopover) return;
+        if (_activeClubFilterPopover.contains(e.target)) return;
+        if (e.target.closest && e.target.closest('#club-list-header .club-th-filterable')) return;
+        closeClubExcelFilterPopover();
     });
 
     function renderClubManagement() {
@@ -11317,16 +11488,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const listContainer = document.getElementById('club-list-container');
             const headerEl = document.getElementById('club-list-header');
-            const filterBarEl = document.getElementById('club-mgmt-filter-bar');
             if (!listContainer) return;
             if (clubs.length === 0) {
                 if (headerEl) headerEl.style.display = 'none';
-                if (filterBarEl) filterBarEl.style.display = 'none';
                 listContainer.innerHTML = `<div class="empty-state"><span class="empty-icon">🏷️</span><p>${t('empty.no_clubs')}</p></div>`;
                 return;
             }
             if (headerEl) headerEl.style.display = 'grid';
-            if (filterBarEl) filterBarEl.style.display = 'flex';
             const clubColorMap = getClubColorMap();
             // ⛔ DOM 루프 내부에서 firebaseDb.ref().update()를 직접 호출하거나 listContainer.appendChild()를
             // 개별 호출하지 않는다 (v1.7.39):
@@ -11338,7 +11506,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let hasPendingSync = false;
 
             const allClubsSortedByName = [...clubs].sort((a, b) => (a[1].name || '').localeCompare(b[1].name || '', 'ko-KR'));
-            syncClubMgmtFilterControls(allClubsSortedByName);
 
             const _thisYear = new Date().getFullYear();
             const _thisYearKey = String(_thisYear);
@@ -11419,14 +11586,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             });
 
-            // 2단계: 클럽 필터(특정 클럽 선택 + 검색어) 및 정렬(클럽명/배정예산/상품비/잔여예산 오름차순·내림차순) 적용
-            const searchKeyword = (_clubMgmtSearchText || '').trim().toLowerCase();
+            _lastPreparedClubRows = preparedClubRows;
+            syncClubMgmtHeaderIndicators();
+
+            // 2단계: 엑셀 방식 컬럼별 체크박스 필터 및 오름차순·내림차순 정렬 적용
             const filteredClubRows = preparedClubRows.filter(item => {
-                if (_clubMgmtFilterClubId !== 'ALL' && String(item.clubId) !== String(_clubMgmtFilterClubId)) {
-                    return false;
-                }
-                if (searchKeyword && !(item.club.name || '').toLowerCase().includes(searchKeyword)) {
-                    return false;
+                for (const col of ['name', 'budget', 'prize', 'remaining']) {
+                    const set = _clubMgmtColFilters[col];
+                    if (set instanceof Set && !set.has(getClubColValueKey(item, col))) {
+                        return false;
+                    }
                 }
                 return true;
             });
@@ -11451,7 +11620,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const emptyDiv = document.createElement('div');
                 emptyDiv.className = 'empty-state';
                 emptyDiv.style.padding = '1.25rem 0.5rem';
-                emptyDiv.innerHTML = `<span class="empty-icon">🔍</span><p>조건에 일치하는 클럽이 없습니다.</p>`;
+                emptyDiv.innerHTML = `
+                    <span class="empty-icon">🔍</span>
+                    <p>선택한 필터 조건에 일치하는 클럽이 없습니다.</p>
+                    <button type="button" class="btn-secondary club-mgmt-empty-reset-btn" style="margin-top:0.5rem; padding:0.35rem 0.8rem; font-size:0.78rem;">필터 모두 해제</button>
+                `;
+                const resetAllBtn = emptyDiv.querySelector('.club-mgmt-empty-reset-btn');
+                if (resetAllBtn) {
+                    resetAllBtn.addEventListener('click', () => {
+                        _clubMgmtColFilters.name = null;
+                        _clubMgmtColFilters.budget = null;
+                        _clubMgmtColFilters.prize = null;
+                        _clubMgmtColFilters.remaining = null;
+                        renderClubManagement();
+                    });
+                }
                 rowsFragment.appendChild(emptyDiv);
             }
 
