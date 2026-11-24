@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.44';
+const APP_VERSION      = '1.7.45';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -9285,6 +9285,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 요청사항(피드백) 모달
+    const feedbackOpenBtn = document.getElementById('feedback-open-btn');
+    const feedbackModal = document.getElementById('feedback-modal');
+    const closeFeedbackModalBtn = document.getElementById('close-feedback-modal');
+    const feedbackMessageInput = document.getElementById('feedback-message-input');
+    const feedbackPhotoInput = document.getElementById('feedback-photo-input');
+    const feedbackPhotoPreview = document.getElementById('feedback-photo-preview');
+    const feedbackPhotoImg = document.getElementById('feedback-photo-img');
+    const feedbackPhotoRemoveBtn = document.getElementById('feedback-photo-remove-btn');
+    const feedbackSubmitBtn = document.getElementById('feedback-submit-btn');
+    const feedbackStatus = document.getElementById('feedback-status');
+    let feedbackPhotoData = null;
+
+    if (feedbackOpenBtn) {
+        feedbackOpenBtn.addEventListener('click', () => {
+            feedbackMessageInput.value = '';
+            feedbackPhotoData = null;
+            feedbackPhotoPreview.classList.add('hidden');
+            feedbackPhotoImg.src = '';
+            feedbackPhotoInput.value = '';
+            feedbackStatus.textContent = '';
+            feedbackModal.classList.remove('hidden');
+        });
+    }
+
+    if (feedbackModal && closeFeedbackModalBtn) {
+        closeFeedbackModalBtn.addEventListener('click', () => {
+            feedbackModal.classList.add('hidden');
+        });
+    }
+
+    if (feedbackPhotoInput) {
+        feedbackPhotoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                compressReceiptImage(file, (compressed) => {
+                    feedbackPhotoData = compressed;
+                    feedbackPhotoImg.src = compressed;
+                    feedbackPhotoPreview.classList.remove('hidden');
+                }, MediaStoragePolicy.feedback);
+            }
+        });
+    }
+
+    if (feedbackPhotoRemoveBtn) {
+        feedbackPhotoRemoveBtn.addEventListener('click', () => {
+            feedbackPhotoData = null;
+            feedbackPhotoInput.value = '';
+            feedbackPhotoPreview.classList.add('hidden');
+            feedbackPhotoImg.src = '';
+        });
+    }
+
+    if (feedbackSubmitBtn) {
+        feedbackSubmitBtn.addEventListener('click', () => {
+            const message = feedbackMessageInput.value.trim();
+            if (!message && !feedbackPhotoData) {
+                feedbackStatus.textContent = '메시지나 사진을 입력해주세요.';
                 return;
             }
             if (!firebaseDb) {
@@ -9790,6 +9847,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.45', date: '2026.11.25', items: ['로그인 화면 PIN 입력 불능 원인이었던 app.js 요청사항 모달 영역 구문 유실 긴급 복구 및 재발 방지 절대규칙(동일 파일 병렬 edit 금지 · 배포 전 PIN 클릭/키보드 로그인 및 pageerror=0 필수 검수) AGENTS.md 지정'] },
         { ver: '1.7.44', date: '2026.11.25', items: ['관리자 [클럽 관리]에 시설·장비 이용료를 1회에 한해 클럽 잔여(배정) 예산 전액까지 법인카드로 결제하고 초과분은 개인카드로 자동 분배할 수 있는 [🔓 시설 전액 승인] 버튼 추가 (정산 1건 확정 시 자동 미승인 복원)'] },
         { ver: '1.7.43', date: '2026.11.25', items: ['[전사원 명부] 마우스 오버 클럽별 참석 횟수 툴팁 및 상세 팝업 내 우측 횟수("N회") 색상도 라이트/다크 테마 고대비 색상(#0369a1 / #38bdf8)으로 통일 개선'] },
         { ver: '1.7.42', date: '2026.11.25', items: ['[전사원 명부]의 "(올해 누적: N회)" 및 입력 횟수 글자 색상을 라이트/다크 테마 모두에서 선명하게 잘 보이도록 고대비 색상(#0369a1 / #b45309 등)으로 개선'] },
