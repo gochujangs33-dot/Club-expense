@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.50';
+const APP_VERSION      = '1.7.51';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3517,10 +3517,18 @@ const AppState = {
         const finalSupport = result.totalCost - finalSelfPay;
         const finalRatio = result.totalCost > 0 ? finalSelfPay / result.totalCost : 0;
 
-        // Build email subject
-        const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-        const clubNamePart = this.clubName ? `[${this.clubName}] ` : '';
-        const subject = `[클럽 비용 정산] ${clubNamePart}${dateStr} 정산 보고서 (${this.memberCount}명)`;
+        // Build email subject (클럽명, 행사진행한 날짜, 정산 보고서)
+        const _sdi = document.getElementById('settlement-date-input');
+        const rawEventDate = (_sdi && _sdi.value)
+            ? _sdi.value
+            : (this._editingHistoryOriginal?.settlementDate || '');
+        let dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawEventDate)) {
+            const [ey, em, ed] = rawEventDate.split('-').map(Number);
+            dateStr = `${ey}년 ${em}월 ${ed}일`;
+        }
+        const clubTitle = (this.clubName || '기본 클럽').trim();
+        const subject = `${clubTitle}, ${dateStr}, 정산 보고서`;
 
         // Build email body text
         let body = `[발신 이메일] ${senderEmail}\n`;
@@ -7492,6 +7500,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.51', date: '2026.11.25', items: ['정산 완료 메일 발송 시 제목 형식을 "클럽명, 행사진행한 날짜, 정산 보고서"로 변경 (정산 날짜 선택값 반영)'] },
         { ver: '1.7.50', date: '2026.11.25', items: ['관리자 클럽 관리 패널 폭 확장 및 클럽명 줄바꿈 방지(1행 고정)', '85k·시설 전액 승인 버튼 문구를 "미승인" / "승인"으로 단순화하고 확인 팝업 후 승인 시 파란색 버튼으로 표시되도록 개선'] },
         { ver: '1.7.49', date: '2026.11.25', items: ['코드 안정화 부분 모듈형 구조 적용 (3~4단계): 엑셀·PPT 출력(정산 엑셀 셀 매핑, 연간 결산 PPT, 중간 결산 엑셀)을 js/export-reports.js로, 관리자 클럽 관리(클럽 목록·헤더 필터·클럽 추가/수정)를 js/admin-clubs.js로 분리'] },
         { ver: '1.7.48', date: '2026.11.25', items: ['코드 안정화 부분 모듈형 구조 적용 (1~2단계): 정산 계산·검증 잠금 로직(js/calc-locked.js) 및 대시보드 차트 렌더링 로직(js/charts.js)을 독립 파일로 분리해 타 영역 수정 시 계산식·차트 영향 원천 차단'] },
