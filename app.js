@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.49';
+const APP_VERSION      = '1.7.50';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -7492,6 +7492,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.50', date: '2026.11.25', items: ['관리자 클럽 관리 패널 폭 확장 및 클럽명 줄바꿈 방지(1행 고정)', '85k·시설 전액 승인 버튼 문구를 "미승인" / "승인"으로 단순화하고 확인 팝업 후 승인 시 파란색 버튼으로 표시되도록 개선'] },
         { ver: '1.7.49', date: '2026.11.25', items: ['코드 안정화 부분 모듈형 구조 적용 (3~4단계): 엑셀·PPT 출력(정산 엑셀 셀 매핑, 연간 결산 PPT, 중간 결산 엑셀)을 js/export-reports.js로, 관리자 클럽 관리(클럽 목록·헤더 필터·클럽 추가/수정)를 js/admin-clubs.js로 분리'] },
         { ver: '1.7.48', date: '2026.11.25', items: ['코드 안정화 부분 모듈형 구조 적용 (1~2단계): 정산 계산·검증 잠금 로직(js/calc-locked.js) 및 대시보드 차트 렌더링 로직(js/charts.js)을 독립 파일로 분리해 타 영역 수정 시 계산식·차트 영향 원천 차단'] },
         { ver: '1.7.47', date: '2026.11.25', items: ['상단에서 클럽을 선택하지 않은 상태("클럽을 선택하세요")에서는 [정산 완료] 및 [정산 확정] 버튼이 자동으로 비활성화(disabled)되도록 개선'] },

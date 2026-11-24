@@ -1386,7 +1386,7 @@ html[data-app-theme="light"] .dir-club-count-text {
 
 .club-list-header {
     display: grid;
-    grid-template-columns: minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 80px 90px 95px 105px;
+    grid-template-columns: minmax(175px, 1.85fr) minmax(95px, 1fr) minmax(130px, 1.15fr) minmax(95px, 1fr) 76px 74px 74px 100px;
     align-items: center;
     gap: 0.5rem;
     padding: 0.45rem 0.75rem;
@@ -1640,7 +1640,7 @@ html[data-app-theme="light"] .club-excel-check-item:hover {
 
 #club-list-container .expense-row.club-item-row {
     display: grid !important;
-    grid-template-columns: minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(140px, 1.2fr) minmax(100px, 1fr) 80px 90px 95px 105px !important;
+    grid-template-columns: minmax(175px, 1.85fr) minmax(95px, 1fr) minmax(130px, 1.15fr) minmax(95px, 1fr) 76px 74px 74px 100px !important;
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 0.75rem;
@@ -1693,16 +1693,17 @@ html[data-app-theme="light"] .club-amount-cell {
     color: var(--text-secondary);
 }
 
-#club-list-container .btn-toggle-overlimit.is-approved {
-    background: rgba(239, 68, 68, 0.18);
-    border: 1px solid rgba(239, 68, 68, 0.55);
-    color: #fca5a5;
+#club-list-container .btn-toggle-overlimit.is-approved,
+#club-list-container .btn-toggle-facility-full.is-approved {
+    background: #2563eb;
+    border: 1px solid #3b82f6;
+    color: #ffffff;
+    font-weight: 700;
 }
 
-#club-list-container .btn-toggle-facility-full.is-approved {
-    background: rgba(16, 185, 129, 0.2);
-    border: 1px solid rgba(16, 185, 129, 0.58);
-    color: #6ee7b7;
+#club-list-container .btn-toggle-overlimit.is-approved:hover,
+#club-list-container .btn-toggle-facility-full.is-approved:hover {
+    background: #1d4ed8;
 }
 
 /* 정산 결과 카드 내 클럽 예산 프로그레스 바 위젯 */
@@ -3860,6 +3861,10 @@ html[data-app-theme="light"] .kpi-mini-gauge-track {
     transition: background-color 0.15s ease;
     user-select: none;
     max-width: 100%;
+    white-space: nowrap;
+}
+.club-name-text {
+    white-space: nowrap;
 }
 .club-name-color-picker-label:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -5066,16 +5071,17 @@ html[data-app-theme="light"] #club-list-container .btn-toggle-facility-full {
     color: #475569 !important;
 }
 
-html[data-app-theme="light"] #club-list-container .btn-toggle-overlimit.is-approved {
-    background: #fef2f2 !important;
-    border: 1px solid rgba(239, 68, 68, 0.45) !important;
-    color: #dc2626 !important;
+html[data-app-theme="light"] #club-list-container .btn-toggle-overlimit.is-approved,
+html[data-app-theme="light"] #club-list-container .btn-toggle-facility-full.is-approved {
+    background: #2563eb !important;
+    border: 1px solid #1d4ed8 !important;
+    color: #ffffff !important;
+    font-weight: 700;
 }
 
-html[data-app-theme="light"] #club-list-container .btn-toggle-facility-full.is-approved {
-    background: #ecfdf5 !important;
-    border: 1px solid rgba(16, 185, 129, 0.5) !important;
-    color: #047857 !important;
+html[data-app-theme="light"] #club-list-container .btn-toggle-overlimit.is-approved:hover,
+html[data-app-theme="light"] #club-list-container .btn-toggle-facility-full.is-approved:hover {
+    background: #1d4ed8 !important;
 }
 
 html[data-app-theme="light"] #club-list-container .btn-delete-club {
@@ -6069,7 +6075,7 @@ html[data-app-theme="light"] #dedup-clubs-btn {
 
     .admin-dashboard-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.25fr);
+        grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.44fr);
         gap: 1.15rem;
         align-items: start;
     }

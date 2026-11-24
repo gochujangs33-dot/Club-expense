@@ -546,12 +546,12 @@ window.__installAdminClubs = function (B) {
                     <div class="club-cell-btn club-cell-overlimit">
                         <button class="btn-toggle-overlimit ${overLimitApproved ? 'is-approved' : ''}" data-id="${AppState.escapeHtml(clubId)}" data-current="${overLimitApproved ? '1' : '0'}"
                             data-tooltip="이사진 승인 시 이 클럽의 다음 정산 1건에 한해 인당 85,000원 초과 지원을 허용합니다 (클럽 잔여 예산은 여전히 초과 불가). 정산이 확정되면 사용 여부와 관계없이 자동으로 미승인 상태로 되돌아갑니다."
-                            style="width:100%; padding:0.22rem 0.35rem; font-size:0.66rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${overLimitApproved ? '🔓 85K 승인됨' : '🔒 85K 미승인'}</button>
+                            style="width:100%; padding:0.28rem 0.35rem; font-size:0.74rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${overLimitApproved ? '승인' : '미승인'}</button>
                     </div>
                     <div class="club-cell-btn club-cell-facility-full">
                         <button class="btn-toggle-facility-full ${facilityFullApproved ? 'is-approved' : ''}" data-id="${AppState.escapeHtml(clubId)}" data-current="${facilityFullApproved ? '1' : '0'}"
                             data-tooltip="연간 시설·장비 이용료 등 특수 사유 시, 이 클럽의 다음 정산 1건에 한해 인당 85,000원 제한 없이 배정(잔여) 예산 전액까지 법인카드 결제를 허용하고 초과분은 개인카드로 분배합니다. 정산 확정 시 자동으로 미승인 상태로 되돌아갑니다."
-                            style="width:100%; padding:0.22rem 0.35rem; font-size:0.66rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${facilityFullApproved ? '🔓 시설 승인됨' : '🔒 시설 미승인'}</button>
+                            style="width:100%; padding:0.28rem 0.35rem; font-size:0.74rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${facilityFullApproved ? '승인' : '미승인'}</button>
                     </div>
                     <div class="expense-row-right club-cell-actions">
                         <button class="btn-edit-club btn-secondary" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.5rem; font-size:0.78rem;">${t('btn.edit')}</button>
@@ -589,7 +589,7 @@ window.__installAdminClubs = function (B) {
                     showConfirmModal(msg, () => {
                         AppState.setClubOverLimitApproval(clubId, willAllow);
                         renderClubManagement();
-                    }, willAllow ? '승인' : '승인 취소');
+                    }, willAllow ? '승인' : '승인 취소', willAllow ? '85K 초과 지원 승인' : '85K 초과 지원 승인 취소', willAllow ? '✅' : '⚠️');
                 });
             });
             clubListContainer.querySelectorAll('.btn-toggle-facility-full').forEach(btn => {
@@ -604,7 +604,7 @@ window.__installAdminClubs = function (B) {
                     showConfirmModal(msg, () => {
                         AppState.setClubFacilityFullBudgetApproval(clubId, willAllow);
                         renderClubManagement();
-                    }, willAllow ? '승인' : '승인 취소');
+                    }, willAllow ? '승인' : '승인 취소', willAllow ? '시설 전액 사용 승인' : '시설 전액 사용 승인 취소', willAllow ? '✅' : '⚠️');
                 });
             });
             clubListContainer.querySelectorAll('.club-name-color-picker-label').forEach(label => {
