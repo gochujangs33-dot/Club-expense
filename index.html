@@ -1195,10 +1195,13 @@
                     <div class="card" id="rules-management-card">
                         <div class="card-header">
                             <span class="card-icon">⚙️</span>
-                            <h2 data-i18n="admin.rules_title">정산 구간 및 비율 설정 (전체 클럽 공통 적용)</h2>
+                            <h2 data-i18n="admin.rules_title">정산 구간 및 비율 설정 (연도별 관리)</h2>
+                            <select id="admin-rules-year-select" aria-label="정산 규칙 적용 연도"
+                                style="margin-left:auto; width:auto; min-width:88px; padding:0.28rem 0.55rem; font-size:0.8rem; font-weight:700; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary);"></select>
                             <button type="button" class="card-collapse-btn" data-card="rules-management-card">▾</button>
                         </div>
                         <div class="card-body">
+                            <div id="admin-rules-year-hint" style="font-size:0.78rem; color:var(--text-secondary); margin:-0.15rem 0 0.7rem; line-height:1.4;"></div>
                             <div class="settings-grid">
                                 <div class="input-group">
                                     <label for="admin-setting-limit1" data-i18n="admin.rule_limit1">가. 지원 한도 (원 이하 자부담

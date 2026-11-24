@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.31';
+const APP_VERSION      = '1.7.32';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -501,6 +501,7 @@ const AppState = {
     editingDirName: null,
     dirSearchQuery: '',
     rules: { ...DefaultRules },
+    yearlyRules: {},
     tempCorpReceiptImage: null,
     tempPersonalReceiptImage: null,
     lastCalculatedSelfPay: 0,
@@ -1356,6 +1357,13 @@ const AppState = {
             }
         }, err => console.error('globalSettings/noteOptions 로딩 실패:', err));
 
+        this.firebaseDb.ref('globalSettings/yearlyRules').off('value');
+        this.firebaseDb.ref('globalSettings/yearlyRules').on('value', snapshot => {
+            const yrMap = snapshot.val();
+            this.yearlyRules = (yrMap && typeof yrMap === 'object') ? yrMap : {};
+            if (typeof window._onYearlyRulesUpdate === 'function') window._onYearlyRulesUpdate();
+        }, err => console.error('globalSettings/yearlyRules 로딩 실패:', err));
+
         this.firebaseDb.ref('globalSettings/emailWebhookUrl').off('value');
         this.firebaseDb.ref('globalSettings/emailWebhookUrl').on('value', snapshot => {
             this.emailWebhookUrl = String(snapshot.val() || '').trim();
@@ -1399,13 +1407,32 @@ const AppState = {
             });
     },
 
-    saveGlobalRules(auditEvent = null) {
+    getRulesForYear(year, historyList = null) {
+        const yKey = String(year || new Date().getFullYear());
+        const saved = this.yearlyRules && this.yearlyRules[yKey];
+        if (saved && typeof saved === 'object') {
+            return { ...DefaultRules, ...saved };
+        }
+        if (Array.isArray(historyList)) {
+            const entryWithRules = historyList.find(e => e && String(getHistoryEntryYear(e)) === yKey && e.rules);
+            if (entryWithRules) return { ...DefaultRules, ...entryWithRules.rules };
+        }
+        return { ...DefaultRules, ...(this.rules || {}) };
+    },
+
+    saveGlobalRules(auditEvent = null, targetYear = null) {
         if (!this.firebaseDb) return Promise.resolve(false);
         const currentYear = new Date().getFullYear();
+        const saveYear = Number(targetYear) || currentYear;
+        const rulesSnapshot = targetYear && this.yearlyRules && this.yearlyRules[String(saveYear)]
+            ? { ...this.yearlyRules[String(saveYear)] }
+            : { ...this.rules };
         const updates = {
-            'globalSettings/rules': { ...this.rules },
-            [`globalSettings/yearlyRules/${currentYear}`]: { ...this.rules }
+            [`globalSettings/yearlyRules/${saveYear}`]: rulesSnapshot
         };
+        if (saveYear === currentYear) {
+            updates['globalSettings/rules'] = rulesSnapshot;
+        }
         if (auditEvent) this.appendAuditUpdate(updates, auditEvent);
         return this.firebaseDb.ref().update(updates)
             .then(() => true)
@@ -2418,47 +2445,60 @@ const AppState = {
         this.render();
     },
 
-    updateRules(newRules) {
-        const previousRules = { ...this.rules };
-        this.rules = { ...newRules };
-        this.save();
+    updateRules(newRules, targetYear = null) {
+        const currentYear = new Date().getFullYear();
+        const saveYear = Number(targetYear) || currentYear;
+        const previousRules = this.getRulesForYear(saveYear);
+        const mergedRules = { ...DefaultRules, ...newRules };
+        this.yearlyRules = { ...(this.yearlyRules || {}), [String(saveYear)]: mergedRules };
+        if (saveYear === currentYear) {
+            this.rules = { ...mergedRules };
+            this.save();
+        }
         this.saveGlobalRules({
             action: 'UPDATE',
             targetType: '정산 구간 변경',
-            targetLabel: '전체 클럽 공통 정산 기준',
-            summary: '정산 구간·비율·상품비·시설비 한도 변경',
+            targetLabel: `${saveYear}년 정산 기준`,
+            summary: `${saveYear}년 정산 구간·비율·상품비·시설비 한도 변경`,
             details: {
+                적용연도: `${saveYear}년`,
                 이전가한도: previousRules.limit1,
-                변경가한도: newRules.limit1,
+                변경가한도: mergedRules.limit1,
                 이전나한도: previousRules.limit2,
-                변경나한도: newRules.limit2,
+                변경나한도: mergedRules.limit2,
                 이전나비율: previousRules.rate2,
-                변경나비율: newRules.rate2,
+                변경나비율: mergedRules.rate2,
                 이전다한도: previousRules.limit3,
-                변경다한도: newRules.limit3,
+                변경다한도: mergedRules.limit3,
                 이전다비율: previousRules.rate3,
-                변경다비율: newRules.rate3,
+                변경다비율: mergedRules.rate3,
                 이전라공제액: previousRules.deduction4,
-                변경라공제액: newRules.deduction4,
+                변경라공제액: mergedRules.deduction4,
                 이전상품비한도: previousRules.prizeLimit,
-                변경상품비한도: newRules.prizeLimit,
+                변경상품비한도: mergedRules.prizeLimit,
                 이전시설비한도: previousRules.facilityLimit,
-                변경시설비한도: newRules.facilityLimit
+                변경시설비한도: mergedRules.facilityLimit
             }
-        });
+        }, saveYear);
         this.render();
     },
 
-    resetRules() {
-        const previousRules = { ...this.rules };
-        this.rules = { ...DefaultRules };
-        this.save();
+    resetRules(targetYear = null) {
+        const currentYear = new Date().getFullYear();
+        const saveYear = Number(targetYear) || currentYear;
+        const previousRules = this.getRulesForYear(saveYear);
+        this.yearlyRules = { ...(this.yearlyRules || {}), [String(saveYear)]: { ...DefaultRules } };
+        if (saveYear === currentYear) {
+            this.rules = { ...DefaultRules };
+            this.save();
+        }
         this.saveGlobalRules({
             action: 'UPDATE',
             targetType: '정산 기준',
-            targetLabel: '전체 클럽 공통 정산 기준',
-            summary: '정산 구간·비율·상품비·시설비 한도를 기본값으로 복원',
+            targetLabel: `${saveYear}년 정산 기준`,
+            summary: `${saveYear}년 정산 구간·비율·상품비·시설비 한도를 기본값으로 복원`,
             details: {
+                적용연도: `${saveYear}년`,
                 이전가한도: previousRules.limit1,
                 기본가한도: DefaultRules.limit1,
                 이전나한도: previousRules.limit2,
@@ -2476,7 +2516,7 @@ const AppState = {
                 이전시설비한도: previousRules.facilityLimit,
                 기본시설비한도: DefaultRules.facilityLimit
             }
-        });
+        }, saveYear);
         this.render();
     },
 
@@ -5995,13 +6035,125 @@ document.addEventListener('DOMContentLoaded', () => {
                 x: 5.08, y: 4.38, w: 4.12, h: 0.88,
                 rectRadius: 0.08, fill: { color: 'FEF3C7' }, line: { color: 'FDE68A', width: 1 }
             });
-            s2.addText('🎁 상품비 규정 관리 현황 (클럽당 연 50만원 한도)', {
+            const yearRules = AppState.getRulesForYear(targetYear, historyList);
+            const prizeLimitMan = Math.round((yearRules.prizeLimit || 500000) / 10000);
+            s2.addText(`🎁 상품비 규정 관리 현황 (클럽당 연 ${prizeLimitMan}만원 한도)`, {
                 x: 5.23, y: 4.46, w: 3.82, h: 0.20,
                 fontSize: 10, bold: true, color: 'B45309', fontFace: font
             });
-            s2.addText(`• 전사 상품비 집행 총액 : ${formatAmount(data.prizeSpend)}원 (회사 지원 ${formatAmount(data.prizeSupport)}원)\n• 규정 준수율 100% : 전 클럽 연간 한도(50만원) 내 정상 집행`, {
+            s2.addText(`• 전사 상품비 집행 총액 : ${formatAmount(data.prizeSpend)}원 (회사 지원 ${formatAmount(data.prizeSupport)}원)\n• 규정 준수율 100% : 전 클럽 연간 한도(${prizeLimitMan}만원) 내 정상 집행`, {
                 x: 5.23, y: 4.69, w: 3.82, h: 0.50,
                 fontSize: 8.8, color: '78350F', fontFace: font, lineSpacingMultiple: 1.35
+            });
+
+            // [Slide 2-B] 해당 연도 정산 구간 및 한도 기준표 (연도별 규칙 반영, 라이트 테마)
+            const sRules = pptx.addSlide();
+            sRules.background = { color: 'F8FAFC' };
+            sRules.addText('SETTLEMENT POLICY & LIMITS', {
+                x: 0.8, y: 0.32, w: 4.0, h: 0.22,
+                fontSize: 9.5, bold: true, color: '2563EB', fontFace: font
+            });
+            sRules.addText(`${targetYear}년 적용 정산 구간 및 지원 한도 기준`, {
+                x: 0.8, y: 0.54, w: 7.4, h: 0.42,
+                fontSize: 19, bold: true, color: '0F172A', fontFace: font
+            });
+            sRules.addText('POLICY', {
+                x: 8.0, y: 0.45, w: 1.2, h: 0.3,
+                fontSize: 10, bold: true, color: '94A3B8', fontFace: font, align: 'right'
+            });
+            sRules.addShape(pptx.ShapeType.line, {
+                x: 0.8, y: 1.0, w: 8.4, h: 0,
+                line: { color: 'E2E8F0', width: 1 }
+            });
+
+            sRules.addText(`• ${targetYear}년도 동호회 행사 정산 시 전 클럽에 공통 적용된 1인당 행사비 구간별 자부담 비율 및 특별 항목 한도 기준입니다.`, {
+                x: 0.8, y: 1.14, w: 8.4, h: 0.26,
+                fontSize: 9.5, color: '475569', fontFace: font
+            });
+
+            const rL1 = formatAmount(yearRules.limit1 || 30000);
+            const rL2 = formatAmount(yearRules.limit2 || 60000);
+            const rL3 = formatAmount(yearRules.limit3 || 120000);
+            const rR2 = Math.round((yearRules.rate2 ?? 0.2) * 100);
+            const rR3 = Math.round((yearRules.rate3 ?? 0.4) * 100);
+            const rD4 = formatAmount(yearRules.deduction4 || 85000);
+            const rPrize = formatAmount(yearRules.prizeLimit || 500000);
+            const rFac = formatAmount(yearRules.facilityLimit || 85000);
+
+            const ruleTableRows = [
+                [
+                    { text: '구간', options: { fill: { color: '1E293B' }, color: 'FFFFFF', bold: true, align: 'center' } },
+                    { text: '1인당 행사비 기준', options: { fill: { color: '1E293B' }, color: 'FFFFFF', bold: true, align: 'center' } },
+                    { text: '자부담 비율 / 공제 기준', options: { fill: { color: '1E293B' }, color: 'FFFFFF', bold: true, align: 'center' } },
+                    { text: '비고 (지원 방식)', options: { fill: { color: '1E293B' }, color: 'FFFFFF', bold: true, align: 'left' } }
+                ],
+                [
+                    { text: '가 구간', options: { bold: true, align: 'center', fill: { color: 'FFFFFF' }, color: '0F172A' } },
+                    { text: `${rL1}원 이하`, options: { align: 'center', fill: { color: 'FFFFFF' }, color: '1E293B' } },
+                    { text: '0% (전액 회사 지원)', options: { align: 'center', bold: true, fill: { color: 'FFFFFF' }, color: '16A34A' } },
+                    { text: '자부담 없음 (전액 법인카드 지원)', options: { align: 'left', fill: { color: 'FFFFFF' }, color: '475569' } }
+                ],
+                [
+                    { text: '나 구간', options: { bold: true, align: 'center', fill: { color: 'F8FAFC' }, color: '0F172A' } },
+                    { text: `${rL1}원 초과 ~ ${rL2}원 이하`, options: { align: 'center', fill: { color: 'F8FAFC' }, color: '1E293B' } },
+                    { text: `행사비 × ${rR2}%`, options: { align: 'center', bold: true, fill: { color: 'F8FAFC' }, color: '2563EB' } },
+                    { text: `인당 행사비의 ${rR2}% 본인 부담`, options: { align: 'left', fill: { color: 'F8FAFC' }, color: '475569' } }
+                ],
+                [
+                    { text: '다 구간', options: { bold: true, align: 'center', fill: { color: 'FFFFFF' }, color: '0F172A' } },
+                    { text: `${rL2}원 초과 ~ ${rL3}원 이하`, options: { align: 'center', fill: { color: 'FFFFFF' }, color: '1E293B' } },
+                    { text: `나 구간 고정분 + 초과분 × ${rR3}%`, options: { align: 'center', bold: true, fill: { color: 'FFFFFF' }, color: 'D97706' } },
+                    { text: `${rL2}원까지 ${rR2}% + 초과 금액 ${rR3}% 부담`, options: { align: 'left', fill: { color: 'FFFFFF' }, color: '475569' } }
+                ],
+                [
+                    { text: '라 구간', options: { bold: true, align: 'center', fill: { color: 'F8FAFC' }, color: '0F172A' } },
+                    { text: `${rL3}원 초과`, options: { align: 'center', fill: { color: 'F8FAFC' }, color: '1E293B' } },
+                    { text: `행사비 - ${rD4}원`, options: { align: 'center', bold: true, fill: { color: 'F8FAFC' }, color: 'DC2626' } },
+                    { text: `최대 인당 ${rD4}원 지원 (초과분 전액 자부담)`, options: { align: 'left', fill: { color: 'F8FAFC' }, color: '475569' } }
+                ]
+            ];
+
+            sRules.addTable(ruleTableRows, {
+                x: 0.8, y: 1.50, w: 8.4,
+                colW: [1.1, 2.3, 2.2, 2.8],
+                rowH: 0.44,
+                fontSize: 9.5, fontFace: font,
+                border: { pt: 0.6, color: 'CBD5E1' },
+                valign: 'middle'
+            });
+
+            sRules.addShape(pptx.ShapeType.roundRect, {
+                x: 0.8, y: 4.00, w: 4.1, h: 1.15,
+                rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+            });
+            sRules.addText('🎁 상품비 연간 사용 한도', {
+                x: 0.98, y: 4.12, w: 3.74, h: 0.24,
+                fontSize: 10.5, bold: true, color: 'B45309', fontFace: font
+            });
+            sRules.addText(`${rPrize}원 / 년 (클럽당)`, {
+                x: 0.98, y: 4.40, w: 3.74, h: 0.30,
+                fontSize: 15, bold: true, color: '0F172A', fontFace: font
+            });
+            sRules.addText('정회원 10명 이상 참석 행사에 한해 법인카드로 사용 가능', {
+                x: 0.98, y: 4.76, w: 3.74, h: 0.26,
+                fontSize: 8.5, color: '64748B', fontFace: font
+            });
+
+            sRules.addShape(pptx.ShapeType.roundRect, {
+                x: 5.1, y: 4.00, w: 4.1, h: 1.15,
+                rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: 'E2E8F0', width: 1 }
+            });
+            sRules.addText('🏢 시설·장비 이용료 지원 한도', {
+                x: 5.28, y: 4.12, w: 3.74, h: 0.24,
+                fontSize: 10.5, bold: true, color: '7C3AED', fontFace: font
+            });
+            sRules.addText(`${rFac}원 / 1인 (정산 1건 기준)`, {
+                x: 5.28, y: 4.40, w: 3.74, h: 0.30,
+                fontSize: 15, bold: true, color: '0F172A', fontFace: font
+            });
+            sRules.addText('이사진 승인 시 1인당 한도 × 정회원 수까지 지원 (초과분 자부담)', {
+                x: 5.28, y: 4.76, w: 3.74, h: 0.26,
+                fontSize: 8.5, color: '64748B', fontFace: font
             });
 
             // [Slide 3] 클럽별 핵심 성과 벤치마크 및 시각화 (신규 슬라이드)
@@ -7717,25 +7869,64 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('settings-panel').classList.add('hidden');
     });
 
-    // Admin: 정산 구간/비율 설정 폼 값 채우기
-    const setAdminRulesFormValues = (rules) => {
-        document.getElementById('admin-setting-limit1').value = formatAmount(rules.limit1);
-        document.getElementById('admin-setting-limit2').value = formatAmount(rules.limit2);
-        document.getElementById('admin-setting-rate2').value = Math.round(rules.rate2 * 100);
-        document.getElementById('admin-setting-limit3').value = formatAmount(rules.limit3);
-        document.getElementById('admin-setting-rate3').value = Math.round(rules.rate3 * 100);
-        document.getElementById('admin-setting-deduction4').value = formatAmount(rules.deduction4);
-        const prizeLimitEl = document.getElementById('admin-setting-prize-limit');
-        if (prizeLimitEl) prizeLimitEl.value = formatAmount(rules.prizeLimit || 500000);
-        const facilityLimitEl = document.getElementById('admin-setting-facility-limit');
-        if (facilityLimitEl) facilityLimitEl.value = formatAmount(rules.facilityLimit || 85000);
+    // Admin: 정산 구간/비율 설정 연도별 관리 및 폼 값 채우기
+    const adminRulesYearSelect = document.getElementById('admin-rules-year-select');
+    const adminRulesYearHint = document.getElementById('admin-rules-year-hint');
+    const getSelectedAdminRulesYear = () => {
+        const curY = new Date().getFullYear();
+        return adminRulesYearSelect ? (Number(adminRulesYearSelect.value) || curY) : curY;
     };
-    setAdminRulesFormValues(AppState.rules);
+    const renderAdminRulesYearOptions = () => {
+        if (!adminRulesYearSelect) return;
+        const curY = new Date().getFullYear();
+        const prevSelected = adminRulesYearSelect.value ? Number(adminRulesYearSelect.value) : curY;
+        const years = new Set([curY - 1, curY, curY + 1]);
+        Object.keys(AppState.yearlyRules || {}).forEach(y => {
+            const num = Number(y);
+            if (!Number.isNaN(num) && num >= 2020 && num <= 2040) years.add(num);
+        });
+        const sorted = Array.from(years).sort((a, b) => b - a);
+        adminRulesYearSelect.innerHTML = sorted.map(y =>
+            `<option value="${y}" ${y === prevSelected ? 'selected' : ''}>${y}년</option>`
+        ).join('');
+    };
+    const setAdminRulesFormValues = (rules) => {
+        const r = { ...DefaultRules, ...(rules || {}) };
+        document.getElementById('admin-setting-limit1').value = formatAmount(r.limit1);
+        document.getElementById('admin-setting-limit2').value = formatAmount(r.limit2);
+        document.getElementById('admin-setting-rate2').value = Math.round((r.rate2 ?? 0.2) * 100);
+        document.getElementById('admin-setting-limit3').value = formatAmount(r.limit3);
+        document.getElementById('admin-setting-rate3').value = Math.round((r.rate3 ?? 0.4) * 100);
+        document.getElementById('admin-setting-deduction4').value = formatAmount(r.deduction4);
+        const prizeLimitEl = document.getElementById('admin-setting-prize-limit');
+        if (prizeLimitEl) prizeLimitEl.value = formatAmount(r.prizeLimit || 500000);
+        const facilityLimitEl = document.getElementById('admin-setting-facility-limit');
+        if (facilityLimitEl) facilityLimitEl.value = formatAmount(r.facilityLimit || 85000);
+        if (adminRulesYearHint) {
+            const selY = getSelectedAdminRulesYear();
+            const curY = new Date().getFullYear();
+            adminRulesYearHint.textContent = selY === curY
+                ? `📌 ${selY}년(올해) 기준 — 저장 시 현재 진행 중인 모든 정산 계산 및 ${selY}년 결산 PPT에 즉시 적용됩니다.`
+                : `📌 ${selY}년 전용 기준 — 올해(${curY}년) 정산 규칙과는 분리 저장되며 ${selY}년 결산 PPT에 반영됩니다.`;
+        }
+    };
+    renderAdminRulesYearOptions();
+    setAdminRulesFormValues(AppState.getRulesForYear(getSelectedAdminRulesYear()));
+    window._onYearlyRulesUpdate = () => {
+        renderAdminRulesYearOptions();
+        setAdminRulesFormValues(AppState.getRulesForYear(getSelectedAdminRulesYear()));
+    };
+    if (adminRulesYearSelect) {
+        adminRulesYearSelect.addEventListener('change', () => {
+            setAdminRulesFormValues(AppState.getRulesForYear(getSelectedAdminRulesYear()));
+        });
+    }
 
-    // Admin: 정산 비율 저장 (전체 클럽 공통 적용)
+    // Admin: 정산 비율 저장 (연도별 관리)
     const adminSaveRulesBtn = document.getElementById('admin-save-rules-btn');
     if (adminSaveRulesBtn) {
         adminSaveRulesBtn.addEventListener('click', () => {
+            const targetYear = getSelectedAdminRulesYear();
             const limit1 = parseAmount(document.getElementById('admin-setting-limit1').value);
             const limit2 = parseAmount(document.getElementById('admin-setting-limit2').value);
             const rate2 = (parseInt(document.getElementById('admin-setting-rate2').value, 10) || 0) / 100;
@@ -7746,8 +7937,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const prizeLimit = prizeLimitEl ? (parseAmount(prizeLimitEl.value) || 500000) : 500000;
             const facilityLimitEl = document.getElementById('admin-setting-facility-limit');
             const facilityLimit = facilityLimitEl ? (parseAmount(facilityLimitEl.value) || 85000) : 85000;
-            AppState.updateRules({ limit1, limit2, rate2, limit3, rate3, deduction4, prizeLimit, facilityLimit });
-            alert(t('alert.rules_saved'));
+            AppState.updateRules({ limit1, limit2, rate2, limit3, rate3, deduction4, prizeLimit, facilityLimit }, targetYear);
+            alert(`${targetYear}년 정산 구간 및 한도 설정이 저장되었습니다.`);
         });
     }
 
@@ -7755,9 +7946,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminResetRulesBtn = document.getElementById('admin-reset-rules-btn');
     if (adminResetRulesBtn) {
         adminResetRulesBtn.addEventListener('click', () => {
-            if (confirm(t('confirm.reset_rules'))) {
-                AppState.resetRules();
-                setAdminRulesFormValues(AppState.rules);
+            const targetYear = getSelectedAdminRulesYear();
+            if (confirm(`${targetYear}년 정산 구간 및 한도 설정을 기본값으로 복원하시겠습니까?`)) {
+                AppState.resetRules(targetYear);
+                setAdminRulesFormValues(AppState.getRulesForYear(targetYear));
             }
         });
     }
@@ -9216,6 +9408,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.32', date: '2026.11.24', items: ['정산 구간·비율·한도를 연도별로 분리 관리(globalSettings/yearlyRules/{연도})할 수 있도록 관리자 설정에 연도 선택 기능 추가', '연간 결산 PPT 보고서 생성 시 해당 연도의 정산 구간 및 한도 기준표 슬라이드를 자동 포함하도록 개선'] },
         { ver: '1.7.31', date: '2026.11.24', items: ['[📋 중간 결산] 팝업 표 및 엑셀 다운로드의 [소진율]을 소수점 첫째 자리(예: 63.2%, 100.0%)까지 표시하도록 개선'] },
         { ver: '1.7.30', date: '2026.11.24', items: ['비용 항목 [내역 (항목명)] 입력란에 한글 입력 우선 속성(lang="ko", inputmode="text", ime-mode: active) 적용'] },
         { ver: '1.7.29', date: '2026.11.24', items: ['정산 완료 메일 발송 시 정산서 엑셀 파일(.xlsx, 내부에 행사·영수증 사진 포함)만 첨부하고 별도 이미지 파일 중복 첨부를 제거해 발송 속도 및 메일함 용량 최적화'] },
