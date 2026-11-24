@@ -91,7 +91,7 @@
 ```
 1. 파일 수정 (app.js / index.html / style.css 등)
 2. node --check app.js   ← 문법 오류 확인
-3. 버전 상수 2곳을 함께 1 증가 (현재 1.7.48) — **아래 두 곳 모두 빠짐없이 bump**:
+3. 버전 상수 2곳을 함께 1 증가 (현재 1.7.49) — **아래 두 곳 모두 빠짐없이 bump**:
    - `sw.js` 의 `APP_VERSION`
    - `app.js` 최상단의 `APP_VERSION`/`APP_VERSION_DATE` (로그인 화면 버전 라벨의 즉시 표시값 +
      "업데이트 내역" 모달이 이 값을 기준으로 그룹핑함 — v1.6.187~223 구간에서 이 상수만 37개
@@ -178,6 +178,14 @@
 
 ---
 
+- **부분 모듈 구조(v1.7.48~49)**: `index.html`이 `js/calc-locked.js` → `app.js` → `js/charts.js` →
+  `js/export-reports.js` → `js/admin-clubs.js` 순서(`defer`)로 로드한다.
+  - `js/calc-locked.js`: 정산 계산·검증(⛔ CALCULATION_LOCKED) / `js/charts.js`: 대시보드 차트(`window.__ChartBridge`)
+  - `js/export-reports.js`: `AppState.generateExcelFile`·`setCellValue`·`embedImagesIntoXlsx`, 연간 결산 PPT, 중간 결산 엑셀
+    (`window.__installExportReports(bridge)`를 app.js 원래 위치에서 호출)
+  - `js/admin-clubs.js`: `renderClubManagement` 등 클럽 관리 UI (`window.__installAdminClubs(bridge)`, `B.historyLoaded`/`B.lastHistoryList`는 app.js 클로저 실시간 getter)
+  - 새 JS 파일 추가 시 `index.html` 스크립트 태그 + `sw.js` `ASSETS` 둘 다 등록할 것.
+
 ## 6. 참고 문서 목록
 
 - [`CALCULATION_SPEC.md`](CALCULATION_SPEC.md) — 계산식/엑셀 매핑 "변경 금지 기준" 문서 (최우선 참조)
@@ -186,7 +194,7 @@
 - [`CHANGES.md`](CHANGES.md) — 버전별 변경 이력
 - [`CODE_REVIEW.md`](CODE_REVIEW.md) — **매 작업 시작 전 필독**: v1.6.201 검증 결과, 재수정 금지 항목 상세, 승인된 백로그(사용자 명시 요청 시에만 착수)
 
-현재 버전: **v1.7.48** (`sw.js` `APP_VERSION`)
+현재 버전: **v1.7.49** (`sw.js` `APP_VERSION`)
 
 ---
 
