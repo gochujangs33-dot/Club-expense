@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.37';
+const APP_VERSION      = '1.7.38';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -519,7 +519,11 @@ const AppState = {
     settlementHistory: [],
     clubHistory: [],
     clubRegistry: {},
+    yearlyClubRegistry: {},
+    _baseClubRegistry: {},
     clubTotalBudget: 0,
+    yearlyClubTotalBudget: {},
+    _baseClubTotalBudget: 0,
     editingHistoryId: null,   // 수정 모드 중인 이력 항목 ID
     _editingHistoryOriginal: null, // 현재 수정 중인 공유 이력 원본 (관리자 요약 화면 저장용)
     _finalizeInProgress: false,
@@ -1281,7 +1285,120 @@ const AppState = {
         });
     },
 
-    // ── 클럽 레지스트리 (관리자가 등록한 전체 클럽 목록 + 예산 분배) ──────────────
+    // ── 클럽 레지스트리 (연도별 분리 관리: yearlyClubRegistry/{연도} + 올해 기준 clubRegistry 병행 동기화) ──────────────
+    getActiveQueryYear() {
+        const realY = new Date().getFullYear();
+        const raw = (typeof window !== 'undefined' && window._selectedQueryYear)
+            ? window._selectedQueryYear
+            : (typeof _selectedQueryYear !== 'undefined' ? _selectedQueryYear : '');
+        if (raw && raw !== 'ALL') {
+            return parseInt(raw, 10) || realY;
+        }
+        return realY;
+    },
+
+    getClubRegistryForYear(year = null) {
+        const realY = new Date().getFullYear();
+        const targetY = Number(year) || this.getActiveQueryYear();
+        const yKey = String(targetY);
+        if (this.yearlyClubRegistry && this.yearlyClubRegistry[yKey] && typeof this.yearlyClubRegistry[yKey] === 'object') {
+            return JSON.parse(JSON.stringify(this.yearlyClubRegistry[yKey]));
+        }
+        const base = (this.yearlyClubRegistry && this.yearlyClubRegistry[String(realY)]) || this._baseClubRegistry || {};
+        if (targetY === realY) {
+            return JSON.parse(JSON.stringify(base));
+        }
+        const cloned = {};
+        Object.entries(base).forEach(([cid, c]) => {
+            if (!c) return;
+            cloned[cid] = {
+                ...c,
+                priorUsed: 0,
+                usedBudget: 0,
+                prizeUsed: 0,
+                allowOverLimitSupport: false
+            };
+        });
+        return cloned;
+    },
+
+    getClubTotalBudgetForYear(year = null) {
+        const realY = new Date().getFullYear();
+        const targetY = Number(year) || this.getActiveQueryYear();
+        const yKey = String(targetY);
+        if (this.yearlyClubTotalBudget && this.yearlyClubTotalBudget[yKey] !== undefined) {
+            return Number(this.yearlyClubTotalBudget[yKey]) || 0;
+        }
+        if (this.yearlyClubTotalBudget && this.yearlyClubTotalBudget[String(realY)] !== undefined) {
+            return Number(this.yearlyClubTotalBudget[String(realY)]) || 0;
+        }
+        return Number(this._baseClubTotalBudget) || 0;
+    },
+
+    syncActiveClubStateForQueryYear(isInitial = false) {
+        const targetY = this.getActiveQueryYear();
+        this.clubRegistry = this.getClubRegistryForYear(targetY);
+        this.clubTotalBudget = this.getClubTotalBudgetForYear(targetY);
+        if (this.clubId && this.clubRegistry[this.clubId]) {
+            const regEntry = this.clubRegistry[this.clubId];
+            this.previousPrizeTotal = regEntry.prizeUsed || 0;
+            let changed = false;
+            if (regEntry.name && regEntry.name !== this.clubName) {
+                const prevName = this.clubName;
+                this.clubName = regEntry.name;
+                if (this.settlementHistory) {
+                    this.settlementHistory.forEach(entry => {
+                        if (entry && ((entry.clubId && entry.clubId === this.clubId) || (!entry.clubId && entry.clubName === prevName))) {
+                            entry.clubName = regEntry.name;
+                        }
+                    });
+                }
+                changed = true;
+            }
+            if (regEntry.budget !== undefined && regEntry.budget !== this.annualBudget) {
+                this.annualBudget = regEntry.budget;
+                changed = true;
+            }
+            if (changed) this.save();
+        } else if (this.clubId && !isInitial && targetY === new Date().getFullYear()) {
+            this.clubName = '';
+            this.clubId = '';
+            this.save();
+            if (typeof window.showClubNotFoundModal === 'function') window.showClubNotFoundModal();
+        }
+        if (typeof window._onClubRegistryUpdate === 'function') window._onClubRegistryUpdate();
+        if (typeof window._onClubTotalBudgetUpdate === 'function') window._onClubTotalBudgetUpdate();
+    },
+
+    _buildYearlyClubUpdates(updates, clubId, valueOrNull, field = null, year = null) {
+        const realY = new Date().getFullYear();
+        const targetY = Number(year) || this.getActiveQueryYear();
+        const yKey = String(targetY);
+        const hasYearlyNode = Boolean(this.yearlyClubRegistry && this.yearlyClubRegistry[yKey]);
+
+        // 로컬 yearlyClubRegistry 캐시도 즉시 동기화
+        if (!this.yearlyClubRegistry) this.yearlyClubRegistry = {};
+        this.yearlyClubRegistry[yKey] = JSON.parse(JSON.stringify(this.clubRegistry || {}));
+
+        if (!hasYearlyNode) {
+            // 해당 연도(예: 2027년) 첫 변경 시, 변경이 반영된 전체 스냅샷을 yearlyClubRegistry/{연도}에 독립 저장
+            updates[`yearlyClubRegistry/${yKey}`] = this.yearlyClubRegistry[yKey];
+        } else if (field) {
+            updates[`yearlyClubRegistry/${yKey}/${clubId}/${field}`] = valueOrNull;
+        } else {
+            updates[`yearlyClubRegistry/${yKey}/${clubId}`] = valueOrNull;
+        }
+
+        // 실제 올해(예: 2026년) 변경일 때만 기존 공용 clubRegistry 경로도 함께 동기화 (타 연도 변경 시 올해 데이터 100% 보존)
+        if (targetY === realY) {
+            if (field) {
+                updates[`clubRegistry/${clubId}/${field}`] = valueOrNull;
+            } else {
+                updates[`clubRegistry/${clubId}`] = valueOrNull;
+            }
+        }
+    },
+
     loadClubRegistry() {
         if (!this.firebaseDb) return Promise.resolve();
         // 실시간 리스너: 관리자가 클럽명/예산 수정 시 모든 접속자에게 즉시 반영
@@ -1290,51 +1407,11 @@ const AppState = {
             // 기존 리스너 제거 후 재등록 — 탭 전환마다 loadClubRegistry()가 호출돼 리스너가 누적되는 문제 방지
             this.firebaseDb.ref('clubRegistry').off('value');
             this.firebaseDb.ref('clubRegistry').on('value', snapshot => {
-                this.clubRegistry = snapshot.val() || {};
-                // 이름 중복 자동 정리: 관리자 권한 보유자 세션에서만 Firebase에서 즉시 제거
-                if (this.hasAdminAccess) this._autoDeduplicateClubs();
-                // 클럽 레지스트리 로드/갱신 시 previousPrizeTotal을 항상 club.prizeUsed 기준으로 동기화
-                if (this.clubId && this.clubRegistry[this.clubId]) {
-                    this.previousPrizeTotal = this.clubRegistry[this.clubId].prizeUsed || 0;
+                this._baseClubRegistry = snapshot.val() || {};
+                this.syncActiveClubStateForQueryYear(initialLoad);
+                if (this.hasAdminAccess && this.getActiveQueryYear() === new Date().getFullYear()) {
+                    this._autoDeduplicateClubs();
                 }
-                // clubId로 현재 사용자가 선택한 클럽명을 추적
-                if (this.clubId) {
-                    if (this.clubRegistry[this.clubId]) {
-                        const regEntry = this.clubRegistry[this.clubId];
-                        let changed = false;
-
-                        // 관리자가 이름 변경 시 자동 갱신
-                        if (regEntry.name && regEntry.name !== this.clubName) {
-                            const prevName = this.clubName;
-                            this.clubName = regEntry.name;
-                            // 메모리 내 정산 이력도 즉시 반영 (Firebase 갱신은 renameClubInHistory가 처리)
-                            if (this.settlementHistory) {
-                                this.settlementHistory.forEach(entry => {
-                                    if (entry && ((entry.clubId && entry.clubId === this.clubId) || (!entry.clubId && entry.clubName === prevName))) {
-                                        entry.clubName = regEntry.name;
-                                    }
-                                });
-                            }
-                            changed = true;
-                        }
-
-                        // 관리자가 예산 변경 시 자동 갱신
-                        if (regEntry.budget !== undefined && regEntry.budget !== this.annualBudget) {
-                            this.annualBudget = regEntry.budget;
-                            changed = true;
-                        }
-
-                        if (changed) this.save();
-                    } else if (!initialLoad) {
-                        // 초기 로드 이후에만 삭제로 간주 — 초기 로드 중에는 오탐 방지
-                        this.clubName = '';
-                        this.clubId = '';
-                        this.save();
-                        if (typeof window.showClubNotFoundModal === 'function') window.showClubNotFoundModal();
-                    }
-                }
-                // 클럽 드롭다운 갱신
-                if (typeof window._onClubRegistryUpdate === 'function') window._onClubRegistryUpdate();
                 const wasInitialLoad = initialLoad;
                 initialLoad = false;
                 if (wasInitialLoad) resolve();
@@ -1342,21 +1419,49 @@ const AppState = {
                 console.error("클럽 레지스트리 로딩 실패:", err);
                 resolve();
             });
+
+            this.firebaseDb.ref('yearlyClubRegistry').off('value');
+            this.firebaseDb.ref('yearlyClubRegistry').on('value', snapshot => {
+                const yrVal = snapshot.val();
+                this.yearlyClubRegistry = (yrVal && typeof yrVal === 'object') ? yrVal : {};
+                this.syncActiveClubStateForQueryYear(true);
+            }, err => {
+                console.error("연도별 클럽 레지스트리 로딩 실패:", err);
+            });
+
             this.firebaseDb.ref('clubTotalBudget').off('value');
             this.firebaseDb.ref('clubTotalBudget').on('value', snapshot => {
-                this.clubTotalBudget = snapshot.val() || 0;
+                this._baseClubTotalBudget = snapshot.val() || 0;
+                this.clubTotalBudget = this.getClubTotalBudgetForYear();
                 if (typeof window._onClubTotalBudgetUpdate === 'function') {
                     window._onClubTotalBudgetUpdate();
                 }
             }, err => {
                 console.error("총 클럽예산 로딩 실패:", err);
             });
+
+            this.firebaseDb.ref('yearlyClubTotalBudget').off('value');
+            this.firebaseDb.ref('yearlyClubTotalBudget').on('value', snapshot => {
+                const ybVal = snapshot.val();
+                this.yearlyClubTotalBudget = (ybVal && typeof ybVal === 'object') ? ybVal : {};
+                this.clubTotalBudget = this.getClubTotalBudgetForYear();
+                if (typeof window._onClubTotalBudgetUpdate === 'function') {
+                    window._onClubTotalBudgetUpdate();
+                }
+            }, err => {
+                console.error("연도별 총 클럽예산 로딩 실패:", err);
+            });
         });
     },
 
     saveClubRegistry() {
         if (!this.firebaseDb) return;
-        this.firebaseDb.ref('clubRegistry').set(this.clubRegistry).catch(err => console.error("클럽 레지스트리 저장 실패:", err));
+        const targetY = this.getActiveQueryYear();
+        const updates = { [`yearlyClubRegistry/${targetY}`]: this.clubRegistry };
+        if (targetY === new Date().getFullYear()) {
+            updates['clubRegistry'] = this.clubRegistry;
+        }
+        this.firebaseDb.ref().update(updates).catch(err => console.error("클럽 레지스트리 저장 실패:", err));
     },
 
     // 관리자가 저장한 자부담 구간/비율 설정 및 공통 비고 항목을 모든 유저에게 실시간 동기화
@@ -1467,16 +1572,22 @@ const AppState = {
 
     saveClubTotalBudget(value) {
         const previousValue = this.clubTotalBudget || 0;
+        const targetY = this.getActiveQueryYear();
         this.clubTotalBudget = Math.max(0, value || 0);
+        if (!this.yearlyClubTotalBudget) this.yearlyClubTotalBudget = {};
+        this.yearlyClubTotalBudget[String(targetY)] = this.clubTotalBudget;
         if (previousValue === this.clubTotalBudget) return Promise.resolve(true);
         if (this.firebaseDb) {
-            const updates = { clubTotalBudget: this.clubTotalBudget };
+            const updates = { [`yearlyClubTotalBudget/${targetY}`]: this.clubTotalBudget };
+            if (targetY === new Date().getFullYear()) {
+                updates['clubTotalBudget'] = this.clubTotalBudget;
+            }
             this.appendAuditUpdate(updates, {
                 action: 'UPDATE',
                 targetType: '금액 수정 (총 예산)',
-                targetLabel: '올해 사용 가능한 총 클럽비용',
-                summary: `총 클럽 예산 금액 수정: ${SettlementCalculator.formatCurrency(previousValue)} → ${SettlementCalculator.formatCurrency(this.clubTotalBudget)}`,
-                details: { 이전금액: previousValue, 변경금액: this.clubTotalBudget }
+                targetLabel: `${targetY}년 총 클럽비용`,
+                summary: `${targetY}년 총 클럽 예산 금액 수정: ${SettlementCalculator.formatCurrency(previousValue)} → ${SettlementCalculator.formatCurrency(this.clubTotalBudget)}`,
+                details: { 적용연도: `${targetY}년`, 이전금액: previousValue, 변경금액: this.clubTotalBudget }
             });
             return this.firebaseDb.ref().update(updates)
                 .then(() => true)
@@ -1504,7 +1615,9 @@ const AppState = {
             allowOverLimitSupport: existing.allowOverLimitSupport || false
         };
         if (this.firebaseDb) {
-            const updates = { [`clubRegistry/${clubId}`]: this.clubRegistry[clubId] };
+            const targetY = this.getActiveQueryYear();
+            const updates = {};
+            this._buildYearlyClubUpdates(updates, clubId, this.clubRegistry[clubId], null, targetY);
             const changes = [];
             const nameChanged = hadExisting && previous.name !== this.clubRegistry[clubId].name;
             const budgetChanged = hadExisting && (previous.budget || 0) !== this.clubRegistry[clubId].budget;
@@ -1558,7 +1671,9 @@ const AppState = {
         this.clubRegistry[clubId] = { ...club, budget: totalBudget };
         if (!this.firebaseDb) return Promise.resolve(true);
 
-        const updates = { [`clubRegistry/${clubId}`]: this.clubRegistry[clubId] };
+        const targetY = this.getActiveQueryYear();
+        const updates = {};
+        this._buildYearlyClubUpdates(updates, clubId, this.clubRegistry[clubId], null, targetY);
         this.appendAuditUpdate(updates, {
             action: 'UPDATE',
             targetType: '추가 배정',
@@ -1590,7 +1705,8 @@ const AppState = {
         const clubName = this.clubRegistry[clubId].name || '';
         this.clubRegistry[clubId].allowOverLimitSupport = !!allowed;
         if (this.firebaseDb) {
-            const updates = { [`clubRegistry/${clubId}/allowOverLimitSupport`]: !!allowed };
+            const updates = {};
+            this._buildYearlyClubUpdates(updates, clubId, !!allowed, 'allowOverLimitSupport');
             this.appendAuditUpdate(updates, {
                 action: 'UPDATE',
                 targetType: '85k 승인',
@@ -1616,7 +1732,8 @@ const AppState = {
         const previousColor = club.chartColor || '';
         club.chartColor = normalized;
         if (!this.firebaseDb) return Promise.resolve(true);
-        const updates = { [`clubRegistry/${clubId}/chartColor`]: normalized };
+        const updates = {};
+        this._buildYearlyClubUpdates(updates, clubId, normalized, 'chartColor');
         this.appendAuditUpdate(updates, {
             action: 'UPDATE',
             targetType: '클럽 차트 색상',
@@ -1638,18 +1755,21 @@ const AppState = {
 
     deleteClub(clubId) {
         const deletedClub = this.clubRegistry[clubId] ? { ...this.clubRegistry[clubId] } : null;
+        const targetY = this.getActiveQueryYear();
         delete this.clubRegistry[clubId];
         if (this.firebaseDb) {
-            const updates = { [`clubRegistry/${clubId}`]: null };
+            const updates = {};
+            this._buildYearlyClubUpdates(updates, clubId, null, null, targetY);
             this.appendAuditUpdate(updates, {
                 action: 'DELETE',
                 targetType: '클럽',
                 targetId: clubId,
                 targetLabel: deletedClub?.name || '',
-                summary: `클럽 '${deletedClub?.name || clubId}' 삭제`,
+                summary: `${targetY}년 클럽 '${deletedClub?.name || clubId}' 삭제`,
                 clubId,
                 clubName: deletedClub?.name || '',
                 details: {
+                    적용연도: `${targetY}년`,
                     배정예산: deletedClub?.budget || 0,
                     기존사용액: deletedClub?.priorUsed || 0,
                     사용지원금: deletedClub?.usedBudget || 0,
@@ -6784,7 +6904,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function updatePreview() {
             const selYear = parseInt(yearSelect.value, 10) || currentYear;
-            const data = YearEndPptGenerator.collectYearData(selYear, historyList, AppState.clubRegistry);
+            const yearClubRegistry = AppState.getClubRegistryForYear(selYear);
+            const data = YearEndPptGenerator.collectYearData(selYear, historyList, yearClubRegistry);
 
             const suppRatio = data.totalSpend > 0 ? ((data.totalSupport / data.totalSpend) * 100).toFixed(1) : '0.0';
             const selfRatio = data.totalSpend > 0 ? ((data.totalSelfPay / data.totalSpend) * 100).toFixed(1) : '0.0';
@@ -6885,7 +7006,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            await YearEndPptGenerator.generateAndDownload(selYear, historyList, AppState.clubRegistry, updateProgress);
+            const yearClubRegistry = AppState.getClubRegistryForYear(selYear);
+            await YearEndPptGenerator.generateAndDownload(selYear, historyList, yearClubRegistry, updateProgress);
             if (btnIcon) btnIcon.textContent = '✅';
             if (btnText) btnText.textContent = '다운로드 완료!';
             setTimeout(() => {
@@ -7214,7 +7336,9 @@ document.addEventListener('DOMContentLoaded', () => {
             noteText: ''
         };
 
-        const labTotalBudget = Math.max(0, Number(AppState.clubTotalBudget) || 0);
+        const labTotalBudget = yearStr === 'ALL'
+            ? Math.max(0, Number(AppState.clubTotalBudget) || 0)
+            : Math.max(0, Number(AppState.getClubTotalBudgetForYear(yearStr)) || 0);
         const labRemainingBudget = labTotalBudget - totalBudget;
 
         return { year: yearStr, rows: computedRows, totals, labTotalBudget, labRemainingBudget };
@@ -7275,7 +7399,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const titleEl = document.getElementById('interim-summary-modal-title');
             if (titleEl) titleEl.textContent = `📋 ${titleText}`;
 
-            const summary = buildInterimSummaryData(selYear, historyList, AppState.clubRegistry);
+            const targetClubRegistry = selYear === 'ALL' ? AppState.clubRegistry : AppState.getClubRegistryForYear(selYear);
+            const summary = buildInterimSummaryData(selYear, historyList, targetClubRegistry);
             summary.titleText = titleText;
             currentInterimSummaryData = summary;
 
@@ -9664,6 +9789,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.38', date: '2026.11.24', items: ['연도별 클럽 목록·배정 예산·총 클럽비용 완전 분리 저장(yearlyClubRegistry/{연도}, yearlyClubTotalBudget/{연도}) 구현 — 다른 연도에서 클럽을 삭제·수정해도 2026년 등 기존 연도 데이터 100% 보존'] },
         { ver: '1.7.37', date: '2026.11.24', items: ['상단 [조회 연도]를 2027년 등 다른 연도로 선택 시 관리자 [클럽 관리] 테이블의 [상품비] 및 [잔여 예산]도 배정 예산은 유지한 채 해당 연도 기준(0원 사용)으로 표시되도록 보강'] },
         { ver: '1.7.36', date: '2026.11.24', items: ['클럽별 정산 이력 [총 자부담 비용] 카드에 총 비용 대비 자부담 비중(%) 함께 표시', '[전사원 명부] 회원 이름에 마우스를 올리면 즉시 클럽별 참석 횟수가 툴팁으로 표시되도록 개선 (모바일 터치 시 팝업 지원)', '상단 [조회 연도]를 2027년 등 신규 연도로 변경 시 전사원 명부 누적·클럽별 정산 이력·잔여 예산·누적 지원금이 해당 연도 기준(0부터)으로 분리 표시되도록 개선'] },
         { ver: '1.7.35', date: '2026.11.24', items: ['로그인 화면 키패드/숫자키 미작동 원인이었던 app.js 구문 누락 긴급 복구'] },
@@ -13491,6 +13617,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function selectQueryYear(year) {
         updateGlobalYearPickerUI(year);
         closeYearPickerModal();
+        if (window.AppState && typeof window.AppState.syncActiveClubStateForQueryYear === 'function') {
+            window.AppState.syncActiveClubStateForQueryYear(true);
+        }
         if (typeof window._onYearlyRulesUpdate === 'function') {
             window._onYearlyRulesUpdate();
         }
