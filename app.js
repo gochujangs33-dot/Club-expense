@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.30';
+const APP_VERSION      = '1.7.31';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6765,8 +6765,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 noteText
             };
         }).sort((a, b) => {
-            const aFull = (a.budget > 0 && a.burnRate >= 99.5) ? 1 : 0;
-            const bFull = (b.budget > 0 && b.burnRate >= 99.5) ? 1 : 0;
+            const aFull = (a.budget > 0 && a.burnRate >= 99.95) ? 1 : 0;
+            const bFull = (b.budget > 0 && b.burnRate >= 99.95) ? 1 : 0;
             if (bFull !== aFull) return bFull - aFull;
             if (Math.abs(b.burnRate - a.burnRate) > 0.001) return b.burnRate - a.burnRate;
             if (b.support !== a.support) return b.support - a.support;
@@ -6860,7 +6860,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tdBase = `padding:0.42rem 0.55rem; font-size:0.8rem; border-bottom:1px solid var(--card-border); white-space:nowrap;`;
 
             const bodyHtml = summary.rows.map(r => {
-                const isExhausted = r.budget > 0 && r.burnRate >= 99.5;
+                const isExhausted = r.budget > 0 && r.burnRate >= 99.95;
                 const rowHighlight = isExhausted
                     ? (isLight ? 'background:rgba(250,204,21,0.22);' : 'background:rgba(250,204,21,0.12);')
                     : '';
@@ -6881,7 +6881,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td style="${tdBase} text-align:right;">${r.nonMembers}</td>
                         <td style="${tdBase} text-align:right;">${r.budgetRatio.toFixed(1)}%</td>
                         <td style="${tdBase} text-align:right;">${r.memberRatio.toFixed(1)}%</td>
-                        <td style="${tdBase} text-align:right; ${burnBg}">${Math.round(r.burnRate)}%</td>
+                        <td style="${tdBase} text-align:right; ${burnBg}">${r.burnRate.toFixed(1)}%</td>
                         <td style="${tdBase} text-align:right;">${formatAmount(r.perPersonSupport)}</td>
                         <td style="${tdBase} text-align:right;">${r.avgParticipants}</td>
                         <td style="${tdBase} text-align:left; color:${r.noteText ? 'var(--color-secondary)' : 'var(--text-muted)'}; font-weight:${r.noteText ? '600' : '400'};">${AppState.escapeHtml(r.noteText || '-')}</td>
@@ -6906,7 +6906,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.nonMembers}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.budgetRatio.toFixed(1)}%</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.memberRatio.toFixed(1)}%</td>
-                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${Math.round(t.burnRate)}%</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.burnRate.toFixed(1)}%</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.perPersonSupport)}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.avgParticipants}</td>
                     <td style="${tdBase} text-align:left; border-top:2px solid var(--card-border);"></td>
@@ -6979,7 +6979,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 r.nonMembers,
                 Number(r.budgetRatio.toFixed(1)),
                 Number(r.memberRatio.toFixed(1)),
-                Math.round(r.burnRate),
+                Number(r.burnRate.toFixed(1)),
                 r.perPersonSupport,
                 r.avgParticipants,
                 r.noteText || ''
@@ -6995,7 +6995,7 @@ document.addEventListener('DOMContentLoaded', () => {
             totals.nonMembers,
             Number(totals.budgetRatio.toFixed(1)),
             Number(totals.memberRatio.toFixed(1)),
-            Math.round(totals.burnRate),
+            Number(totals.burnRate.toFixed(1)),
             totals.perPersonSupport,
             totals.avgParticipants,
             ''
@@ -7047,7 +7047,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <numFmts count="3">
     <numFmt numFmtId="164" formatCode="#,##0"/>
     <numFmt numFmtId="165" formatCode="0.0&quot;%&quot;"/>
-    <numFmt numFmtId="166" formatCode="0&quot;%&quot;"/>
+    <numFmt numFmtId="166" formatCode="0.0&quot;%&quot;"/>
   </numFmts>
   <fonts count="10">
     <font><sz val="10"/><color rgb="FF0F172A"/><name val="맑은 고딕"/></font>
@@ -7162,7 +7162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             rows.forEach((r, i) => {
                 const rowNum = 4 + i;
-                const isExhausted = r.budget > 0 && r.burnRate >= 99.5;
+                const isExhausted = r.budget > 0 && r.burnRate >= 99.95;
                 const zebra = i % 2 === 1;
                 if (isExhausted) {
                     cols.forEach((c, idx) => {
@@ -9216,6 +9216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.31', date: '2026.11.24', items: ['[📋 중간 결산] 팝업 표 및 엑셀 다운로드의 [소진율]을 소수점 첫째 자리(예: 63.2%, 100.0%)까지 표시하도록 개선'] },
         { ver: '1.7.30', date: '2026.11.24', items: ['비용 항목 [내역 (항목명)] 입력란에 한글 입력 우선 속성(lang="ko", inputmode="text", ime-mode: active) 적용'] },
         { ver: '1.7.29', date: '2026.11.24', items: ['정산 완료 메일 발송 시 정산서 엑셀 파일(.xlsx, 내부에 행사·영수증 사진 포함)만 첨부하고 별도 이미지 파일 중복 첨부를 제거해 발송 속도 및 메일함 용량 최적화'] },
         { ver: '1.7.28', date: '2026.11.24', items: ['로그인 인증 직후 globalSettings(메일 웹훅 URL·정산 규칙·비고 항목) 실시간 리스너 재연결 및 발송 시점 직접 조회 보강으로 첨부 메일 미발송 원인 해결'] },
