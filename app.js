@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.36';
+const APP_VERSION      = '1.7.37';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -9664,6 +9664,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.37', date: '2026.11.24', items: ['상단 [조회 연도]를 2027년 등 다른 연도로 선택 시 관리자 [클럽 관리] 테이블의 [상품비] 및 [잔여 예산]도 배정 예산은 유지한 채 해당 연도 기준(0원 사용)으로 표시되도록 보강'] },
         { ver: '1.7.36', date: '2026.11.24', items: ['클럽별 정산 이력 [총 자부담 비용] 카드에 총 비용 대비 자부담 비중(%) 함께 표시', '[전사원 명부] 회원 이름에 마우스를 올리면 즉시 클럽별 참석 횟수가 툴팁으로 표시되도록 개선 (모바일 터치 시 팝업 지원)', '상단 [조회 연도]를 2027년 등 신규 연도로 변경 시 전사원 명부 누적·클럽별 정산 이력·잔여 예산·누적 지원금이 해당 연도 기준(0부터)으로 분리 표시되도록 개선'] },
         { ver: '1.7.35', date: '2026.11.24', items: ['로그인 화면 키패드/숫자키 미작동 원인이었던 app.js 구문 누락 긴급 복구'] },
         { ver: '1.7.34', date: '2026.11.24', items: ['[전사원 명부]에서 회원 이름을 클릭하면 올해 어느 클럽에 몇 번·언제 참석했는지 한눈에 확인하는 팝업창 추가'] },
@@ -11087,7 +11088,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const budget = club.budget || 0;
             const priorUsed = club.priorUsed || 0;
-            const remaining = budget - priorUsed - usedBudget;
+            // 화면 표시용 상품비·잔여예산은 상단 조회 연도(_selectedQueryYear) 기준 (2027년 등 미등록 연도는 0원부터 시작)
+            const displayPrizeUsed = isAllQueryYears
+                ? lastHistoryList.filter(e => historyMatchesClub(e, clubId, club.name)).reduce((s, e) => s + getHistoryPrizeCost(e), 0)
+                : (targetQueryYearNum === _thisYear
+                    ? prizeUsed
+                    : lastHistoryList.filter(e => historyMatchesClub(e, clubId, club.name) && getHistoryEntryYear(e) === targetQueryYearNum).reduce((s, e) => s + getHistoryPrizeCost(e), 0));
+            const displayUsedBudget = isAllQueryYears
+                ? lastHistoryList.filter(e => historyMatchesClub(e, clubId, club.name)).reduce((s, e) => s + (e.finalSupportAmount || 0), 0)
+                : (targetQueryYearNum === _thisYear
+                    ? usedBudget
+                    : lastHistoryList.filter(e => historyMatchesClub(e, clubId, club.name) && getHistoryEntryYear(e) === targetQueryYearNum).reduce((s, e) => s + (e.finalSupportAmount || 0), 0));
+            const displayPriorUsed = (isAllQueryYears || targetQueryYearNum === _thisYear) ? priorUsed : 0;
+            const remaining = budget - displayPriorUsed - displayUsedBudget;
             const overLimitApproved = !!club.allowOverLimitSupport;
             const chartColor = clubColorMap[club.name] || resolveClubBaseColor(clubId, club);
             const row = document.createElement('div');
@@ -11104,8 +11117,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="club-amount-cell club-cell-budget">
                     ${SettlementCalculator.formatCurrency(budget)}
                 </div>
-                <div class="club-amount-cell club-cell-prize" style="color:${prizeUsed > 0 ? 'hsl(35,90%,42%)' : 'var(--text-muted)'};">
-                    ${SettlementCalculator.formatCurrency(prizeUsed)}
+                <div class="club-amount-cell club-cell-prize" style="color:${displayPrizeUsed > 0 ? 'hsl(35,90%,42%)' : 'var(--text-muted)'};">
+                    ${SettlementCalculator.formatCurrency(displayPrizeUsed)}
                 </div>
                 <div class="club-amount-cell club-cell-remaining" style="color:${remaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)'};">
                     ${SettlementCalculator.formatCurrency(remaining)}
