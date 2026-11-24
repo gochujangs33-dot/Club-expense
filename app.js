@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.29';
+const APP_VERSION      = '1.7.30';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -9216,6 +9216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.30', date: '2026.11.24', items: ['비용 항목 [내역 (항목명)] 입력란에 한글 입력 우선 속성(lang="ko", inputmode="text", ime-mode: active) 적용'] },
         { ver: '1.7.29', date: '2026.11.24', items: ['정산 완료 메일 발송 시 정산서 엑셀 파일(.xlsx, 내부에 행사·영수증 사진 포함)만 첨부하고 별도 이미지 파일 중복 첨부를 제거해 발송 속도 및 메일함 용량 최적화'] },
         { ver: '1.7.28', date: '2026.11.24', items: ['로그인 인증 직후 globalSettings(메일 웹훅 URL·정산 규칙·비고 항목) 실시간 리스너 재연결 및 발송 시점 직접 조회 보강으로 첨부 메일 미발송 원인 해결'] },
         { ver: '1.7.27', date: '2026.11.24', items: ['정산 완료 시 Google Apps Script 연동을 통해 정산서 엑셀(.xlsx) 및 영수증/행사 사진이 이메일에 실제 파일로 자동 첨부·발송되도록 기능 추가 (관리자 페이지 웹 앱 URL 1회 등록)'] },
