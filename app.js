@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.45';
+const APP_VERSION      = '1.7.46';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1887,9 +1887,19 @@ const AppState = {
         }
     },
 
+    // 현재 정산할 클럽이 실제로 선택되어 있는지 여부 ("클럽을 선택하세요" 미선택 상태는 false)
+    hasSelectedClub() {
+        if (this.clubId && this.clubRegistry && this.clubRegistry[this.clubId]) {
+            return true;
+        }
+        const name = (this.clubName || '').trim();
+        return Boolean(name && name !== '클럽을 선택하세요');
+    },
+
     // 선택된 클럽의 배정 예산을 현재 사용자의 "올해 클럽 지원 총예산"에 동기화
     // 클럽 레지스트리에서 현재 선택 클럽의 예산을 직접 조회 (항상 관리자 설정값 기준)
     getClubBudget() {
+        if (!this.hasSelectedClub()) return 0;
         // 1순위: clubId로 직접 조회
         if (this.clubId && this.clubRegistry[this.clubId]) {
             return this.clubRegistry[this.clubId].budget || 0;
@@ -1899,12 +1909,12 @@ const AppState = {
             const club = Object.values(this.clubRegistry).find(c => c.name === this.clubName);
             if (club) return club.budget || 0;
         }
-        // 3순위: 레지스트리 미로드 상태면 캐시값 사용 (로그인 직후 타이밍 보호)
-        return this.annualBudget || 0;
+        return 0;
     },
 
     // 현재/조회 연도 내 이 클럽의 정산 이력 합산으로 실제 사용금액 계산
     getClubUsedBudget() {
+        if (!this.hasSelectedClub()) return 0;
         const currentYear = new Date().getFullYear();
         const activeYear = (typeof _selectedQueryYear !== 'undefined' && _selectedQueryYear && _selectedQueryYear !== 'ALL')
             ? (parseInt(_selectedQueryYear, 10) || currentYear)
@@ -2822,6 +2832,7 @@ const AppState = {
                 this.updateClubBudgetProgress(clubBudget, clubUsed, finalSupport);
             } else {
                 budgetSection.classList.add('hidden');
+                this.updateClubBudgetProgress(0, 0, 0);
             }
         }
 
@@ -3564,7 +3575,7 @@ const AppState = {
     updateClubBudgetProgress(clubBudget, clubUsed, finalSupport) {
         const cardEl = document.getElementById('club-budget-progress-card');
         if (!cardEl) return;
-        if (!clubBudget || clubBudget <= 0) {
+        if (!this.hasSelectedClub() || !clubBudget || clubBudget <= 0) {
             cardEl.classList.add('hidden');
             return;
         }
@@ -4162,6 +4173,11 @@ const AppState = {
 
     // 엑셀 파일만 로컬 다운로드 폴더에 저장 (수정 모드이면 이력도 갱신)
     async downloadExcelOnly() {
+        if (!this.hasSelectedClub()) {
+            alert('먼저 상단에서 정산할 클럽을 선택해 주세요.');
+            document.getElementById('club-select')?.focus();
+            return;
+        }
         try {
             const file = await this.generateExcelFile();
             const url = URL.createObjectURL(file);
@@ -4726,6 +4742,11 @@ const AppState = {
     },
 
     async finalizeSettlement(skipConfirm = false) {
+        if (!this.hasSelectedClub()) {
+            alert('먼저 상단에서 정산할 클럽을 선택해 주세요.');
+            document.getElementById('club-select')?.focus();
+            return false;
+        }
         if (this.editingHistoryId) {
             alert('수정 모드에서는 엑셀 다운로드 시 이력이 업데이트됩니다. 수정을 취소하려면 "수정 취소" 버튼을 누르세요.');
             return false;
@@ -8490,6 +8511,16 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        if (!AppState.hasSelectedClub()) {
+            alert('먼저 상단에서 정산할 클럽을 선택해 주세요.');
+            const clubSel = document.getElementById('club-select');
+            if (clubSel) {
+                clubSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                clubSel.focus();
+            }
+            return;
+        }
+
         const description = descInput.value.trim();
         const amount = parseAmount(amountInput.value);
         const category = catSelect.value;
@@ -9847,6 +9878,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.46', date: '2026.11.25', items: ['상단에서 클럽을 선택하지 않은 상태("클럽을 선택하세요")에서는 우측 하단 클럽 잔여 예산·이전 잔여 예산·예산 소진 프로그레스 바가 표시되지 않도록 숨김 처리하고, 클럽 선택 전에는 비용 항목 추가·정산 확정·엑셀 저장 등 비용 처리를 차단하도록 보강'] },
         { ver: '1.7.45', date: '2026.11.25', items: ['로그인 화면 PIN 입력 불능 원인이었던 app.js 요청사항 모달 영역 구문 유실 긴급 복구 및 재발 방지 절대규칙(동일 파일 병렬 edit 금지 · 배포 전 PIN 클릭/키보드 로그인 및 pageerror=0 필수 검수) AGENTS.md 지정'] },
         { ver: '1.7.44', date: '2026.11.25', items: ['관리자 [클럽 관리]에 시설·장비 이용료를 1회에 한해 클럽 잔여(배정) 예산 전액까지 법인카드로 결제하고 초과분은 개인카드로 자동 분배할 수 있는 [🔓 시설 전액 승인] 버튼 추가 (정산 1건 확정 시 자동 미승인 복원)'] },
         { ver: '1.7.43', date: '2026.11.25', items: ['[전사원 명부] 마우스 오버 클럽별 참석 횟수 툴팁 및 상세 팝업 내 우측 횟수("N회") 색상도 라이트/다크 테마 고대비 색상(#0369a1 / #38bdf8)으로 통일 개선'] },
