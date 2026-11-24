@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.41';
+const APP_VERSION      = '1.7.42';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3194,7 +3194,7 @@ const AppState = {
                         <div class="expense-row-left">
                             <span class="expense-row-title" style="font-size: 0.88rem; display: inline-flex; align-items: center;">
                                 ${crownHtml}<button type="button" class="btn-dir-member-history" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" data-count="${countValue}" style="background:none; border:none; padding:0; margin:0; font:inherit; font-weight:700; color:inherit; cursor:pointer; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px;">${this.escapeHtml(name)}</button>
-                                <span style="font-size: 0.72rem; color: ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; font-weight: 700; margin-left: 0.3rem;">(${dirYearLabel}: ${this.hasAdminAccess && activeQueryYear === String(realCurrentYear) ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0" style="width:34px; padding:0 2px; font-size:0.72rem; font-weight:700; color:${isTopRank ? '#d97706' : 'var(--color-secondary)'}; background:transparent; border:none; border-bottom:1px dashed ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; outline:none; text-align:center; -moz-appearance:textfield; appearance:textfield;">` : countValue}회)</span>
+                                <span class="dir-year-count-badge ${isTopRank ? 'is-top' : ''}">(${dirYearLabel}: ${this.hasAdminAccess && activeQueryYear === String(realCurrentYear) ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0">` : countValue}회)</span>
                             </span>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">EMP ID: ${this.escapeHtml(id)}</span>
                         </div>
@@ -9812,6 +9812,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.42', date: '2026.11.25', items: ['[전사원 명부]의 "(올해 누적: N회)" 및 입력 횟수 글자 색상을 라이트/다크 테마 모두에서 선명하게 잘 보이도록 고대비 색상(#0369a1 / #b45309 등)으로 개선'] },
         { ver: '1.7.41', date: '2026.11.25', items: ['관리자 [클럽 관리] 필터·정렬을 별도 상단 바 대신 엑셀(Excel) 스타일 컬럼 제목줄 드롭다운 필터로 개편: [클럽명 / 배정예산 / 상품비 / 잔여 예산] 제목 클릭 시 오름차순·내림차순(높은순·낮은순) 정렬과 항목별 체크박스 다중 선택 필터 팝오버 제공'] },
         { ver: '1.7.40', date: '2026.11.25', items: ['관리자 [클럽 관리]에 클럽 필터(특정 클럽 선택 및 실시간 이름 검색) 및 [클럽명 / 배정예산 / 상품비 / 잔여 예산] 오름차순·내림차순 정렬 기능(상단 정렬 드롭다운 및 테이블 컬럼 헤더 클릭 정렬) 추가'] },
         { ver: '1.7.39', date: '2026.11.25', items: ['관리자 [클럽 관리]에서 추가 배정 또는 금액 수정 시 목록 하단에 중복 클럽 행이 이어 붙어 표시되던 동기적 재진입(Re-entrant DOM 렌더링) 버그 수정: DOM 루프 중 Firebase update 호출을 루프 종료 후 일괄 처리로 분리하고 DocumentFragment 원자적 교체 및 재진입 방지 가드 적용'] },

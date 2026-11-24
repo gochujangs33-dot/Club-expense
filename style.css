@@ -1320,6 +1320,40 @@ html[data-app-theme="light"] #dir-search-input {
     max-height: 480px;
 }
 
+/* 전사원 명부 "(올해 누적: N회)" 및 입력 횟수 고대비 색상 */
+.dir-year-count-badge {
+    font-size: 0.74rem;
+    font-weight: 700;
+    margin-left: 0.3rem;
+    color: #38bdf8;
+}
+.dir-year-count-badge.is-top {
+    color: #fbbf24;
+}
+.dir-year-count-badge .dir-count-input {
+    width: 34px;
+    padding: 0 2px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: inherit;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px dashed currentColor;
+    outline: none;
+    text-align: center;
+    transition: none;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+html[data-app-theme="light"] .dir-year-count-badge,
+html[data-app-theme="light"] .dir-year-count-badge .dir-count-input {
+    color: #0369a1 !important;
+}
+html[data-app-theme="light"] .dir-year-count-badge.is-top,
+html[data-app-theme="light"] .dir-year-count-badge.is-top .dir-count-input {
+    color: #b45309 !important;
+}
+
 /* Scroll Container */
 .scroll-y {
     max-height: 250px;
