@@ -6,14 +6,16 @@
  *   예) '1.0.0' → '1.1.0'
  *   그러면 앱에 자동으로 "업데이트 있음" 알림이 표시됩니다.
  */
-const APP_VERSION = '1.7.47';
+const APP_VERSION = '1.7.48';
 const CACHE_NAME = `club-expense-v${APP_VERSION}`;
 
 const ASSETS = [
   './',
   './index.html',
   './style.css',
+  './js/calc-locked.js',
   './app.js',
+  './js/charts.js',
   './manifest.json',
   './lib/xlsx.mini.min.js',
   './lib/jszip.min.js',
