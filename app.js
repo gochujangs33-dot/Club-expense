@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.35';
+const APP_VERSION      = '1.7.36';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -789,6 +789,8 @@ const AppState = {
         const currentYear = new Date().getFullYear();
         this._resetDirectoryCounts();
         const idToName = this._buildIdToName();
+        const yearCountsMap = {};
+        const empBreakdownByYear = {};
 
         try {
             const [histSnap, deletedSnap] = await Promise.all([
@@ -808,10 +810,31 @@ const AppState = {
                 const entryYear = entry.settlementDate
                     ? parseInt(entry.settlementDate.slice(0, 4), 10)
                     : (entry.date ? new Date(entry.date).getFullYear() : new Date(entry.id).getFullYear());
+                if (Number.isNaN(entryYear)) return;
+
+                const yKey = String(entryYear);
+                if (!yearCountsMap[yKey]) yearCountsMap[yKey] = {};
+                if (!empBreakdownByYear[yKey]) empBreakdownByYear[yKey] = {};
+                const clubName = String(entry.clubName || '기본 클럽').trim() || '기본 클럽';
+                const dStr = entry.settlementDate || (entry.date ? String(entry.date).slice(0, 10) : '');
+
+                const entrySeenEmpIds = new Set();
+                (entry.attendees || []).forEach(att => {
+                    const empId = att && att.employeeId ? String(att.employeeId).trim() : '';
+                    if (!empId || entrySeenEmpIds.has(empId)) return;
+                    entrySeenEmpIds.add(empId);
+                    yearCountsMap[yKey][empId] = (yearCountsMap[yKey][empId] || 0) + 1;
+                    if (!empBreakdownByYear[yKey][empId]) empBreakdownByYear[yKey][empId] = {};
+                    if (!empBreakdownByYear[yKey][empId][clubName]) empBreakdownByYear[yKey][empId][clubName] = [];
+                    if (dStr) empBreakdownByYear[yKey][empId][clubName].push(dStr);
+                });
+
                 if (entryYear !== currentYear) return;
                 counted++;
                 this._countAttendeesByEmpId(entry.attendees || [], idToName);
             });
+            this._directoryCountsByYear = yearCountsMap;
+            this._empClubBreakdownByYear = empBreakdownByYear;
             console.log(`[명부 카운트] ${currentYear}년 정산 ${counted}건 처리, 명부 ${Object.keys(this.directory).length}명`);
         } catch (err) {
             console.error('globalHistory 카운트 재계산 실패:', err);
@@ -1732,16 +1755,20 @@ const AppState = {
         return this.annualBudget || 0;
     },
 
-    // 현재 연도 내 이 클럽의 정산 이력 합산으로 실제 사용금액 계산
+    // 현재/조회 연도 내 이 클럽의 정산 이력 합산으로 실제 사용금액 계산
     getClubUsedBudget() {
         const currentYear = new Date().getFullYear();
+        const activeYear = (typeof _selectedQueryYear !== 'undefined' && _selectedQueryYear && _selectedQueryYear !== 'ALL')
+            ? (parseInt(_selectedQueryYear, 10) || currentYear)
+            : currentYear;
         let regEntry = null;
         if (this.clubId && this.clubRegistry[this.clubId]) {
             regEntry = this.clubRegistry[this.clubId];
         } else if (this.clubName) {
             regEntry = Object.values(this.clubRegistry).find(c => c.name === this.clubName) || null;
         }
-        const priorUsed = regEntry ? (regEntry.priorUsed || 0) : 0;
+        const isRealCurrentYear = activeYear === currentYear;
+        const priorUsed = (isRealCurrentYear && regEntry) ? (regEntry.priorUsed || 0) : 0;
 
         // clubHistory(전체 사용자 이력)가 로드돼 있으면 우선 사용 — 없으면 개인 이력으로 fallback
         const useClubHistory = this.clubHistory.length > 0;
@@ -1752,7 +1779,7 @@ const AppState = {
                 const entryYear = e.settlementDate
                     ? parseInt(e.settlementDate.slice(0, 4), 10)
                     : new Date(e.date).getFullYear();
-                if (entryYear !== currentYear) return false;
+                if (entryYear !== activeYear) return false;
                 // clubHistory는 이미 현재 클럽 기준으로 필터됨
                 if (useClubHistory) return true;
                 if (this.clubId) return e.clubId === this.clubId || e.clubName === this.clubName;
@@ -1760,8 +1787,8 @@ const AppState = {
             })
             .reduce((sum, e) => sum + (e.finalSupportAmount || 0), 0);
 
-        // Firebase 동기화값 (관리자 대시보드에서 갱신된 값 — 추가 보완용)
-        const firebaseUsed = (regEntry && regEntry.usedBudget) ? regEntry.usedBudget : 0;
+        // Firebase 동기화값은 실제 올해 기준일 때만 보조로 사용 (2027년 등 신규 연도 조회 시 0원부터 시작)
+        const firebaseUsed = (isRealCurrentYear && regEntry && regEntry.usedBudget) ? regEntry.usedBudget : 0;
 
         let used = priorUsed + Math.max(fromHistory, firebaseUsed);
 
@@ -2960,8 +2987,14 @@ const AppState = {
                     </div>
                 `;
             } else {
-                // ids[]가 여러 개면 사번마다 별도 행으로 만들고, 각 행 자신의 사번별 카운트를 기록
-                // (동명이인이어도 함께 묶어 정렬하지 않고 각자 실제 참석 횟수로만 순위를 매김)
+                // ids[]가 여러 개면 사번마다 별도 행으로 만들고, 상단 조회 연도(_selectedQueryYear) 기준 참석 횟수를 표시
+                const realCurrentYear = new Date().getFullYear();
+                const activeQueryYear = (typeof _selectedQueryYear !== 'undefined' && _selectedQueryYear)
+                    ? String(_selectedQueryYear)
+                    : String(realCurrentYear);
+                const dirYearLabel = activeQueryYear === 'ALL'
+                    ? '전체 누적'
+                    : (Number(activeQueryYear) === realCurrentYear ? '올해 누적' : `${activeQueryYear}년 누적`);
                 const dirRows = [];
                 dirNames.forEach(name => {
                     const entry = this.directory[name];
@@ -2969,7 +3002,18 @@ const AppState = {
                         ? entry.ids.map(String)
                         : [String(typeof entry === 'object' ? entry.id : entry)];
                     ids.forEach(id => {
-                        const countValue = (typeof entry === 'object' && entry.counts) ? (entry.counts[id] || 0) : 0;
+                        let countValue = 0;
+                        if (this._directoryCountsByYear) {
+                            if (activeQueryYear === 'ALL') {
+                                Object.values(this._directoryCountsByYear).forEach(yMap => {
+                                    countValue += (yMap && yMap[id]) ? yMap[id] : 0;
+                                });
+                            } else {
+                                countValue = (this._directoryCountsByYear[activeQueryYear] && this._directoryCountsByYear[activeQueryYear][id]) || 0;
+                            }
+                        } else if (activeQueryYear === String(realCurrentYear) || activeQueryYear === 'ALL') {
+                            countValue = (typeof entry === 'object' && entry.counts) ? (entry.counts[id] || 0) : 0;
+                        }
                         dirRows.push({ name, id, count: countValue });
                     });
                 });
@@ -3029,8 +3073,8 @@ const AppState = {
                     row.innerHTML = `
                         <div class="expense-row-left">
                             <span class="expense-row-title" style="font-size: 0.88rem; display: inline-flex; align-items: center;">
-                                ${crownHtml}<button type="button" class="btn-dir-member-history" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" data-count="${countValue}" title="클릭하여 클럽별 참석 내역 보기" style="background:none; border:none; padding:0; margin:0; font:inherit; font-weight:700; color:inherit; cursor:pointer; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px;">${this.escapeHtml(name)}</button>
-                                <span style="font-size: 0.72rem; color: ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; font-weight: 700; margin-left: 0.3rem;">(올해 누적: ${this.hasAdminAccess ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0" style="width:34px; padding:0 2px; font-size:0.72rem; font-weight:700; color:${isTopRank ? '#d97706' : 'var(--color-secondary)'}; background:transparent; border:none; border-bottom:1px dashed ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; outline:none; text-align:center; -moz-appearance:textfield; appearance:textfield;">` : countValue}회)</span>
+                                ${crownHtml}<button type="button" class="btn-dir-member-history" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" data-count="${countValue}" style="background:none; border:none; padding:0; margin:0; font:inherit; font-weight:700; color:inherit; cursor:pointer; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px;">${this.escapeHtml(name)}</button>
+                                <span style="font-size: 0.72rem; color: ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; font-weight: 700; margin-left: 0.3rem;">(${dirYearLabel}: ${this.hasAdminAccess && activeQueryYear === String(realCurrentYear) ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0" style="width:34px; padding:0 2px; font-size:0.72rem; font-weight:700; color:${isTopRank ? '#d97706' : 'var(--color-secondary)'}; background:transparent; border:none; border-bottom:1px dashed ${isTopRank ? '#d97706' : 'var(--color-secondary)'}; outline:none; text-align:center; -moz-appearance:textfield; appearance:textfield;">` : countValue}회)</span>
                             </span>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">EMP ID: ${this.escapeHtml(id)}</span>
                         </div>
@@ -3083,13 +3127,24 @@ const AppState = {
                     });
                 });
 
-                // Bind click handlers for member name -> show club attendance breakdown modal
+                // Bind hover + click handlers for member name -> show club attendance breakdown tooltip/modal
                 directoryContainer.querySelectorAll('.btn-dir-member-history').forEach(btn => {
+                    const mName = btn.getAttribute('data-name');
+                    const mId = btn.getAttribute('data-id');
+                    const mCount = Number(btn.getAttribute('data-count')) || 0;
+                    btn.addEventListener('mouseenter', () => {
+                        if (typeof window.showDirMemberHoverTooltip === 'function') {
+                            window.showDirMemberHoverTooltip(btn, mName, mId, mCount);
+                        }
+                    });
+                    btn.addEventListener('mouseleave', () => {
+                        if (typeof window.hideDirMemberHoverTooltip === 'function') {
+                            window.hideDirMemberHoverTooltip();
+                        }
+                    });
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const mName = btn.getAttribute('data-name');
-                        const mId = btn.getAttribute('data-id');
-                        const mCount = Number(btn.getAttribute('data-count')) || 0;
+                        if (typeof window.hideDirMemberHoverTooltip === 'function') window.hideDirMemberHoverTooltip();
                         if (typeof window.openDirMemberClubHistoryModal === 'function') {
                             window.openDirMemberClubHistoryModal(mName, mId, mCount);
                         }
@@ -3156,6 +3211,7 @@ const AppState = {
                 });
                 const canEditSharedHistory = this.isLoggedIn;
 
+                let renderedCards = 0;
                 entriesByClub.forEach((clubEntries, clubName) => {
                     const targetEntries = clubEntries.filter(entry => {
                         if (selectedUserYear === 'ALL') return true;
@@ -3163,6 +3219,7 @@ const AppState = {
                     });
                     if (targetEntries.length === 0) return;
 
+                    renderedCards++;
                     const yearLabel = selectedUserYear === 'ALL' ? '전체' : `${selectedUserYear}년`;
                     const clubCard = document.createElement('section');
                     clubCard.className = 'admin-inline-club-usage-card user-inline-club-usage-card';
@@ -3188,6 +3245,10 @@ const AppState = {
                     );
                     historyContainer.appendChild(clubCard);
                 });
+                if (renderedCards === 0) {
+                    const emptyLabel = selectedUserYear === 'ALL' ? '등록된' : `${selectedUserYear}년 등록된`;
+                    historyContainer.innerHTML = `<div class="empty-state"><span class="empty-icon">📋</span><p>${emptyLabel} 정산 이력이 없습니다.</p></div>`;
+                }
             } else {
                 // 사용자 이력도 클럽별 그룹으로 표시한다. 현재 선택된 클럽이 하나면 해당 그룹만 보인다.
                 const groupContainers = new Map();
@@ -6851,7 +6912,87 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.id === 'year-end-ppt-modal') closeYearEndPptModal();
     });
 
-    // ── 전사원 명부 회원별 클럽 참석 내역 모달 ──────────────────────────
+    // ── 전사원 명부 회원별 클럽 참석 내역 호버 툴팁 & 모달 ──────────────────────────
+    function getDirMemberBreakdownForQueryYear(memberEmpId) {
+        const realCurrentYear = new Date().getFullYear();
+        const activeQueryYear = (typeof _selectedQueryYear !== 'undefined' && _selectedQueryYear)
+            ? String(_selectedQueryYear)
+            : String(realCurrentYear);
+        const empIdStr = String(memberEmpId || '').trim();
+        const clubCounts = new Map();
+        const yearMap = AppState._empClubBreakdownByYear || {};
+
+        const mergeYearBucket = (bucket) => {
+            if (!bucket || !empIdStr || !bucket[empIdStr]) return;
+            Object.entries(bucket[empIdStr]).forEach(([clubName, dates]) => {
+                if (!clubCounts.has(clubName)) clubCounts.set(clubName, []);
+                clubCounts.get(clubName).push(...dates);
+            });
+        };
+
+        if (activeQueryYear === 'ALL') {
+            Object.values(yearMap).forEach(mergeYearBucket);
+        } else {
+            mergeYearBucket(yearMap[activeQueryYear]);
+        }
+
+        const clubList = Array.from(clubCounts.entries())
+            .map(([clubName, dates]) => ({
+                clubName,
+                count: dates.length,
+                dates: dates.filter(Boolean).sort((a, b) => b.localeCompare(a))
+            }))
+            .sort((a, b) => b.count - a.count || a.clubName.localeCompare(b.clubName, 'ko'));
+        const totalMatched = clubList.reduce((s, c) => s + c.count, 0);
+        const yearLabel = activeQueryYear === 'ALL' ? '전체 연도' : `${activeQueryYear}년`;
+        return { activeQueryYear, yearLabel, totalMatched, clubList };
+    }
+
+    function showDirMemberHoverTooltip(anchorEl, memberName, memberEmpId, cachedCount = 0) {
+        const tip = document.getElementById('dir-member-hover-tooltip');
+        if (!tip || !anchorEl) return;
+        const { yearLabel, totalMatched, clubList } = getDirMemberBreakdownForQueryYear(memberEmpId);
+        const colorMap = (typeof getClubColorMap === 'function') ? getClubColorMap() : {};
+        const headerHtml = `<div style="font-weight:800; font-size:0.84rem; margin-bottom:0.35rem; color:var(--text-primary); border-bottom:1px solid var(--card-border); padding-bottom:0.3rem;">🏅 ${AppState.escapeHtml(memberName)}${memberEmpId ? ` (${AppState.escapeHtml(memberEmpId)})` : ''} · ${yearLabel}</div>`;
+        let bodyHtml = '';
+        if (clubList.length === 0) {
+            bodyHtml = `<div style="color:var(--text-muted); font-size:0.78rem;">${yearLabel} 참석한 클럽 이력이 없습니다.</div>`;
+        } else {
+            bodyHtml = `<div style="font-size:0.74rem; color:var(--text-secondary); margin-bottom:0.35rem;">총 <b>${totalMatched}회</b> 참석 (${clubList.length}개 클럽)</div>` +
+                clubList.map(c => {
+                    const dotColor = colorMap[c.clubName] || '#8b5cf6';
+                    return `<div style="display:flex; align-items:center; justify-content:space-between; gap:0.6rem; padding:0.15rem 0;">
+                        <span style="display:inline-flex; align-items:center; gap:0.35rem; font-weight:600; color:var(--text-primary);">
+                            <span style="width:7px; height:7px; border-radius:50%; background:${dotColor}; display:inline-block;"></span>
+                            ${AppState.escapeHtml(c.clubName)}
+                        </span>
+                        <span style="font-weight:800; color:var(--color-secondary);">${c.count}회</span>
+                    </div>`;
+                }).join('');
+        }
+        tip.innerHTML = headerHtml + bodyHtml;
+        tip.classList.remove('hidden');
+
+        const rect = anchorEl.getBoundingClientRect();
+        const tipRect = tip.getBoundingClientRect();
+        let left = rect.left;
+        let top = rect.bottom + 8;
+        if (left + tipRect.width > window.innerWidth - 12) {
+            left = Math.max(12, window.innerWidth - tipRect.width - 12);
+        }
+        if (top + tipRect.height > window.innerHeight - 12) {
+            top = Math.max(12, rect.top - tipRect.height - 8);
+        }
+        tip.style.left = `${left}px`;
+        tip.style.top = `${top}px`;
+    }
+
+    function hideDirMemberHoverTooltip() {
+        document.getElementById('dir-member-hover-tooltip')?.classList.add('hidden');
+    }
+    window.showDirMemberHoverTooltip = showDirMemberHoverTooltip;
+    window.hideDirMemberHoverTooltip = hideDirMemberHoverTooltip;
+
     async function openDirMemberClubHistoryModal(memberName, memberEmpId, cachedCount = 0) {
         const modal = document.getElementById('dir-club-history-modal');
         const titleEl = document.getElementById('dir-club-history-title');
@@ -6859,9 +7000,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const listEl = document.getElementById('dir-club-history-list');
         if (!modal || !titleEl || !summaryEl || !listEl) return;
 
-        const targetYear = new Date().getFullYear();
+        const realCurrentYear = new Date().getFullYear();
+        const activeQueryYear = (typeof _selectedQueryYear !== 'undefined' && _selectedQueryYear)
+            ? String(_selectedQueryYear)
+            : String(realCurrentYear);
+        const isAll = activeQueryYear === 'ALL';
+        const targetYear = isAll ? null : (Number(activeQueryYear) || realCurrentYear);
+        const yearLabel = isAll ? '전체' : `${targetYear}년`;
         const empIdStr = String(memberEmpId || '').trim();
-        titleEl.textContent = `${memberName}${empIdStr ? ` (${empIdStr})` : ''} — ${targetYear}년 참석 내역`;
+        titleEl.textContent = `${memberName}${empIdStr ? ` (${empIdStr})` : ''} — ${yearLabel} 참석 내역`;
         summaryEl.textContent = '클럽별 참석 내역을 불러오는 중입니다...';
         listEl.innerHTML = '';
         modal.classList.remove('hidden');
@@ -6893,7 +7040,7 @@ document.addEventListener('DOMContentLoaded', () => {
         historyList.forEach(entry => {
             if (!entry || !entry.id || seenIds.has(entry.id)) return;
             seenIds.add(entry.id);
-            if (getHistoryEntryYear(entry) !== targetYear) return;
+            if (!isAll && getHistoryEntryYear(entry) !== targetYear) return;
             const attendees = Array.isArray(entry.attendees) ? entry.attendees : [];
             const matched = empIdStr
                 ? attendees.some(a => a && a.employeeId && String(a.employeeId).trim() === empIdStr)
@@ -6917,8 +7064,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const colorMap = (typeof getClubColorMap === 'function') ? getClubColorMap() : {};
         summaryEl.innerHTML = totalMatched > 0
-            ? `<b>${targetYear}년 총 ${totalMatched}회</b> 참석 · <b>${clubList.length}개</b> 클럽`
-            : `${targetYear}년 등록된 클럽 참석 기록이 없습니다.${cachedCount > 0 ? ` (명부 누적 ${cachedCount}회)` : ''}`;
+            ? `<b>${yearLabel} 총 ${totalMatched}회</b> 참석 · <b>${clubList.length}개</b> 클럽`
+            : `${yearLabel} 등록된 클럽 참석 기록이 없습니다.${cachedCount > 0 ? ` (명부 누적 ${cachedCount}회)` : ''}`;
 
         if (clubList.length === 0) {
             listEl.innerHTML = `<div style="padding:1.25rem; text-align:center; color:var(--text-muted); font-size:0.84rem; border:1px dashed var(--card-border); border-radius:10px;">참석한 클럽 이력이 없습니다.</div>`;
@@ -9517,6 +9664,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.36', date: '2026.11.24', items: ['클럽별 정산 이력 [총 자부담 비용] 카드에 총 비용 대비 자부담 비중(%) 함께 표시', '[전사원 명부] 회원 이름에 마우스를 올리면 즉시 클럽별 참석 횟수가 툴팁으로 표시되도록 개선 (모바일 터치 시 팝업 지원)', '상단 [조회 연도]를 2027년 등 신규 연도로 변경 시 전사원 명부 누적·클럽별 정산 이력·잔여 예산·누적 지원금이 해당 연도 기준(0부터)으로 분리 표시되도록 개선'] },
         { ver: '1.7.35', date: '2026.11.24', items: ['로그인 화면 키패드/숫자키 미작동 원인이었던 app.js 구문 누락 긴급 복구'] },
         { ver: '1.7.34', date: '2026.11.24', items: ['[전사원 명부]에서 회원 이름을 클릭하면 올해 어느 클럽에 몇 번·언제 참석했는지 한눈에 확인하는 팝업창 추가'] },
         { ver: '1.7.33', date: '2026.11.24', items: ['상단 [조회 연도] 선택과 [정산 구간 및 비율 설정] 및 [연간 결산 PPT]를 1:1로 자동 연동 (조회 연도 변경 시 해당 연도의 구간·비율 설정값 자동 불러오기·저장 및 PPT 기준표 반영)'] },
@@ -10857,9 +11005,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (adminTotalBudgetEl) {
             adminTotalBudgetEl.textContent = SettlementCalculator.formatCurrency(allocated);
         }
+        const realCurrentYear = new Date().getFullYear();
+        const activeQueryYear = (typeof _selectedQueryYear !== 'undefined' && _selectedQueryYear)
+            ? String(_selectedQueryYear)
+            : String(realCurrentYear);
+        const isAllQueryYears = activeQueryYear === 'ALL';
+        const targetQueryYearNum = Number(activeQueryYear) || realCurrentYear;
+        const filteredHistoryForSummary = (lastHistoryList || []).filter(e =>
+            e && (isAllQueryYears || getHistoryEntryYear(e) === targetQueryYearNum)
+        );
         const totalSupportVal = historyLoaded
-            ? (lastHistoryList || []).reduce((sum, e) => sum + (e && e.finalSupportAmount ? e.finalSupportAmount : 0), 0)
-            : clubs.reduce((sum, [, c]) => sum + (c.usedBudget || 0), 0);
+            ? filteredHistoryForSummary.reduce((sum, e) => sum + (e && e.finalSupportAmount ? e.finalSupportAmount : 0), 0)
+            : (targetQueryYearNum === realCurrentYear || isAllQueryYears
+                ? clubs.reduce((sum, [, c]) => sum + (c.usedBudget || 0), 0)
+                : 0);
         const adminSupportEl = document.getElementById('admin-total-support');
         if (adminSupportEl) {
             adminSupportEl.textContent = SettlementCalculator.formatCurrency(totalSupportVal);
@@ -12452,7 +12611,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(card);
     }
 
-    function getClubUsageSummaryData(clubName, entries) {
+    function getClubUsageSummaryData(clubName, entries, year = null) {
         const rows = (entries || [])
             .slice()
             .sort(compareHistoryEntriesNewestFirst)
@@ -12469,8 +12628,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const registryClub = Object.values(AppState.clubRegistry || {}).find(club => club && club.name === clubName);
         const hasAssignedBudget = Boolean(registryClub) && Object.prototype.hasOwnProperty.call(registryClub, 'budget');
         const clubBudget = registryClub ? Math.max(0, parseAmount(registryClub.budget)) : 0;
-        const priorUsed = registryClub ? Math.max(0, parseAmount(registryClub.priorUsed)) : 0;
-        const registryUsed = registryClub ? Math.max(0, parseAmount(registryClub.usedBudget)) : 0;
+        const realCurrentYear = new Date().getFullYear();
+        const isCurrentYearView = year === null || year === undefined || Number(year) === realCurrentYear;
+        const priorUsed = (isCurrentYearView && registryClub) ? Math.max(0, parseAmount(registryClub.priorUsed)) : 0;
+        const registryUsed = (isCurrentYearView && registryClub) ? Math.max(0, parseAmount(registryClub.usedBudget)) : 0;
         const clubUsed = priorUsed + Math.max(totals.support, registryUsed);
         const clubRemaining = clubBudget - clubUsed;
         return { rows, totals, hasAssignedBudget, clubBudget, clubRemaining };
@@ -12608,7 +12769,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createInlineClubUsageSummary(clubName, entries, year, options = {}) {
         const { editableDates = false, excelDownloads = false, deleteEntries = false } = options;
-        const data = getClubUsageSummaryData(clubName, entries);
+        const data = getClubUsageSummaryData(clubName, entries, year);
         const summary = document.createElement('section');
         summary.className = 'inline-club-usage-summary';
 
@@ -12627,7 +12788,11 @@ document.addEventListener('DOMContentLoaded', () => {
         appendClubUsageTotalCard(totalsEl, '평균 참석 인원', avgAttendees, '', () => avgAttendeesStr);
         appendClubUsageTotalCard(totalsEl, '총 상품비', data.totals.prizeCost, 'prize');
         appendClubUsageTotalCard(totalsEl, '총 회사 지원금', data.totals.support, 'support');
-        appendClubUsageTotalCard(totalsEl, '총 자부담 비용', data.totals.selfPay, 'selfpay');
+        const selfPayPct = data.totals.totalCost > 0
+            ? ((data.totals.selfPay / data.totals.totalCost) * 100).toFixed(1)
+            : '0.0';
+        appendClubUsageTotalCard(totalsEl, '총 자부담 비용', data.totals.selfPay, 'selfpay',
+            val => `${SettlementCalculator.formatCurrency(val)} (${selfPayPct}%)`);
         appendClubUsageTotalCard(totalsEl, '총 비용', data.totals.totalCost, '');
 
         const tableWrap = document.createElement('div');
@@ -12650,7 +12815,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 클럽별 정산이력 요일별 요약 (모바일 친화적 뷰)
     function createInlineClubWeekdaySummary(clubName, entries, year, options = {}) {
         const { editableDates = false, excelDownloads = false, deleteEntries = false } = options;
-        const data = getClubUsageSummaryData(clubName, entries);
+        const data = getClubUsageSummaryData(clubName, entries, year);
         const summary = document.createElement('section');
         summary.className = 'inline-club-usage-summary inline-club-weekday-summary';
 
@@ -12669,7 +12834,11 @@ document.addEventListener('DOMContentLoaded', () => {
         appendClubUsageTotalCard(totalsEl, '평균 참석 인원', avgAttendees, '', () => avgAttendeesStr);
         appendClubUsageTotalCard(totalsEl, '총 상품비', data.totals.prizeCost, 'prize');
         appendClubUsageTotalCard(totalsEl, '총 회사 지원금', data.totals.support, 'support');
-        appendClubUsageTotalCard(totalsEl, '총 자부담 비용', data.totals.selfPay, 'selfpay');
+        const selfPayPct = data.totals.totalCost > 0
+            ? ((data.totals.selfPay / data.totals.totalCost) * 100).toFixed(1)
+            : '0.0';
+        appendClubUsageTotalCard(totalsEl, '총 자부담 비용', data.totals.selfPay, 'selfpay',
+            val => `${SettlementCalculator.formatCurrency(val)} (${selfPayPct}%)`);
         appendClubUsageTotalCard(totalsEl, '총 비용', data.totals.totalCost, '');
 
         const DAY_DEFS = [
@@ -13320,6 +13489,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (typeof renderAdminHistory === 'function') {
             renderAdminHistory(listToRender);
+        }
+        if (typeof renderClubManagement === 'function') {
+            renderClubManagement();
+        }
+        if (typeof updateChartsBudgetStats === 'function') {
+            updateChartsBudgetStats(listToRender);
         }
         if (window.AppState && typeof window.AppState.render === 'function') {
             window.AppState.render();
