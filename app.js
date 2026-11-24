@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.34';
+const APP_VERSION      = '1.7.35';
 const APP_VERSION_DATE = '2026.11.24';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -9330,6 +9330,143 @@ document.addEventListener('DOMContentLoaded', () => {
                 headerAdminModeBtn.style.color = '#059669';
             } else {
                 headerAdminModeBtn.innerHTML = '👑 관리자 페이지';
+                headerAdminModeBtn.title = '관리자 대시보드 페이지로 이동';
+                headerAdminModeBtn.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.12))';
+                headerAdminModeBtn.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+                headerAdminModeBtn.style.color = '#d97706';
+            }
+        } else {
+            headerAdminModeBtn.classList.add('hidden');
+            headerAdminModeBtn.style.display = 'none';
+        }
+        if (AppState.isLoggedIn && statusBadge && AppState.currentPin) {
+            const roleBadgeText = AppState.userRole === 'president' ? ' 👑회장' : (AppState.userRole === 'developer' ? ' 💻개발자' : (AppState.hasAdminAccess ? ' 🛡️관리자' : ''));
+            statusBadge.innerHTML = `${t('status.online')} (${AppState.userName || t('status.unknown') || '?'}${roleBadgeText} / PIN: ${AppState.currentPin})`;
+        }
+    }
+    window._syncHeaderAdminButton = syncHeaderAdminButton;
+    window._forceUserModeOnRevoke = () => {
+        setAdminMode(false);
+        syncHeaderAdminButton();
+    };
+
+    if (headerAdminModeBtn) {
+        headerAdminModeBtn.addEventListener('click', () => {
+            if (!AppState.isLoggedIn || !AppState.hasAdminAccess) return;
+            setAdminMode(!AppState.isAdminMode);
+        });
+    }
+
+    function setAdminMode(isAdmin) {
+        const allowAdmin = Boolean(isAdmin && AppState.isLoggedIn && AppState.hasAdminAccess);
+        AppState.isAdminMode = allowAdmin;
+
+        // 관리자 모드: 헤더 문구 변경 및 클럽 선택 영역 숨김
+        const headerTitleEl = document.querySelector('.logo-area h1');
+        if (headerTitleEl) headerTitleEl.textContent = allowAdmin ? '총 클럽 비용 관리' : '클럽 비용 정산';
+        const clubNameWrapperEl = document.querySelector('.club-name-wrapper');
+        if (clubNameWrapperEl) clubNameWrapperEl.classList.toggle('hidden', allowAdmin);
+
+        const adminOnlyIds = ['admin-tab-btn', 'club-history-tab-btn', 'charts-tab-btn', 'admin-audit-log-btn', 'admin-interim-summary-btn', 'admin-export-ppt-btn', 'history-export-ppt-btn'];
+        const memberOnlyIds = ['settlement-tab-btn', 'attendees-tab-btn', 'history-tab-btn'];
+        adminOnlyIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('hidden', !allowAdmin);
+        });
+        memberOnlyIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('hidden', allowAdmin);
+        });
+
+        // 일반 회원 모드: 요청사항 보내기 버튼 표시 / 관리자 모드: 요청사항 리스트 버튼 표시
+        const feedbackOpenBtnEl = document.getElementById('feedback-open-btn');
+        const feedbackListOpenBtnEl = document.getElementById('feedback-list-open-btn');
+        if (feedbackOpenBtnEl) feedbackOpenBtnEl.classList.toggle('hidden', allowAdmin);
+        if (feedbackListOpenBtnEl && !allowAdmin) feedbackListOpenBtnEl.classList.add('hidden');
+
+        syncHeaderAdminButton();
+
+        // 관리자 모드에서는 새 요청사항이 도착하면 알림 팝업을 띄우고, 리스트 버튼을 표시
+        if (allowAdmin && firebaseDb) {
+            firebaseDb.ref('requests').off('value');
+            firebaseDb.ref('requests').on('value', snapshot => {
+                const requestsData = snapshot.val() || {};
+                const requestList = Object.keys(requestsData)
+                    .map(key => ({ key, ...requestsData[key] }))
+                    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                const unreadCount = requestList.filter(r => !r.read).length;
+
+                const badge = document.getElementById('feedback-list-badge');
+                if (badge) {
+                    if (unreadCount > 0) {
+                        badge.textContent = unreadCount;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+
+                // 새로 도착한(아직 본 적 없는) 안읽은 요청은 팝업 큐에 추가
+                requestList.forEach(req => {
+                    if (!req.read && !seenFeedbackKeys.has(req.key)) {
+                        seenFeedbackKeys.add(req.key);
+                        feedbackPopupQueue.push(req);
+                    }
+                });
+                showNextFeedbackPopup();
+
+                // 안읽은 요청이 있으면(팝업 확인 전이라도) 리스트 버튼 노출
+                if (feedbackListOpenBtnEl && unreadCount > 0) {
+                    feedbackListOpenBtnEl.classList.remove('hidden');
+                }
+            });
+        } else if (!allowAdmin && firebaseDb) {
+            firebaseDb.ref('requests').off('value');
+        }
+
+        // 활성 탭이 더 이상 보이지 않으면 기본 탭으로 전환
+        const activeBtn = document.querySelector('.tab-nav .tab-btn.active');
+        if (!activeBtn || activeBtn.classList.contains('hidden')) {
+            const fallbackId = allowAdmin ? 'tab-admin' : 'tab-settlement';
+            document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+            const fallbackBtn = document.querySelector(`[data-tab="${fallbackId}"]`);
+            if (fallbackBtn) fallbackBtn.classList.add('active');
+            const fallbackPane = document.getElementById(fallbackId);
+            if (fallbackPane) fallbackPane.classList.remove('hidden');
+            if (allowAdmin && typeof renderAdminDashboard === 'function') {
+                renderAdminDashboard();
+            } else if (!allowAdmin) {
+                AppState.render();
+            }
+        }
+    }
+
+    function switchToOfflineMode() {
+        AppState._unbindUserRoleListener();
+        AppState.userRole = 'member';
+        AppState.hasAdminAccess = false;
+        AppState.isAdminMode = false;
+        pinModal.classList.add('hidden');
+        statusBadge.className = 'badge-offline';
+        statusBadge.textContent = t('header.offline');
+        logoutBtn.style.display = 'none';
+        loginBtn.style.display = 'inline-block';
+        document.getElementById('admin-tab-btn').classList.add('hidden');
+        setAdminMode(false);
+        syncHeaderAdminButton();
+
+        // If we were on admin tab, switch back to settlement
+        if (document.getElementById('admin-tab-btn').classList.contains('active')) {
+            document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+            const sTab = document.querySelector('[data-tab="tab-settlement"]');
+            if (sTab) sTab.classList.add('active');
+            document.getElementById('tab-settlement').classList.remove('hidden');
+        }
+
+        AppState.cancelEditMode(); // 수정 모드 중 로그아웃 시 상태 초기화
+        AppState.clubHistory = [];
         AppState.isLoggedIn = false;
         AppState.currentPin = null;
         AppState.userName = null;
@@ -9380,6 +9517,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.35', date: '2026.11.24', items: ['로그인 화면 키패드/숫자키 미작동 원인이었던 app.js 구문 누락 긴급 복구'] },
         { ver: '1.7.34', date: '2026.11.24', items: ['[전사원 명부]에서 회원 이름을 클릭하면 올해 어느 클럽에 몇 번·언제 참석했는지 한눈에 확인하는 팝업창 추가'] },
         { ver: '1.7.33', date: '2026.11.24', items: ['상단 [조회 연도] 선택과 [정산 구간 및 비율 설정] 및 [연간 결산 PPT]를 1:1로 자동 연동 (조회 연도 변경 시 해당 연도의 구간·비율 설정값 자동 불러오기·저장 및 PPT 기준표 반영)'] },
         { ver: '1.7.32', date: '2026.11.24', items: ['정산 구간·비율·한도를 연도별로 분리 관리(globalSettings/yearlyRules/{연도})할 수 있도록 관리자 설정에 연도 선택 기능 추가', '연간 결산 PPT 보고서 생성 시 해당 연도의 정산 구간 및 한도 기준표 슬라이드를 자동 포함하도록 개선'] },
