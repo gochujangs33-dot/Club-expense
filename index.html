@@ -332,9 +332,6 @@
                 <span style="font-size:0.88rem; color:#fbbf24;">✏️ <strong data-i18n="label.edit_mode">수정 모드</strong> —
                     <span id="edit-mode-date"></span> <span data-i18n="label.editing_in_progress">정산 수정 중</span></span>
                 <div style="display:flex; gap:0.4rem; flex-shrink:0;">
-                    <button id="edit-mode-done-btn"
-                        style="font-size:0.78rem; padding:0.25rem 0.7rem; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.5); color:#4ade80; border-radius:0.3rem; cursor:pointer; white-space:nowrap;">✅
-                        수정 완료</button>
                     <button id="edit-mode-cancel-btn" data-i18n="btn.cancel"
                         style="font-size:0.78rem; padding:0.25rem 0.7rem; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:0.3rem; cursor:pointer;">취소</button>
                 </div>
@@ -776,31 +773,31 @@
                 <!-- Right Panel: Attendee List -->
                 <section class="panel-right">
                     <div class="card" id="attendee-list-card">
-                        <div class="card-header">
-                            <div class="header-split">
-                                <div class="header-left">
+                        <div class="card-header" style="display:flex; flex-direction:column; gap:0.65rem; align-items:stretch;">
+                            <div style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap; justify-content:flex-end; padding-bottom:0.55rem; border-bottom:1px solid var(--card-border);">
+                                <button type="button" id="load-regular-members-btn" class="btn-secondary"
+                                    style="padding:0.32rem 0.72rem; font-size:0.78rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; background:rgba(59,130,246,0.14); border-color:rgba(59,130,246,0.4); color:#60a5fa; white-space:nowrap;">
+                                    ⭐ 정회원 불러오기
+                                </button>
+                                <button type="button" id="load-prev-attendees-btn" class="btn-secondary"
+                                    style="padding:0.32rem 0.72rem; font-size:0.78rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; white-space:nowrap;">
+                                    📋 종전 참석자 불러오기
+                                </button>
+                                <button type="button" id="manage-regular-members-btn" class="btn-secondary"
+                                    style="padding:0.32rem 0.65rem; font-size:0.78rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap;"
+                                    title="클럽별 정회원 명단 등록 및 관리">
+                                    ⚙️ 정회원 관리
+                                </button>
+                            </div>
+                            <div class="header-split" style="width:100%;">
+                                <div class="header-left" style="white-space:nowrap;">
                                     <span class="card-icon">👥</span>
-                                    <h2><span data-i18n="section.current_attendees">현재 참석자 명단</span> (<span
+                                    <h2 style="white-space:nowrap;"><span data-i18n="section.current_attendees">현재 참석자 명단</span> (<span
                                             id="attendee-list-count">0</span><span data-i18n="unit.person">명</span>)
                                     </h2>
                                 </div>
-                                <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; justify-content:flex-end;">
-                                    <button type="button" id="load-regular-members-btn" class="btn-secondary"
-                                        style="padding:0.28rem 0.65rem; font-size:0.78rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; background:rgba(59,130,246,0.14); border-color:rgba(59,130,246,0.4); color:#60a5fa;">
-                                        ⭐ 정회원 불러오기
-                                    </button>
-                                    <button type="button" id="load-prev-attendees-btn" class="btn-secondary"
-                                        style="padding:0.28rem 0.65rem; font-size:0.78rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem;">
-                                        📋 종전 참석자 불러오기
-                                    </button>
-                                    <button type="button" id="manage-regular-members-btn" class="btn-secondary"
-                                        style="padding:0.28rem 0.55rem; font-size:0.76rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;"
-                                        title="클럽별 정회원 명단 등록 및 관리">
-                                        ⚙️ 정회원 관리
-                                    </button>
-                                    <button id="clear-attendees-btn" class="btn-text-danger"
-                                        data-i18n="btn.clear_attendees">전체 비우기</button>
-                                </div>
+                                <button id="clear-attendees-btn" class="btn-text-danger" style="white-space:nowrap;"
+                                    data-i18n="btn.clear_attendees">전체 비우기</button>
                             </div>
                         </div>
                         <div class="card-body scroll-y" style="max-height: 400px;">

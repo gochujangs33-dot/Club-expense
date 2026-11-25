@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.55';
+const APP_VERSION      = '1.7.56';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3902,8 +3902,8 @@ const AppState = {
         }
     },
 
-    // 엑셀 파일만 로컬 다운로드 폴더에 저장 (수정 모드이면 이력도 갱신)
-    async downloadExcelOnly() {
+    // 엑셀 파일만 로컬 다운로드 폴더에 저장 (수정 모드이면 이력도 갱신; skipEditSave=true 시 파일 저장만 수행)
+    async downloadExcelOnly(skipEditSave = false) {
         if (!this.hasSelectedClub()) {
             alert('먼저 상단에서 정산할 클럽을 선택해 주세요.');
             document.getElementById('club-select')?.focus();
@@ -3921,7 +3921,7 @@ const AppState = {
             URL.revokeObjectURL(url);
 
             // 수정 모드: 이력 항목 갱신
-            if (this.editingHistoryId) {
+            if (!skipEditSave && this.editingHistoryId) {
                 const _sdi = document.getElementById('settlement-date-input');
                 const settlementDate = (_sdi && _sdi.value)
                     ? _sdi.value : (this._editingHistoryOriginal?.settlementDate || new Date().toISOString().slice(0, 10));
@@ -4065,9 +4065,12 @@ const AppState = {
                 if (_sdiEdit) _sdiEdit.value = entry.settlementDate;
             }
         }
-        // 수정 모드에서 "정산 완료" 버튼 숨기기
+        // 수정 모드에서는 우측 하단 "정산 완료" 버튼을 "수정 완료"로 전환해 표시
         const _sendEmailBtn = document.getElementById('send-email-btn');
-        if (_sendEmailBtn) _sendEmailBtn.classList.add('hidden');
+        if (_sendEmailBtn) {
+            _sendEmailBtn.classList.remove('hidden');
+            _sendEmailBtn.innerHTML = `<span class="btn-icon">✅</span> 수정 완료`;
+        }
         // 수정 모드 배너 표시
         const banner = document.getElementById('edit-mode-banner');
         const dateEl = document.getElementById('edit-mode-date');
@@ -4288,9 +4291,12 @@ const AppState = {
         this._editingOriginalPrize = 0;
         const banner = document.getElementById('edit-mode-banner');
         if (banner) banner.classList.add('hidden');
-        // 숨겼던 버튼 복원
+        // 우측 하단 버튼 문구 원래("정산 완료")로 복원
         const sendBtn = document.getElementById('send-email-btn');
-        if (sendBtn) sendBtn.classList.remove('hidden');
+        if (sendBtn) {
+            sendBtn.classList.remove('hidden');
+            sendBtn.innerHTML = `<span class="btn-icon">💾</span> 정산 완료`;
+        }
         // 날짜를 오늘로 초기화
         if (typeof window._onSettleDateReset === 'function') window._onSettleDateReset();
     },
@@ -4954,63 +4960,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     AppState.loadGlobalSettings();
 
-    // 수정 모드 완료 버튼 — 파일 다운로드 없이 데이터만 저장 (모바일 다운로드 차단 우회)
-    const editModeDoneBtn = document.getElementById('edit-mode-done-btn');
-    if (editModeDoneBtn) {
-        editModeDoneBtn.addEventListener('click', async () => {
-            if (!AppState.editingHistoryId) return;
-
-            const _sdi = document.getElementById('settlement-date-input');
-            const settlementDate = (_sdi && _sdi.value)
-                ? _sdi.value : new Date().toISOString().slice(0, 10);
-
-            // 수정 시에도 다른 이력과 동일 클럽·동일 날짜 중복 검증
-            const duplicate = await AppState.checkDuplicateSettlement(AppState.clubId, AppState.clubName, settlementDate);
-            if (duplicate) {
-                AppState.showDuplicateSettlementAlert(duplicate);
-                return;
-            }
-
-            editModeDoneBtn.disabled = true;
-            editModeDoneBtn.textContent = '⏳ 저장 중...';
-            try {
-                const result = SettlementCalculator.calculate(
-                    AppState.memberCount, AppState.expenseItems, AppState.previousPrizeTotal, AppState.rules
-                );
-                const finalTotalSelfPay = AppState.selfPayManuallyOverridden
-                    ? AppState.lastCalculatedSelfPay : Math.round(result.itemSelfPay);
-                const updatedFields = {
-                    memberCount: AppState.memberCount,
-                    nonMemberCount: AppState.nonMemberCount || 0,
-                    eventNote: AppState.eventNote || '',
-                    totalCost: result.totalCost,
-                    prizeCost: result.prizeCost,
-                    finalSupportAmount: result.totalCost - finalTotalSelfPay,
-                    totalSelfPay: finalTotalSelfPay,
-                    perPersonSelfPay: AppState.memberCount > 0
-                        ? Math.round(finalTotalSelfPay / AppState.memberCount)
-                        : result.perPersonSelfPay,
-                    selfPayRatio: result.totalCost > 0 ? finalTotalSelfPay / result.totalCost : 0,
-                    expenseItems: JSON.parse(JSON.stringify(AppState.expenseItems)),
-                    attendees: JSON.parse(JSON.stringify(AppState.attendees)),
-                    eventPhotos: JSON.parse(JSON.stringify(AppState.eventPhotos || [])),
-                    clubName: AppState.clubName,
-                    clubId: AppState.clubId || '',
-                    settlementDate,
-                };
-                await AppState.updateHistoryEntry(AppState.editingHistoryId, updatedFields);
-                AppState.cancelEditMode();
-                resetSettlementSession();
-                alert('수정 내용이 저장되었습니다.\n엑셀 파일이 필요하면 정산 이력에서 수정 후 다운로드하세요.');
-            } catch (err) {
-                console.error(err);
-                alert('수정 저장 중 오류가 발생했습니다: ' + (err.message || ''));
-            } finally {
-                editModeDoneBtn.disabled = false;
-                editModeDoneBtn.textContent = '✅ 수정 완료';
-            }
-        });
-    }
+    // 수정 완료는 우측 하단 정산 완료 버튼(#send-email-btn)이 수정 모드 시 "수정 완료"로 전환되어 일괄 처리함 (v1.7.56)
 
     // 수정 모드 취소 버튼
     const editModeCancelBtn = document.getElementById('edit-mode-cancel-btn');
@@ -6920,11 +6870,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const senderEmail = 'Gochujangs33@gmail.com';
             const willSaveExcel = AppState.saveExcelToDevice !== false;
+            const isEditMode = Boolean(AppState.editingHistoryId);
 
-            const confirmMsg =
-                `수신 메일 : ${recipientEmail}\n` +
-                `디바이스 저장 : ${willSaveExcel ? '활성화' : '비활성화'}\n\n` +
-                `정산 완료 확인 시 현재 화면이 초기화됩니다.`;
+            const confirmMsg = isEditMode
+                ? (`수신 메일 : ${recipientEmail}\n` +
+                   `디바이스 저장 : ${willSaveExcel ? '활성화' : '비활성화'}\n\n` +
+                   `수정 완료 확인 시 수정된 정산 내역 저장 및 메일이 재발송되며 현재 화면이 초기화됩니다.`)
+                : (`수신 메일 : ${recipientEmail}\n` +
+                   `디바이스 저장 : ${willSaveExcel ? '활성화' : '비활성화'}\n\n` +
+                   `정산 완료 확인 시 현재 화면이 초기화됩니다.`);
 
             // ── 관리자 DB 중복 정산 사전 검증 (이메일 발송/엑셀 다운로드 전 원천 차단) ──
             const duplicate = await AppState.checkDuplicateSettlement();
@@ -6936,29 +6890,63 @@ document.addEventListener('DOMContentLoaded', () => {
             showConfirmModal(
                 confirmMsg,
                 async () => {
-                    const originalText = sendEmailBtn.innerHTML;
                     let excelDownloaded = false;
                     sendEmailBtn.disabled = true;
-                    sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> 정산 처리 중...`;
+                    sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> ${isEditMode ? '수정 처리 중...' : '정산 처리 중...'}`;
 
                     try {
-                        // 1. 디바이스 저장 옵션 체크 시 엑셀 다운로드 실행
+                        // 1. 디바이스 저장 옵션 체크 시 엑셀 다운로드 실행 (수정 모드에서는 여기서 이력/세션 초기화를 건너뜀)
                         if (willSaveExcel) {
                             sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> 엑셀 파일 저장 중...`;
-                            await AppState.downloadExcelOnly();
+                            await AppState.downloadExcelOnly(isEditMode);
                             excelDownloaded = true;
                         }
 
-                        // 2. 이메일 보고서 생성 및 발송
-                        sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> 이메일 발송 준비 중...`;
+                        // 2. 이메일 보고서 생성 및 발송 (수정 모드일 때는 수정된 내역으로 재발송)
+                        sendEmailBtn.innerHTML = `<span class='btn-icon'>⏳</span> ${isEditMode ? '수정 메일 재발송 중...' : '이메일 발송 준비 중...'}`;
                         const report = AppState.generateEmailReport();
                         const emailResult = await AppState.sendReportEmail(recipientEmail, senderEmail, report.subject, report.body);
 
-                        // 3. 정산 확정 (Firebase 이력 저장, 누적 카운트 반영, 세션 초기화)
-                        sendEmailBtn.innerHTML = '<span class="btn-icon">⏳</span> 정산 저장 중...';
                         const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-                        const completed = await runFinalizeSettlement(true);
-                        if (!completed) return;
+                        if (isEditMode) {
+                            // 3-A. 수정 모드: 이력 업데이트 후 수정 모드 해제 및 세션 초기화
+                            sendEmailBtn.innerHTML = '<span class="btn-icon">⏳</span> 수정 저장 중...';
+                            const _sdi = document.getElementById('settlement-date-input');
+                            const settlementDate = (_sdi && _sdi.value)
+                                ? _sdi.value : (AppState._editingHistoryOriginal?.settlementDate || new Date().toISOString().slice(0, 10));
+                            const result = SettlementCalculator.calculate(
+                                AppState.memberCount, AppState.expenseItems, AppState.previousPrizeTotal, AppState.rules
+                            );
+                            const finalTotalSelfPay = AppState.selfPayManuallyOverridden
+                                ? AppState.lastCalculatedSelfPay : Math.round(result.itemSelfPay);
+                            const updatedFields = {
+                                memberCount: AppState.memberCount,
+                                nonMemberCount: AppState.nonMemberCount || 0,
+                                eventNote: AppState.eventNote || '',
+                                totalCost: result.totalCost,
+                                prizeCost: result.prizeCost,
+                                finalSupportAmount: result.totalCost - finalTotalSelfPay,
+                                totalSelfPay: finalTotalSelfPay,
+                                perPersonSelfPay: AppState.memberCount > 0
+                                    ? Math.round(finalTotalSelfPay / AppState.memberCount)
+                                    : result.perPersonSelfPay,
+                                selfPayRatio: result.totalCost > 0 ? finalTotalSelfPay / result.totalCost : 0,
+                                expenseItems: JSON.parse(JSON.stringify(AppState.expenseItems)),
+                                attendees: JSON.parse(JSON.stringify(AppState.attendees)),
+                                eventPhotos: JSON.parse(JSON.stringify(AppState.eventPhotos || [])),
+                                clubName: AppState.clubName,
+                                clubId: AppState.clubId || '',
+                                settlementDate,
+                            };
+                            await AppState.updateHistoryEntry(AppState.editingHistoryId, updatedFields);
+                            AppState.cancelEditMode();
+                            resetSettlementSession();
+                        } else {
+                            // 3-B. 신규 정산 확정 (Firebase 이력 저장, 누적 카운트 반영, 세션 초기화)
+                            sendEmailBtn.innerHTML = '<span class="btn-icon">⏳</span> 정산 저장 중...';
+                            const completed = await runFinalizeSettlement(true);
+                            if (!completed) return;
+                        }
 
                         sendEmailBtn.innerHTML = `<span class='btn-icon'>✓</span> ${t('state.saved')}`;
 
@@ -6970,8 +6958,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             : `📂 설정에 따라 디바이스 엑셀 저장은 건너뛰었습니다.\n`;
 
                         alert(
-                            `✅ ${todayStr} 정산이 정상적으로 완료되었습니다!\n\n` +
-                            `📧 이메일 발송: [${senderEmail}] → [${recipientEmail}]\n` +
+                            `✅ ${todayStr} ${isEditMode ? '정산 수정이' : '정산이'} 정상적으로 완료되었습니다!\n\n` +
+                            `📧 ${isEditMode ? '수정 메일 재발송' : '이메일 발송'}: [${senderEmail}] → [${recipientEmail}]\n` +
                             attachNotice +
                             saveNotice +
                             `✅ 현재 입력 항목이 초기화되었습니다.\n` +
@@ -6984,14 +6972,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         else alert('정산 처리 중 오류가 발생했습니다: ' + (err.message || err));
                     } finally {
                         setTimeout(() => {
-                            sendEmailBtn.innerHTML = originalText;
-                            sendEmailBtn.disabled = false;
+                            sendEmailBtn.innerHTML = AppState.editingHistoryId
+                                ? `<span class='btn-icon'>✅</span> 수정 완료`
+                                : `<span class='btn-icon'>💾</span> 정산 완료`;
+                            sendEmailBtn.disabled = !AppState.hasSelectedClub();
                         }, 2000);
                     }
                 },
-                '정산 완료',
-                '정산 완료 확인',
-                '💾'
+                isEditMode ? '수정 완료' : '정산 완료',
+                isEditMode ? '정산 수정 완료 확인' : '정산 완료 확인',
+                isEditMode ? '✅' : '💾'
             );
         });
     }
@@ -7881,6 +7871,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.56', date: '2026.11.25', items: ['정산 수정 모드에서 상단 수정 완료 버튼을 제거하고 우측 하단 버튼을 [수정 완료]로 전환하여 클릭 시 수정 저장과 함께 수정된 정산 메일이 재발송되도록 통합', '[현재 참석자] 탭 우측 창 상단에 정회원 불러오기·종전 참석자 불러오기·정회원 관리 메뉴를 배치하고, 아래 줄에 현재 참석자 명단(좌)과 전체 비우기(우)를 정렬 배치'] },
         { ver: '1.7.55', date: '2026.11.25', items: ['정산 이력 관리자·사용자 페이지 불일치 및 삭제된 이력(id 누락 좀비 노드) 중복 표시 버그 수정 (extractValidGlobalHistory 공통 정제 및 All balls 잔여 예산 정상화)', '동일 클럽·동일 날짜 선택 시 관리자 DB(globalHistory) 실시간 조회 및 인앱 팝업 모달(중복 정산 날짜 알림) 즉시 표시로 강화', '클럽별 정회원 인원 관리 모달 및 [현재 참석자] 탭 [⭐ 정회원 불러오기] · [📋 종전 참석자 불러오기] · [⚙️ 정회원 관리] 버튼 추가'] },
         { ver: '1.7.54', date: '2026.11.25', items: ['신입사원 명부 등록 후 사라지는 문제 원인 해결: 전사원 명부 전용 모듈(js/directory.js) 분리 및 Firebase 공유 명부(settlements/000000/directory) 전체 덮어쓰기 제거(사원 개별 키 단위 원자적 업데이트 + 정산 확정/수정/삭제 시 원격 최신 스냅샷 병합 후 count/counts 부분 패치)'] },
         { ver: '1.7.53', date: '2026.11.25', items: ['관리자 클럽 관리 테이블 헤더·모달·로그 문구의 "시설 전액"을 "시설 장비"로 변경'] },
