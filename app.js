@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.60';
+const APP_VERSION      = '1.7.61';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -7931,6 +7931,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.61', date: '2026.11.25', items: ['공통 알림·확인 모달(#confirm-modal-overlay) z-index를 20000으로 상향해 정회원 관리 등 다른 모달 위에서도 항상 맨 앞에 표시되도록 수정'] },
         { ver: '1.7.60', date: '2026.11.25', items: ['정회원 관리 모달 대상 클럽을 변경 불가한 고정 클럽명 표시로 변경하고 일괄 추가 버튼 2개(+ 현재/종전 참석자에서 추가) 제거', '정회원 관리 이름 검색 시 동명이인 최근 참석자 표시가 어느 클럽에서 열어도 누락되지 않도록 전체 이력 기준 보조 표시 및 자동 로드 보강'] },
         { ver: '1.7.59', date: '2026.11.25', items: ['정산 보고서 메일 발송 시 본문 글꼴을 "맑은 고딕", 글자 크기를 9pt HTML 서식으로 전송하도록 개선 (앱 및 Google Apps Script 동시 반영)'] },
         { ver: '1.7.58', date: '2026.11.25', items: ['삭제·비우기·완료·안내 등 모든 상단 브라우저 팝업(alert/confirm)을 화면 정가운데 인앱 커스텀 모달로 전면 통일', '관리자 클럽 관리의 정회원 버튼 문구에서 인원수 표기를 제거하고 "정회원"으로 간소화'] },
