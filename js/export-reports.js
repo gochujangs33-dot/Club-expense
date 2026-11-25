@@ -1661,9 +1661,10 @@ window.__installExportReports = function (B) {
                     ]);
                     const historyData = snapshot.val() || {};
                     const cachedDeletedIds = deletedSnap.val() || {};
-                    historyList = Object.values(historyData)
-                        .filter(e => e && !cachedDeletedIds[String(e.id)])
-                        .sort(compareHistoryEntriesNewestFirst);
+                    historyList = (typeof window.extractValidGlobalHistory === 'function'
+                        ? window.extractValidGlobalHistory(historyData, cachedDeletedIds, firebaseDb)
+                        : Object.values(historyData).filter(e => e && !cachedDeletedIds[String(e.id)])
+                    ).sort(compareHistoryEntriesNewestFirst);
                     B.lastHistoryList = historyList;
                 } catch (e) {
                     console.error('globalHistory 로드 실패:', e);
@@ -1776,9 +1777,10 @@ window.__installExportReports = function (B) {
                     ]);
                     const historyData = snapshot.val() || {};
                     const cachedDeletedIds = deletedSnap.val() || {};
-                    historyList = Object.values(historyData)
-                        .filter(e => e && !cachedDeletedIds[String(e.id)])
-                        .sort(compareHistoryEntriesNewestFirst);
+                    historyList = (typeof window.extractValidGlobalHistory === 'function'
+                        ? window.extractValidGlobalHistory(historyData, cachedDeletedIds, firebaseDb)
+                        : Object.values(historyData).filter(e => e && !cachedDeletedIds[String(e.id)])
+                    ).sort(compareHistoryEntriesNewestFirst);
                     B.lastHistoryList = historyList;
                 }
             }
@@ -2010,9 +2012,10 @@ window.__installExportReports = function (B) {
                 ]);
                 const historyData = snapshot.val() || {};
                 const delIds = deletedSnap.val() || {};
-                historyList = Object.values(historyData)
-                    .filter(e => e && !delIds[String(e.id)])
-                    .sort(compareHistoryEntriesNewestFirst);
+                historyList = (typeof window.extractValidGlobalHistory === 'function'
+                    ? window.extractValidGlobalHistory(historyData, delIds, firebaseDb)
+                    : Object.values(historyData).filter(e => e && !delIds[String(e.id)])
+                ).sort(compareHistoryEntriesNewestFirst);
                 B.lastHistoryList = historyList;
             } catch (e) {
                 console.error('중간 결산 이력 로드 실패:', e);

@@ -558,8 +558,9 @@ window.__installAdminClubs = function (B) {
                             style="width:100%; padding:0.28rem 0.35rem; font-size:0.74rem; border-radius:5px; cursor:pointer; white-space:nowrap;">${facilityFullApproved ? '승인' : '미승인'}</button>
                     </div>
                     <div class="expense-row-right club-cell-actions">
-                        <button class="btn-edit-club btn-secondary" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.5rem; font-size:0.78rem;">${t('btn.edit')}</button>
-                        <button class="btn-delete-club btn-text-danger" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.5rem; font-size:0.78rem;">${t('btn.delete')}</button>
+                        <button class="btn-manage-club-regular btn-secondary" data-id="${AppState.escapeHtml(clubId)}" title="이 클럽의 정회원 명단을 등록·관리합니다" style="padding:0.28rem 0.42rem; font-size:0.72rem; white-space:nowrap;">정회원(${Array.isArray(club.regularMembers) ? club.regularMembers.length : 0})</button>
+                        <button class="btn-edit-club btn-secondary" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.45rem; font-size:0.76rem; white-space:nowrap;">${t('btn.edit')}</button>
+                        <button class="btn-delete-club btn-text-danger" data-id="${AppState.escapeHtml(clubId)}" style="padding:0.3rem 0.45rem; font-size:0.76rem; white-space:nowrap;">${t('btn.delete')}</button>
                     </div>
                 `;
                 rowsFragment.appendChild(row);
@@ -567,6 +568,14 @@ window.__installAdminClubs = function (B) {
 
             listContainer.replaceChildren(rowsFragment);
 
+            clubListContainer.querySelectorAll('.btn-manage-club-regular').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const clubId = btn.getAttribute('data-id');
+                    if (clubId && typeof window.openClubRegularMembersModal === 'function') {
+                        window.openClubRegularMembersModal(clubId);
+                    }
+                });
+            });
             clubListContainer.querySelectorAll('.btn-edit-club').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const clubId = btn.getAttribute('data-id');

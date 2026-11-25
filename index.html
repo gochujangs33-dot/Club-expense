@@ -784,10 +784,19 @@
                                             id="attendee-list-count">0</span><span data-i18n="unit.person">명</span>)
                                     </h2>
                                 </div>
-                                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end;">
+                                <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; justify-content:flex-end;">
+                                    <button type="button" id="load-regular-members-btn" class="btn-secondary"
+                                        style="padding:0.28rem 0.65rem; font-size:0.78rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; background:rgba(59,130,246,0.14); border-color:rgba(59,130,246,0.4); color:#60a5fa;">
+                                        ⭐ 정회원 불러오기
+                                    </button>
                                     <button type="button" id="load-prev-attendees-btn" class="btn-secondary"
                                         style="padding:0.28rem 0.65rem; font-size:0.78rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem;">
                                         📋 종전 참석자 불러오기
+                                    </button>
+                                    <button type="button" id="manage-regular-members-btn" class="btn-secondary"
+                                        style="padding:0.28rem 0.55rem; font-size:0.76rem; font-weight:600; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.2rem;"
+                                        title="클럽별 정회원 명단 등록 및 관리">
+                                        ⚙️ 정회원 관리
                                     </button>
                                     <button id="clear-attendees-btn" class="btn-text-danger"
                                         data-i18n="btn.clear_attendees">전체 비우기</button>
@@ -2095,6 +2104,42 @@
             <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.9rem;">
                 <button type="button" id="prev-attendees-cancel-btn" class="btn-secondary" style="padding:0.5rem 1rem; font-size:0.86rem; border-radius:8px;">취소</button>
                 <button type="button" id="prev-attendees-apply-btn" class="btn-primary" style="padding:0.5rem 1.2rem; font-size:0.86rem; font-weight:700; border-radius:8px; width:auto;">선택한 인원 불러오기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 클럽별 정회원 관리 모달 -->
+    <div id="club-regular-members-modal" class="modal hidden" style="z-index:10355;">
+        <div class="modal-content-card" style="max-width:540px; width:calc(100% - 2rem); max-height:88vh; display:flex; flex-direction:column; padding:1.25rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                <div>
+                    <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">⭐ 클럽별 정회원 인원 관리</h3>
+                    <p style="margin:0.15rem 0 0; font-size:0.76rem; color:var(--text-secondary);">클럽에 정회원을 등록해 두면 [정회원 불러오기] 버튼으로 한 번에 참석자에 추가됩니다.</p>
+                </div>
+                <button type="button" id="close-regular-members-modal-btn" class="close-btn" style="position:static; font-size:1.3rem; line-height:1;">&times;</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.7rem; flex-wrap:wrap;">
+                <label for="regular-members-club-select" style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); white-space:nowrap;">대상 클럽</label>
+                <select id="regular-members-club-select" style="flex:1; min-width:160px; padding:0.45rem 0.65rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.86rem; font-weight:600;"></select>
+                <button type="button" id="import-current-to-regular-btn" class="btn-secondary" style="padding:0.38rem 0.6rem; font-size:0.75rem; border-radius:7px; white-space:nowrap;" title="현재 참석자 명단에 있는 인원을 정회원으로 일괄 추가">+ 현재 참석자에서 추가</button>
+                <button type="button" id="import-history-to-regular-btn" class="btn-secondary" style="padding:0.38rem 0.6rem; font-size:0.75rem; border-radius:7px; white-space:nowrap;" title="이 클럽의 최근 정산 참석자를 정회원으로 일괄 추가">+ 종전 참석자에서 추가</button>
+            </div>
+            <div style="display:flex; gap:0.45rem; margin-bottom:0.65rem; position:relative; align-items:stretch;">
+                <div style="flex:1.2; position:relative;">
+                    <input type="text" id="regular-member-name-input" placeholder="이름 검색/입력 (전사원 명부 연동)" autocomplete="off" style="width:100%; padding:0.46rem 0.65rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.84rem;">
+                    <div id="regular-member-name-dropdown" class="hidden attendee-dropdown" style="z-index:10370;"></div>
+                </div>
+                <input type="text" id="regular-member-id-input" placeholder="사번" autocomplete="off" style="width:105px; padding:0.46rem 0.6rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.84rem;">
+                <button type="button" id="add-regular-member-btn" class="btn-primary" style="width:auto; padding:0.46rem 0.85rem; font-size:0.82rem; font-weight:700; border-radius:8px; white-space:nowrap;">+ 정회원 추가</button>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem; font-size:0.8rem;">
+                <span style="color:var(--text-secondary); font-weight:600;">등록된 정회원 명단 (<strong id="regular-members-count-label" style="color:var(--color-primary);">0</strong>명)</span>
+                <button type="button" id="clear-regular-members-btn" class="btn-text-danger" style="font-size:0.76rem; padding:0.15rem 0.4rem;">전체 삭제</button>
+            </div>
+            <div id="regular-members-list-container" class="scroll-y" style="flex:1; min-height:160px; max-height:300px; border:1px solid var(--card-border); border-radius:10px; padding:0.5rem; display:flex; flex-direction:column; gap:0.35rem;"></div>
+            <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.85rem;">
+                <button type="button" id="regular-members-load-now-btn" class="btn-primary" style="padding:0.48rem 1rem; font-size:0.84rem; font-weight:700; border-radius:8px; width:auto;">⭐ 현재 참석자로 바로 불러오기</button>
+                <button type="button" id="done-regular-members-modal-btn" class="btn-secondary" style="padding:0.48rem 1rem; font-size:0.84rem; border-radius:8px;">닫기</button>
             </div>
         </div>
     </div>

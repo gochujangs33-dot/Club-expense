@@ -1386,7 +1386,7 @@ html[data-app-theme="light"] .dir-club-count-text {
 
 .club-list-header {
     display: grid;
-    grid-template-columns: minmax(175px, 1.85fr) minmax(95px, 1fr) minmax(130px, 1.15fr) minmax(95px, 1fr) 76px 74px 74px 100px;
+    grid-template-columns: minmax(165px, 1.75fr) minmax(90px, 1fr) minmax(125px, 1.1fr) minmax(90px, 1fr) 74px 70px 70px 158px;
     align-items: center;
     gap: 0.5rem;
     padding: 0.45rem 0.75rem;
@@ -1640,7 +1640,7 @@ html[data-app-theme="light"] .club-excel-check-item:hover {
 
 #club-list-container .expense-row.club-item-row {
     display: grid !important;
-    grid-template-columns: minmax(175px, 1.85fr) minmax(95px, 1fr) minmax(130px, 1.15fr) minmax(95px, 1fr) 76px 74px 74px 100px !important;
+    grid-template-columns: minmax(165px, 1.75fr) minmax(90px, 1fr) minmax(125px, 1.1fr) minmax(90px, 1fr) 74px 70px 70px 158px !important;
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 0.75rem;
