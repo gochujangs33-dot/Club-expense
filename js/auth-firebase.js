@@ -270,7 +270,12 @@ window.__installAuthFirebaseState = function (targetAppState) {
             this.firebaseDb.ref('globalSettings/rules').on('value', snapshot => {
                 const rules = snapshot.val();
                 if (rules && typeof rules === 'object') {
-                    this.rules = { ...this.rules, ...rules };
+                    this._baseRules = { ...DefaultRules, ...rules };
+                    if (typeof window._onYearlyRulesUpdate === 'function') {
+                        window._onYearlyRulesUpdate();
+                    } else {
+                        this.rules = { ...this.rules, ...rules };
+                    }
                     if (typeof window._onGlobalSettingsUpdate === 'function') window._onGlobalSettingsUpdate();
                 }
             }, err => console.error('globalSettings 로딩 실패:', err));

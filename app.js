@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.69';
+const APP_VERSION      = '1.7.70';
 const APP_VERSION_DATE = '2026.11.26';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -944,40 +944,7 @@ const AppState = {
 
     // loadClubRegistry / saveClubRegistry / loadGlobalSettings / saveEmailWebhookUrl / saveCustomNoteOptions 는 js/auth-firebase.js 로 분리됨 (v1.7.69)
 
-    getRulesForYear(year, historyList = null) {
-        const yKey = String(year || new Date().getFullYear());
-        const saved = this.yearlyRules && this.yearlyRules[yKey];
-        if (saved && typeof saved === 'object') {
-            return { ...DefaultRules, ...saved };
-        }
-        if (Array.isArray(historyList)) {
-            const entryWithRules = historyList.find(e => e && String(getHistoryEntryYear(e)) === yKey && e.rules);
-            if (entryWithRules) return { ...DefaultRules, ...entryWithRules.rules };
-        }
-        return { ...DefaultRules, ...(this.rules || {}) };
-    },
-
-    saveGlobalRules(auditEvent = null, targetYear = null) {
-        if (!this.firebaseDb) return Promise.resolve(false);
-        const currentYear = new Date().getFullYear();
-        const saveYear = Number(targetYear) || currentYear;
-        const rulesSnapshot = targetYear && this.yearlyRules && this.yearlyRules[String(saveYear)]
-            ? { ...this.yearlyRules[String(saveYear)] }
-            : { ...this.rules };
-        const updates = {
-            [`globalSettings/yearlyRules/${saveYear}`]: rulesSnapshot
-        };
-        if (saveYear === currentYear) {
-            updates['globalSettings/rules'] = rulesSnapshot;
-        }
-        if (auditEvent) this.appendAuditUpdate(updates, auditEvent);
-        return this.firebaseDb.ref().update(updates)
-            .then(() => true)
-            .catch(err => {
-                console.error('globalSettings 저장 실패:', err);
-                return false;
-            });
-    },
+    // 연도별 정산 구간·비율 설정(getRulesForYear / saveGlobalRules / updateRules / resetRules)은 js/rules-manager.js 로 분리됨 (v1.7.70)
 
     saveClubTotalBudget(value) {
         const previousValue = this.clubTotalBudget || 0;
@@ -2049,80 +2016,7 @@ const AppState = {
         this.render();
     },
 
-    updateRules(newRules, targetYear = null) {
-        const currentYear = new Date().getFullYear();
-        const saveYear = Number(targetYear) || currentYear;
-        const previousRules = this.getRulesForYear(saveYear);
-        const mergedRules = { ...DefaultRules, ...newRules };
-        this.yearlyRules = { ...(this.yearlyRules || {}), [String(saveYear)]: mergedRules };
-        if (saveYear === currentYear) {
-            this.rules = { ...mergedRules };
-            this.save();
-        }
-        this.saveGlobalRules({
-            action: 'UPDATE',
-            targetType: '정산 구간 변경',
-            targetLabel: `${saveYear}년 정산 기준`,
-            summary: `${saveYear}년 정산 구간·비율·상품비·시설비 한도 변경`,
-            details: {
-                적용연도: `${saveYear}년`,
-                이전가한도: previousRules.limit1,
-                변경가한도: mergedRules.limit1,
-                이전나한도: previousRules.limit2,
-                변경나한도: mergedRules.limit2,
-                이전나비율: previousRules.rate2,
-                변경나비율: mergedRules.rate2,
-                이전다한도: previousRules.limit3,
-                변경다한도: mergedRules.limit3,
-                이전다비율: previousRules.rate3,
-                변경다비율: mergedRules.rate3,
-                이전라공제액: previousRules.deduction4,
-                변경라공제액: mergedRules.deduction4,
-                이전상품비한도: previousRules.prizeLimit,
-                변경상품비한도: mergedRules.prizeLimit,
-                이전시설비한도: previousRules.facilityLimit,
-                변경시설비한도: mergedRules.facilityLimit
-            }
-        }, saveYear);
-        this.render();
-    },
-
-    resetRules(targetYear = null) {
-        const currentYear = new Date().getFullYear();
-        const saveYear = Number(targetYear) || currentYear;
-        const previousRules = this.getRulesForYear(saveYear);
-        this.yearlyRules = { ...(this.yearlyRules || {}), [String(saveYear)]: { ...DefaultRules } };
-        if (saveYear === currentYear) {
-            this.rules = { ...DefaultRules };
-            this.save();
-        }
-        this.saveGlobalRules({
-            action: 'UPDATE',
-            targetType: '정산 기준',
-            targetLabel: `${saveYear}년 정산 기준`,
-            summary: `${saveYear}년 정산 구간·비율·상품비·시설비 한도를 기본값으로 복원`,
-            details: {
-                적용연도: `${saveYear}년`,
-                이전가한도: previousRules.limit1,
-                기본가한도: DefaultRules.limit1,
-                이전나한도: previousRules.limit2,
-                기본나한도: DefaultRules.limit2,
-                이전나비율: previousRules.rate2,
-                기본나비율: DefaultRules.rate2,
-                이전다한도: previousRules.limit3,
-                기본다한도: DefaultRules.limit3,
-                이전다비율: previousRules.rate3,
-                기본다비율: DefaultRules.rate3,
-                이전라공제액: previousRules.deduction4,
-                기본라공제액: DefaultRules.deduction4,
-                이전상품비한도: previousRules.prizeLimit,
-                기본상품비한도: DefaultRules.prizeLimit,
-                이전시설비한도: previousRules.facilityLimit,
-                기본시설비한도: DefaultRules.facilityLimit
-            }
-        }, saveYear);
-        this.render();
-    },
+    // updateRules / resetRules 는 js/rules-manager.js 로 분리됨 (v1.7.70)
 
     clearClubData(previousClub = null) {
         const deletedExpenseCount = this.expenseItems.length;
@@ -3106,6 +3000,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Firebase 인증·권한 리스너·공유 로더 장착 (js/auth-firebase.js, v1.7.69)
     if (typeof window.__installAuthFirebaseState === 'function') {
         window.__installAuthFirebaseState(AppState);
+    }
+    // 연도별 정산 구간·비율 설정 상태 메서드 장착 (js/rules-manager.js, v1.7.70)
+    if (typeof window.__installRulesState === 'function') {
+        window.__installRulesState(AppState);
     }
 
     // 언어 설정 초기 적용
@@ -4183,80 +4081,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('settings-panel').classList.add('hidden');
     });
 
-    // Admin: 정산 구간/비율 설정 — 상단 전역 조회 연도(_selectedQueryYear)와 1:1 연동
-    const adminRulesYearHint = document.getElementById('admin-rules-year-hint');
-    const getSelectedAdminRulesYear = () => {
-        const curY = new Date().getFullYear();
-        return (_selectedQueryYear && _selectedQueryYear !== 'ALL')
-            ? (Number(_selectedQueryYear) || curY)
-            : curY;
-    };
-    const setAdminRulesFormValues = (rules) => {
-        const r = { ...DefaultRules, ...(rules || {}) };
-        document.getElementById('admin-setting-limit1').value = formatAmount(r.limit1);
-        document.getElementById('admin-setting-limit2').value = formatAmount(r.limit2);
-        document.getElementById('admin-setting-rate2').value = Math.round((r.rate2 ?? 0.2) * 100);
-        document.getElementById('admin-setting-limit3').value = formatAmount(r.limit3);
-        document.getElementById('admin-setting-rate3').value = Math.round((r.rate3 ?? 0.4) * 100);
-        document.getElementById('admin-setting-deduction4').value = formatAmount(r.deduction4);
-        const prizeLimitEl = document.getElementById('admin-setting-prize-limit');
-        if (prizeLimitEl) prizeLimitEl.value = formatAmount(r.prizeLimit || 500000);
-        const facilityLimitEl = document.getElementById('admin-setting-facility-limit');
-        if (facilityLimitEl) facilityLimitEl.value = formatAmount(r.facilityLimit || 85000);
-        if (adminRulesYearHint) {
-            const selY = getSelectedAdminRulesYear();
-            const curY = new Date().getFullYear();
-            adminRulesYearHint.textContent = selY === curY
-                ? `📌 상단 조회 연도 [${selY}년] 적용 중 — 저장 시 ${selY}년 정산 계산 및 ${selY}년 결산 PPT에 반영됩니다.`
-                : `📌 상단 조회 연도 [${selY}년] 전용 기준 — ${selY}년 정산 및 ${selY}년 결산 PPT에 별도 저장·적용됩니다.`;
-        }
-    };
-    const syncActiveRulesForQueryYear = () => {
-        const targetYear = getSelectedAdminRulesYear();
-        const yearRules = AppState.getRulesForYear(targetYear);
-        AppState.rules = { ...yearRules };
-        setAdminRulesFormValues(yearRules);
-    };
-    syncActiveRulesForQueryYear();
-    window._onYearlyRulesUpdate = syncActiveRulesForQueryYear;
-
-    // Admin: 정산 비율 저장 (연도별 관리)
-    const adminSaveRulesBtn = document.getElementById('admin-save-rules-btn');
-    if (adminSaveRulesBtn) {
-        adminSaveRulesBtn.addEventListener('click', () => {
-            const targetYear = getSelectedAdminRulesYear();
-            const limit1 = parseAmount(document.getElementById('admin-setting-limit1').value);
-            const limit2 = parseAmount(document.getElementById('admin-setting-limit2').value);
-            const rate2 = (parseInt(document.getElementById('admin-setting-rate2').value, 10) || 0) / 100;
-            const limit3 = parseAmount(document.getElementById('admin-setting-limit3').value);
-            const rate3 = (parseInt(document.getElementById('admin-setting-rate3').value, 10) || 0) / 100;
-            const deduction4 = parseAmount(document.getElementById('admin-setting-deduction4').value);
-            const prizeLimitEl = document.getElementById('admin-setting-prize-limit');
-            const prizeLimit = prizeLimitEl ? (parseAmount(prizeLimitEl.value) || 500000) : 500000;
-            const facilityLimitEl = document.getElementById('admin-setting-facility-limit');
-            const facilityLimit = facilityLimitEl ? (parseAmount(facilityLimitEl.value) || 85000) : 85000;
-            AppState.updateRules({ limit1, limit2, rate2, limit3, rate3, deduction4, prizeLimit, facilityLimit }, targetYear);
-            alert(`${targetYear}년 정산 구간 및 한도 설정이 저장되었습니다.`);
-        });
-    }
-
-    // Admin: 정산 비율 기본값 복원
-    const adminResetRulesBtn = document.getElementById('admin-reset-rules-btn');
-    if (adminResetRulesBtn) {
-        adminResetRulesBtn.addEventListener('click', () => {
-            const targetYear = getSelectedAdminRulesYear();
-            showConfirmModal(
-                `${targetYear}년 정산 구간 및 한도 설정을 기본값으로 복원하시겠습니까?`,
-                () => {
-                    AppState.resetRules(targetYear);
-                    setAdminRulesFormValues(AppState.getRulesForYear(targetYear));
-                },
-                '복원',
-                '기본값 복원 확인',
-                '🔄'
-            );
-        });
-    }
+    // Admin: 연도별 정산 구간·비율 설정 UI는 js/rules-manager.js 로 분리됨 (v1.7.70)
+    const {
+        setAdminRulesFormValues
+    } = window.__installRulesUI({
+        getSelectedQueryYear: () => _selectedQueryYear
+    });
 
     // Admin: Google Apps Script 첨부 메일 웹훅 설정
     const emailWebhookInput = document.getElementById('admin-email-webhook-input');
@@ -5498,6 +5328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.70', date: '2026.11.26', items: ['연도별 정산 구간·비율·한도 설정을 전용 모듈(js/rules-manager.js)로 분리하고, 신규 연도 설정 미입력 시 직전 연도 설정을 자동 승계하도록 보완 (조회 연도 전환 시 이전 연도 값 즉시 표시)'] },
         { ver: '1.7.69', date: '2026.11.26', items: ['PIN 로그인·권한 전환·오프라인 전환 및 Firebase 부트스트랩(loadFromFirebase·loadClubRegistry·loadGlobalSettings)을 전용 모듈(js/auth-firebase.js)로 분리'] },
         { ver: '1.7.68', date: '2026.11.26', items: ['공통 모달(showConfirmModal·showAlertModal·showEditModal·showPrizeModal)·정산 규정 안내·전역 툴팁·이미지 압축 유틸을 전용 모듈(js/ui-modals.js)로 분리'] },
         { ver: '1.7.67', date: '2026.11.26', items: ['관리자 계정·권한·작업 로그·요청사항(피드백) 관리 UI를 전용 모듈(js/admin-users-audit.js)로 분리'] },

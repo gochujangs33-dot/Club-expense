@@ -178,8 +178,8 @@
 
 ---
 
-- **부분 모듈 구조(v1.7.48~69)**: `index.html`이 `js/calc-locked.js` → `js/settlement-history.js` → `js/ui-modals.js` → `app.js` → `js/directory.js` → `js/regular-members.js` → `js/email-report.js` → `js/charts.js` →
-  `js/export-reports.js` → `js/admin-clubs.js` → `js/admin-dashboard.js` → `js/admin-users-audit.js` → `js/auth-firebase.js` 순서(`defer`)로 로드한다.
+- **부분 모듈 구조(v1.7.48~70)**: `index.html`이 `js/calc-locked.js` → `js/settlement-history.js` → `js/ui-modals.js` → `app.js` → `js/directory.js` → `js/regular-members.js` → `js/email-report.js` → `js/charts.js` →
+  `js/export-reports.js` → `js/admin-clubs.js` → `js/admin-dashboard.js` → `js/admin-users-audit.js` → `js/auth-firebase.js` → `js/rules-manager.js` 순서(`defer`)로 로드한다.
   - `js/calc-locked.js`: 정산 계산·검증(⛔ CALCULATION_LOCKED) / `js/settlement-history.js`: 정산 이력 유틸(`extractValidGlobalHistory`, `MediaStoragePolicy`) 및 수정·확정·중복체크(`window.__installSettlementHistory`) / `js/directory.js`: 전사원 명부(`settlements/000000/directory` 개별 키 단위 원자적 sync·병합) / `js/regular-members.js`: 클럽별 연도별 정회원 관리(`yearlyClubRegistry/{연도}/{clubId}/regularMembers`) / `js/email-report.js`: 이메일 보고서 생성·발송 및 파일 공유/다운로드(`window.__installEmailReport`) / `js/charts.js`: 대시보드 차트(`window.__ChartBridge`)
   - `js/export-reports.js`: `AppState.generateExcelFile`·`setCellValue`·`embedImagesIntoXlsx`, 연간 결산 PPT, 중간 결산 엑셀
     (`window.__installExportReports(bridge)`를 app.js 원래 위치에서 호출)
@@ -188,6 +188,7 @@
   - `js/admin-users-audit.js`: 감사 로그 조회·필터링, 가입 회원 권한/정보 수정·삭제, 요청사항 렌더링 (`window.__installAdminUsersAudit`)
   - `js/ui-modals.js`: 공통 모달(`showConfirmModal`, `showAlertModal`, `showEditModal`, `showPrizeModal`), 규정 안내 모달, 전역 툴팁, 이미지 압축 유틸리티
   - `js/auth-firebase.js`: PIN 로그인·권한 전환(`setAdminMode`, `syncHeaderAdminButton`), 오프라인 전환, Firebase 부트스트랩(`loadFromFirebase`, `loadClubRegistry`, `loadGlobalSettings`)
+  - `js/rules-manager.js`: 연도별 정산 구간·비율·한도 설정(`getRulesForYear`, `saveGlobalRules`, `updateRules`, `resetRules`, 직전 연도 자동 승계)
   - 새 JS 파일 추가 시 `index.html` 스크립트 태그 + `sw.js` `ASSETS` 둘 다 등록할 것.
 
 ## 6. 참고 문서 목록
@@ -198,7 +199,7 @@
 - [`CHANGES.md`](CHANGES.md) — 버전별 변경 이력
 - [`CODE_REVIEW.md`](CODE_REVIEW.md) — **매 작업 시작 전 필독**: v1.6.201 검증 결과, 재수정 금지 항목 상세, 승인된 백로그(사용자 명시 요청 시에만 착수)
 
-현재 버전: **v1.7.69** (`sw.js` `APP_VERSION`)
+현재 버전: **v1.7.70** (`sw.js` `APP_VERSION`)
 
 ---
 
