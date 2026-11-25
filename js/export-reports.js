@@ -2033,7 +2033,7 @@ window.__installExportReports = function (B) {
             { key: 'support', label: '지원금', align: 'right', type: 'currency' },
             { key: 'remaining', label: '잔여금액', align: 'right', type: 'currency' },
             { key: 'eventCount', label: '행사수', align: 'right', type: 'number' },
-            { key: 'regularMembers', label: '정회원', align: 'right', type: 'number' },
+            { key: 'regularMembers', label: '총 참석자', align: 'right', type: 'number' },
             { key: 'actualMembers', label: '실참석', align: 'right', type: 'number' },
             { key: 'nonMembers', label: '비회원', align: 'right', type: 'number' },
             { key: 'budgetRatio', label: '예산 비율', align: 'right', type: 'percent' },
@@ -2441,7 +2441,7 @@ window.__installExportReports = function (B) {
             return;
         }
         const { year, titleText, rows, totals, labTotalBudget, labRemainingBudget } = currentInterimSummaryData;
-        const headers = ['클럽명', '예산', '지원금', '잔여금액', '행사수', '정회원', '실참석', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
+        const headers = ['클럽명', '예산', '지원금', '잔여금액', '행사수', '총 참석자', '실참석', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
         const aoa = [
             [titleText || `${year}년 진행 내역`],
             [],

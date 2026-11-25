@@ -331,10 +331,6 @@
                 style="background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.15)); border:1px solid rgba(245,158,11,0.5); border-radius:0.5rem; padding:0.6rem 1rem; margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
                 <span style="font-size:0.88rem; color:#fbbf24;">✏️ <strong data-i18n="label.edit_mode">수정 모드</strong> —
                     <span id="edit-mode-date"></span> <span data-i18n="label.editing_in_progress">정산 수정 중</span></span>
-                <div style="display:flex; gap:0.4rem; flex-shrink:0;">
-                    <button id="edit-mode-cancel-btn" data-i18n="btn.cancel"
-                        style="font-size:0.78rem; padding:0.25rem 0.7rem; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:0.3rem; cursor:pointer;">취소</button>
-                </div>
             </div>
             <div class="layout-grid">
                 <!-- Left Panel: Inputs -->
@@ -708,6 +704,8 @@
                             <div class="divider"></div>
                             <button id="send-email-btn" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">💾
                                 정산 완료</button>
+                            <button type="button" id="edit-mode-cancel-btn" class="btn-secondary hidden"
+                                style="width: 100%; margin-top: 0.45rem;">❌ 수정 취소</button>
                         </div>
                     </div>
 
@@ -1371,7 +1369,7 @@
                                             <span class="club-th-filter-btn" data-filter-icon="budget">▾</span>
                                         </div>
                                         <div class="club-th club-th-prize club-th-filterable" data-filter-col="prize" role="button" tabindex="0" aria-haspopup="dialog" title="클릭하여 상품비 정렬 및 필터 선택">
-                                            <span class="club-th-label">상품비(한도 50만원)</span>
+                                            <span class="club-th-label">상품비</span>
                                             <span class="club-th-filter-btn" data-filter-icon="prize">▾</span>
                                         </div>
                                         <div class="club-th club-th-remaining club-th-filterable" data-filter-col="remaining" role="button" tabindex="0" aria-haspopup="dialog" title="클릭하여 잔여 예산 정렬 및 필터 선택">

@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.56';
+const APP_VERSION      = '1.7.57';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -4065,12 +4065,14 @@ const AppState = {
                 if (_sdiEdit) _sdiEdit.value = entry.settlementDate;
             }
         }
-        // 수정 모드에서는 우측 하단 "정산 완료" 버튼을 "수정 완료"로 전환해 표시
+        // 수정 모드에서는 우측 하단 "정산 완료" 버튼을 "수정 완료"로 전환하고 아래에 "수정 취소" 버튼 표시
         const _sendEmailBtn = document.getElementById('send-email-btn');
         if (_sendEmailBtn) {
             _sendEmailBtn.classList.remove('hidden');
             _sendEmailBtn.innerHTML = `<span class="btn-icon">✅</span> 수정 완료`;
         }
+        const _editCancelBtn = document.getElementById('edit-mode-cancel-btn');
+        if (_editCancelBtn) _editCancelBtn.classList.remove('hidden');
         // 수정 모드 배너 표시
         const banner = document.getElementById('edit-mode-banner');
         const dateEl = document.getElementById('edit-mode-date');
@@ -4291,12 +4293,14 @@ const AppState = {
         this._editingOriginalPrize = 0;
         const banner = document.getElementById('edit-mode-banner');
         if (banner) banner.classList.add('hidden');
-        // 우측 하단 버튼 문구 원래("정산 완료")로 복원
+        // 우측 하단 버튼 문구 원래("정산 완료")로 복원 및 수정 취소 버튼 숨기기
         const sendBtn = document.getElementById('send-email-btn');
         if (sendBtn) {
             sendBtn.classList.remove('hidden');
             sendBtn.innerHTML = `<span class="btn-icon">💾</span> 정산 완료`;
         }
+        const editCancelBtn = document.getElementById('edit-mode-cancel-btn');
+        if (editCancelBtn) editCancelBtn.classList.add('hidden');
         // 날짜를 오늘로 초기화
         if (typeof window._onSettleDateReset === 'function') window._onSettleDateReset();
     },
@@ -6127,9 +6131,32 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        function getRecentClubAttendanceForTarget(employeeId, targetClubId, targetClubName) {
+            const id = String(employeeId || '').trim();
+            if (!id) return null;
+            const sources = [...(lastHistoryList || []), ...(AppState.clubHistory || []), ...(AppState.settlementHistory || [])];
+            let latest = null;
+            sources.forEach(entry => {
+                if (!entry || !historyMatchesClub(entry, targetClubId, targetClubName)) return;
+                const matched = (entry.attendees || []).some(a => a && a.employeeId != null && String(a.employeeId).trim() === id);
+                if (!matched) return;
+                const time = entry.settlementDate
+                    ? new Date(entry.settlementDate + 'T00:00:00').getTime()
+                    : (entry.date ? new Date(entry.date).getTime() : (entry.id || 0));
+                if (!latest || time > latest.time) {
+                    latest = {
+                        time,
+                        dateStr: entry.settlementDate || (entry.date ? new Date(entry.date).toISOString().slice(0, 10) : '')
+                    };
+                }
+            });
+            return latest;
+        }
+
         if (nameInput && dropdown) {
             nameInput.addEventListener('input', () => {
                 const q = nameInput.value.trim();
+                if (idInput) idInput.value = '';
                 if (!q) {
                     dropdown.classList.add('hidden');
                     return;
@@ -6139,17 +6166,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     dropdown.classList.add('hidden');
                     return;
                 }
-                dropdown.innerHTML = matches.map(m =>
-                    `<div class="attendee-dropdown-item" data-name="${AppState.escapeHtml(m.name)}" data-id="${AppState.escapeHtml(m.id)}">
+                const selClubId = clubSelect ? clubSelect.value : AppState.clubId;
+                const selClub = selClubId && AppState.clubRegistry ? AppState.clubRegistry[selClubId] : null;
+                const selClubName = selClub ? selClub.name : AppState.clubName;
+
+                dropdown.innerHTML = matches.map(m => {
+                    const isDupe = matches.filter(x => x.name === m.name).length > 1;
+                    const recent = isDupe ? getRecentClubAttendanceForTarget(m.id, selClubId, selClubName) : null;
+                    const recentStyle = recent ? 'background:rgba(52,211,153,0.12); border-left:3px solid rgb(52,211,153);' : '';
+                    const recentBadge = recent
+                        ? `<span style="font-size:0.7rem; color:#10b981; font-weight:700; margin-left:0.35rem;">✅ 최근 참석 (${AppState.escapeHtml(recent.dateStr)})</span>`
+                        : '';
+                    return `<div class="attendee-dropdown-item" data-name="${AppState.escapeHtml(m.name)}" data-id="${AppState.escapeHtml(m.id)}" style="${recentStyle} display:flex; align-items:center; justify-content:space-between; gap:0.4rem;">
                         <span><strong>${AppState.escapeHtml(m.name)}</strong> <small style="color:var(--text-secondary);">(${AppState.escapeHtml(m.id)})</small></span>
-                    </div>`
-                ).join('');
+                        ${recentBadge}
+                    </div>`;
+                }).join('');
                 dropdown.classList.remove('hidden');
                 dropdown.querySelectorAll('.attendee-dropdown-item').forEach(item => {
-                    item.addEventListener('click', () => {
+                    item.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
                         nameInput.value = item.getAttribute('data-name') || '';
                         if (idInput) idInput.value = item.getAttribute('data-id') || '';
                         dropdown.classList.add('hidden');
+                        nameInput.focus();
                     });
                 });
             });
@@ -6168,7 +6208,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (!empId && AppState.getAllDirectoryMatches) {
                 const exact = AppState.getAllDirectoryMatches(name).filter(m => m.name === name);
-                if (exact.length === 1) empId = exact[0].id;
+                if (exact.length === 1) {
+                    empId = exact[0].id;
+                } else if (exact.length > 1 && typeof window.showEmpIdPickerPopup === 'function') {
+                    window.showEmpIdPickerPopup(name, exact, async (picked) => {
+                        if (idInput) idInput.value = picked.id;
+                        await handleAddSingleRegularMember();
+                    });
+                    return;
+                }
             }
             if (!empId) {
                 alert('사번을 입력하거나 드롭다운에서 사원을 선택해 주세요.');
@@ -6187,6 +6235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             populateRegularClubSelect(clubId);
             renderRegularMembersList();
             if (typeof renderClubManagement === 'function') renderClubManagement();
+            if (nameInput) nameInput.focus();
         }
 
         if (addBtn) addBtn.addEventListener('click', handleAddSingleRegularMember);
@@ -7871,6 +7920,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.57', date: '2026.11.25', items: ['정회원 관리 모달 이름 검색 시 동명이인 최근 참석자(✅ 최근 참석) 강조 표시 및 선택 후 Enter로 바로 추가 지원', '정산 수정 모드에서 상단 취소 버튼을 제거하고 우측 하단 [수정 완료] 버튼 아래 [❌ 수정 취소] 버튼 배치', '관리자 클럽 관리 헤더 "상품비(한도 50만원)"를 "상품비"로 축약하고 열 폭을 최적화해 우측 삭제 버튼 잘림 해소', '중간 결산 팝업 및 엑셀 출력의 "정회원" 컬럼명을 "총 참석자"로 변경'] },
         { ver: '1.7.56', date: '2026.11.25', items: ['정산 수정 모드에서 상단 수정 완료 버튼을 제거하고 우측 하단 버튼을 [수정 완료]로 전환하여 클릭 시 수정 저장과 함께 수정된 정산 메일이 재발송되도록 통합', '[현재 참석자] 탭 우측 창 상단에 정회원 불러오기·종전 참석자 불러오기·정회원 관리 메뉴를 배치하고, 아래 줄에 현재 참석자 명단(좌)과 전체 비우기(우)를 정렬 배치'] },
         { ver: '1.7.55', date: '2026.11.25', items: ['정산 이력 관리자·사용자 페이지 불일치 및 삭제된 이력(id 누락 좀비 노드) 중복 표시 버그 수정 (extractValidGlobalHistory 공통 정제 및 All balls 잔여 예산 정상화)', '동일 클럽·동일 날짜 선택 시 관리자 DB(globalHistory) 실시간 조회 및 인앱 팝업 모달(중복 정산 날짜 알림) 즉시 표시로 강화', '클럽별 정회원 인원 관리 모달 및 [현재 참석자] 탭 [⭐ 정회원 불러오기] · [📋 종전 참석자 불러오기] · [⚙️ 정회원 관리] 버튼 추가'] },
         { ver: '1.7.54', date: '2026.11.25', items: ['신입사원 명부 등록 후 사라지는 문제 원인 해결: 전사원 명부 전용 모듈(js/directory.js) 분리 및 Firebase 공유 명부(settlements/000000/directory) 전체 덮어쓰기 제거(사원 개별 키 단위 원자적 업데이트 + 정산 확정/수정/삭제 시 원격 최신 스냅샷 병합 후 count/counts 부분 패치)'] },
