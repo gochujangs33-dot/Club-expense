@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.58';
+const APP_VERSION      = '1.7.59';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3655,6 +3655,12 @@ const AppState = {
         };
     },
 
+    // 메일 본문을 맑은 고딕 9pt HTML로 변환
+    buildEmailHtmlBody(body) {
+        const escaped = this.escapeHtml(String(body || '')).replace(/\r?\n/g, '<br>');
+        return `<div style="font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:9pt;line-height:1.55;color:#1e293b;">${escaped}</div>`;
+    },
+
     // 이메일 발송 실행 (1. Google Apps Script 엑셀+사진 첨부 자동 발송, 2. EmailJS 텍스트 자동 발송, 3. Web Share / mailto 폴백)
     async sendReportEmail(recipient, sender = 'Gochujangs33@gmail.com', subject, body) {
         const EMAILJS_SERVICE_ID  = 'service_yjm2gpq';
@@ -3686,6 +3692,7 @@ const AppState = {
                         to: recipient,
                         subject,
                         body,
+                        htmlBody: this.buildEmailHtmlBody(body),
                         senderName: '3M 클럽 비용 정산기',
                         attachments
                     })
@@ -7950,6 +7957,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.59', date: '2026.11.25', items: ['정산 보고서 메일 발송 시 본문 글꼴을 "맑은 고딕", 글자 크기를 9pt HTML 서식으로 전송하도록 개선 (앱 및 Google Apps Script 동시 반영)'] },
         { ver: '1.7.58', date: '2026.11.25', items: ['삭제·비우기·완료·안내 등 모든 상단 브라우저 팝업(alert/confirm)을 화면 정가운데 인앱 커스텀 모달로 전면 통일', '관리자 클럽 관리의 정회원 버튼 문구에서 인원수 표기를 제거하고 "정회원"으로 간소화'] },
         { ver: '1.7.57', date: '2026.11.25', items: ['정회원 관리 모달 이름 검색 시 동명이인 최근 참석자(✅ 최근 참석) 강조 표시 및 선택 후 Enter로 바로 추가 지원', '정산 수정 모드에서 상단 취소 버튼을 제거하고 우측 하단 [수정 완료] 버튼 아래 [❌ 수정 취소] 버튼 배치', '관리자 클럽 관리 헤더 "상품비(한도 50만원)"를 "상품비"로 축약하고 열 폭을 최적화해 우측 삭제 버튼 잘림 해소', '중간 결산 팝업 및 엑셀 출력의 "정회원" 컬럼명을 "총 참석자"로 변경'] },
         { ver: '1.7.56', date: '2026.11.25', items: ['정산 수정 모드에서 상단 수정 완료 버튼을 제거하고 우측 하단 버튼을 [수정 완료]로 전환하여 클릭 시 수정 저장과 함께 수정된 정산 메일이 재발송되도록 통합', '[현재 참석자] 탭 우측 창 상단에 정회원 불러오기·종전 참석자 불러오기·정회원 관리 메뉴를 배치하고, 아래 줄에 현재 참석자 명단(좌)과 전체 비우기(우)를 정렬 배치'] },

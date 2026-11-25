@@ -19,7 +19,17 @@ function doPost(e) {
     var to = String(data.to || '').trim();
     var subject = String(data.subject || '[클럽 비용 정산] 정산 보고서').trim();
     var body = String(data.body || '').trim();
+    var htmlBody = String(data.htmlBody || '').trim();
     var senderName = String(data.senderName || '3M 클럽 비용 정산기').trim();
+
+    if (!htmlBody && body) {
+      var escaped = body
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\r?\n/g, '<br>');
+      htmlBody = '<div style="font-family:\'맑은 고딕\',\'Malgun Gothic\',sans-serif;font-size:9pt;line-height:1.55;color:#1e293b;">' + escaped + '</div>';
+    }
 
     if (!to) {
       return ContentService
@@ -40,6 +50,7 @@ function doPost(e) {
 
     GmailApp.sendEmail(to, subject, body, {
       name: senderName,
+      htmlBody: htmlBody,
       attachments: blobs
     });
 
