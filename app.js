@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.71';
+const APP_VERSION      = '1.7.72';
 const APP_VERSION_DATE = '2026.11.26';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -5288,6 +5288,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.72', date: '2026.11.26', items: ['차트 탭 [최근 정산 알림] 표시 범위를 최신 5건에서 최근 2개월 전체로 확대하고 목록 스크롤(마우스 휠) 지원', '관리자 [클럽 관리] 상품비 금액에 마우스를 올리면 날짜별 상품비 입력 내역을 툴팁으로 즉시 표시'] },
         { ver: '1.7.71', date: '2026.11.26', items: ['전체 모듈 코드 정적 감사 및 정리: 미사용 구버전 함수(clearAll·updateAttendance·updateRemainingDisplay) 제거 및 클럽 미선택 시 구형 셀렉터(#club-select → #club-name-select) 포커스 이동 보완'] },
         { ver: '1.7.70', date: '2026.11.26', items: ['연도별 정산 구간·비율·한도 설정을 전용 모듈(js/rules-manager.js)로 분리하고, 신규 연도 설정 미입력 시 직전 연도 설정을 자동 승계하도록 보완 (조회 연도 전환 시 이전 연도 값 즉시 표시)'] },
         { ver: '1.7.69', date: '2026.11.26', items: ['PIN 로그인·권한 전환·오프라인 전환 및 Firebase 부트스트랩(loadFromFirebase·loadClubRegistry·loadGlobalSettings)을 전용 모듈(js/auth-firebase.js)로 분리'] },

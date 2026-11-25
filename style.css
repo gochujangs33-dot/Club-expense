@@ -1992,9 +1992,9 @@ html[data-app-theme="light"] .club-progress-subtext {
     border-radius: 8px;
     font-size: 0.72rem;
     line-height: 1.45;
-    white-space: normal;
+    white-space: pre-line;
     width: max-content;
-    max-width: 240px;
+    max-width: 300px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.12);
     opacity: 0;
@@ -3836,8 +3836,8 @@ html[data-app-theme="light"] .kpi-mini-gauge-track {
 .trend-total-card { border-color: var(--dashboard-border); background: var(--dashboard-panel-strong); }
 .trend-total-card span { color: var(--dashboard-subtext); }
 .recent-settlement-card .card-body { height: calc(285px + 1.5rem); }
-.recent-settlement-list { display: flex; height: 100%; flex-direction: column; gap: 0.46rem; overflow-y: auto; }
-.recent-settlement-item { display: grid; width: 100%; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0.55rem; align-items: center; padding: 0.58rem 0.62rem; border: 1px solid var(--dashboard-border); border-radius: 10px; background: var(--dashboard-panel-strong); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease; }
+.recent-settlement-list { display: flex; height: 100%; flex-direction: column; gap: 0.46rem; overflow-y: auto; padding-right: 0.2rem; }
+.recent-settlement-item { display: grid; width: 100%; flex-shrink: 0; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0.55rem; align-items: center; padding: 0.58rem 0.62rem; border: 1px solid var(--dashboard-border); border-radius: 10px; background: var(--dashboard-panel-strong); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease; }
 .recent-settlement-item:hover,
 .recent-settlement-item:focus-visible { border-color: color-mix(in srgb, var(--club-color, #8b5cf6) 58%, transparent); background: color-mix(in srgb, var(--club-color, #8b5cf6) 9%, var(--dashboard-panel-strong)); outline: none; }
 .recent-settlement-item:active { transform: scale(0.99); }
@@ -5136,8 +5136,8 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     .charts-kpi-foot { font-size: 0.75rem; }
     .charts-premium-grid { gap: 0.7rem; }
     .chart-card-glow .card-body { padding: 0.65rem; }
-    .recent-settlement-card .card-body { max-height: none; }
-    .recent-settlement-list { overflow-y: visible; }
+    .recent-settlement-card .card-body { max-height: 320px; }
+    .recent-settlement-list { overflow-y: auto; max-height: 300px; }
     .recent-settlement-item { grid-template-columns: 9px minmax(0, 1fr); }
     .recent-settlement-amount { grid-column: 2; }
     .admin-theme-control.compact { width: 100%; }

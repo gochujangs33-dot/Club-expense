@@ -1378,13 +1378,41 @@
     function renderRecentSettlements(historyList) {
         const container = document.getElementById('recent-settlement-list');
         if (!container) return;
-        const entries = (historyList || [])
-            .filter(entry => entry && (!(ChartBridge().getSelectedOverallClubs()) || (ChartBridge().getSelectedOverallClubs()).has(entry.clubName || '기본 클럽')))
+        const subtitleEl = document.getElementById('recent-settlement-subtitle');
+        const selectedClubs = ChartBridge().getSelectedOverallClubs();
+        const clubFiltered = (historyList || [])
+            .filter(entry => entry && (!selectedClubs || selectedClubs.has(entry.clubName || '기본 클럽')))
             .slice()
-            .sort(compareHistoryEntriesNewestFirst)
-            .slice(0, 5);
+            .sort(compareHistoryEntriesNewestFirst);
+
+        const parseEntryDateObj = entry => {
+            if (!entry || typeof entry !== 'object') return null;
+            if (typeof entry.settlementDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(entry.settlementDate)) {
+                const [y, m, d] = entry.settlementDate.slice(0, 10).split('-').map(Number);
+                return new Date(y, m - 1, d);
+            }
+            const raw = entry.date || entry.id;
+            const dt = raw ? new Date(Number(raw) || raw) : null;
+            return (dt && !Number.isNaN(dt.getTime())) ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null;
+        };
+
+        const now = new Date();
+        const isCurrentYearView = !_selectedQueryYear || _selectedQueryYear === String(now.getFullYear());
+        const refDate = isCurrentYearView
+            ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+            : (parseEntryDateObj(clubFiltered[0]) || new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+        const cutoffDate = new Date(refDate.getFullYear(), refDate.getMonth() - 2, refDate.getDate());
+
+        const entries = clubFiltered.filter(entry => {
+            const dt = parseEntryDateObj(entry);
+            return dt ? dt >= cutoffDate : false;
+        });
+
+        if (subtitleEl) {
+            subtitleEl.textContent = `최근 2개월 (${entries.length}건) · 참석 인원과 명단 확인`;
+        }
         if (entries.length === 0) {
-            container.innerHTML = '<div class="recent-settlement-empty">선택한 클럽의 정산 이력이 없습니다.</div>';
+            container.innerHTML = '<div class="recent-settlement-empty">최근 2개월 내 정산 이력이 없습니다.</div>';
             return;
         }
         const colorMap = getClubColorMap();

@@ -522,6 +522,32 @@ window.__installAdminClubs = function (B) {
                 const overLimitApproved = !!club.allowOverLimitSupport;
                 const facilityFullApproved = !!club.allowFacilityFullBudget;
                 const chartColor = clubColorMap[club.name] || resolveClubBaseColor(clubId, club);
+
+                // 해당 클럽의 상품비 입력 내역(날짜별 금액) 추출 — 마우스 오버 툴팁용
+                let prizeTooltipAttr = '';
+                let prizeExtraStyle = '';
+                if (displayPrizeUsed > 0) {
+                    const prizeHistoryLines = (B.lastHistoryList || [])
+                        .filter(entry => {
+                            if (!entry || !historyMatchesClub(entry, clubId, club.name)) return false;
+                            if (!isAllQueryYears && getHistoryEntryYear(entry) !== targetQueryYearNum) return false;
+                            return getHistoryPrizeCost(entry) > 0;
+                        })
+                        .slice()
+                        .sort(compareHistoryEntriesNewestFirst)
+                        .map(entry => {
+                            const dateStr = (typeof entry.settlementDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(entry.settlementDate))
+                                ? entry.settlementDate.slice(0, 10)
+                                : (entry.date ? String(entry.date).slice(0, 10) : '-');
+                            return `• ${dateStr}: ${SettlementCalculator.formatCurrency(getHistoryPrizeCost(entry))}`;
+                        });
+                    const prizeTooltipText = prizeHistoryLines.length > 0
+                        ? `📦 상품비 입력 내역 (${prizeHistoryLines.length}건)\n${prizeHistoryLines.join('\n')}`
+                        : '📦 상품비 누적액 (이력 내역 없음)';
+                    prizeTooltipAttr = `data-tooltip="${AppState.escapeHtml(prizeTooltipText)}" tabindex="0"`;
+                    prizeExtraStyle = ' cursor:help; text-decoration:underline dotted rgba(245,158,11,0.5); text-underline-offset:3px;';
+                }
+
                 const row = document.createElement('div');
                 row.className = 'expense-row club-item-row';
                 row.innerHTML = `
@@ -536,7 +562,7 @@ window.__installAdminClubs = function (B) {
                     <div class="club-amount-cell club-cell-budget">
                         ${SettlementCalculator.formatCurrency(budget)}
                     </div>
-                    <div class="club-amount-cell club-cell-prize" style="color:${displayPrizeUsed > 0 ? 'hsl(35,90%,42%)' : 'var(--text-muted)'};">
+                    <div class="club-amount-cell club-cell-prize" ${prizeTooltipAttr} style="color:${displayPrizeUsed > 0 ? 'hsl(35,90%,42%)' : 'var(--text-muted)'};${prizeExtraStyle}">
                         ${SettlementCalculator.formatCurrency(displayPrizeUsed)}
                     </div>
                     <div class="club-amount-cell club-cell-remaining" style="color:${remaining < 0 ? 'var(--warning-text, #ff6b6b)' : 'var(--color-secondary)'};">
