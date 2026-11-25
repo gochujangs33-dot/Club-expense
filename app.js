@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.61';
+const APP_VERSION      = '1.7.62';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6007,7 +6007,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const idInput = document.getElementById('regular-member-id-input');
         const addBtn = document.getElementById('add-regular-member-btn');
         const clearAllBtn = document.getElementById('clear-regular-members-btn');
-        const loadNowBtn = document.getElementById('regular-members-load-now-btn');
         const countLabel = document.getElementById('regular-members-count-label');
         const listContainer = document.getElementById('regular-members-list-container');
 
@@ -6301,15 +6300,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderRegularMembersList();
                     if (typeof renderClubManagement === 'function') renderClubManagement();
                 });
-            });
-        }
-
-        if (loadNowBtn) {
-            loadNowBtn.addEventListener('click', () => {
-                const clubId = getActiveRegularClubId() || AppState.clubId;
-                if (loadRegularMembersToAttendees(clubId)) {
-                    closeClubRegularMembersModal();
-                }
             });
         }
     })();
@@ -7931,6 +7921,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.62', date: '2026.11.25', items: ['정회원 관리 모달 하단 [⭐ 현재 참석자로 바로 불러오기] 버튼 제거 (정회원 등록·관리 전용으로 간소화)'] },
         { ver: '1.7.61', date: '2026.11.25', items: ['공통 알림·확인 모달(#confirm-modal-overlay) z-index를 20000으로 상향해 정회원 관리 등 다른 모달 위에서도 항상 맨 앞에 표시되도록 수정'] },
         { ver: '1.7.60', date: '2026.11.25', items: ['정회원 관리 모달 대상 클럽을 변경 불가한 고정 클럽명 표시로 변경하고 일괄 추가 버튼 2개(+ 현재/종전 참석자에서 추가) 제거', '정회원 관리 이름 검색 시 동명이인 최근 참석자 표시가 어느 클럽에서 열어도 누락되지 않도록 전체 이력 기준 보조 표시 및 자동 로드 보강'] },
         { ver: '1.7.59', date: '2026.11.25', items: ['정산 보고서 메일 발송 시 본문 글꼴을 "맑은 고딕", 글자 크기를 9pt HTML 서식으로 전송하도록 개선 (앱 및 Google Apps Script 동시 반영)'] },
