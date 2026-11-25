@@ -1812,6 +1812,41 @@ window.__installExportReports = function (B) {
     });
 
     // ── 중간 결산 모달 & 엑셀 다운로드 ───────────────────
+    const isPinnedInterimBottomClub = (name) => String(name || '').replace(/\s+/g, ' ').trim() === '3M 동탄 운영진';
+
+    function computeInterimTotals(rows, labTotalBudget) {
+        const list = Array.isArray(rows) ? rows : [];
+        const totalBudget = list.reduce((s, r) => s + (Number(r.budget) || 0), 0);
+        const totalSupport = list.reduce((s, r) => s + (Number(r.support) || 0), 0);
+        const totalEvents = list.reduce((s, r) => s + (Number(r.eventCount) || 0), 0);
+        const totalRegular = list.reduce((s, r) => s + (Number(r.regularMembers) || 0), 0);
+        const totalActual = list.reduce((s, r) => s + (Number(r.actualMembers) || 0), 0);
+        const totalNonMembers = list.reduce((s, r) => s + (Number(r.nonMembers) || 0), 0);
+        const totalAllMembers = totalRegular + totalNonMembers;
+        const totalBudgetRatio = list.reduce((s, r) => s + (Number(r.budgetRatio) || 0), 0);
+        const totalMemberRatio = list.reduce((s, r) => s + (Number(r.memberRatio) || 0), 0);
+        return {
+            totals: {
+                name: '총합계',
+                budget: totalBudget,
+                support: totalSupport,
+                remaining: totalBudget - totalSupport,
+                eventCount: totalEvents,
+                regularMembers: totalRegular,
+                actualMembers: totalActual,
+                nonMembers: totalNonMembers,
+                totalMembers: totalAllMembers,
+                budgetRatio: totalBudget > 0 ? Math.min(100, totalBudgetRatio) : 0,
+                memberRatio: totalAllMembers > 0 ? Math.min(100, totalMemberRatio) : 0,
+                burnRate: totalBudget > 0 ? (totalSupport / totalBudget) * 100 : 0,
+                perPersonSupport: totalAllMembers > 0 ? Math.round(totalSupport / totalAllMembers) : 0,
+                avgParticipants: totalEvents > 0 ? Math.round(totalAllMembers / totalEvents) : 0,
+                noteText: ''
+            },
+            labRemainingBudget: labTotalBudget - totalBudget
+        };
+    }
+
     function buildInterimSummaryData(selectedYear, historyList, clubRegistry) {
         const yearStr = String(selectedYear || 'ALL');
         const filteredEntries = (historyList || []).filter(e => {
@@ -1834,6 +1869,8 @@ window.__installExportReports = function (B) {
                 support: 0,
                 eventCount: 0,
                 regularMembers: 0,
+                actualMembers: 0,
+                uniqueAttendeeKeys: new Set(),
                 nonMembers: 0,
                 noteCounts: new Map()
             });
@@ -1849,6 +1886,8 @@ window.__installExportReports = function (B) {
                     support: 0,
                     eventCount: 0,
                     regularMembers: 0,
+                    actualMembers: 0,
+                    uniqueAttendeeKeys: new Set(),
                     nonMembers: 0,
                     noteCounts: new Map()
                 });
@@ -1861,6 +1900,16 @@ window.__installExportReports = function (B) {
             row.regularMembers += regCnt;
             row.nonMembers += nonCnt;
 
+            if (Array.isArray(entry.attendees)) {
+                entry.attendees.forEach(att => {
+                    if (!att) return;
+                    const empId = (typeof att === 'object' && att.employeeId) ? String(att.employeeId).trim() : '';
+                    const attName = (typeof att === 'object' ? (att.name || '') : String(att)).trim();
+                    const uKey = empId ? `id:${empId}` : (attName ? `name:${attName}` : '');
+                    if (uKey) row.uniqueAttendeeKeys.add(uKey);
+                });
+            }
+
             const note = String(entry.eventNote || '').trim();
             if (note) {
                 row.noteCounts.set(note, (row.noteCounts.get(note) || 0) + 1);
@@ -1869,14 +1918,13 @@ window.__installExportReports = function (B) {
 
         const rows = Array.from(clubMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
         const totalBudget = rows.reduce((s, r) => s + r.budget, 0);
-        const totalSupport = rows.reduce((s, r) => s + r.support, 0);
-        const totalEvents = rows.reduce((s, r) => s + r.eventCount, 0);
         const totalRegular = rows.reduce((s, r) => s + r.regularMembers, 0);
         const totalNonMembers = rows.reduce((s, r) => s + r.nonMembers, 0);
         const totalAllMembers = totalRegular + totalNonMembers;
 
         const computedRows = rows.map(r => {
             const totalClubMembers = r.regularMembers + r.nonMembers;
+            const actualMembers = r.uniqueAttendeeKeys ? r.uniqueAttendeeKeys.size : 0;
             const remaining = r.budget - r.support;
             const budgetRatio = totalBudget > 0 ? (r.budget / totalBudget) * 100 : 0;
             const memberRatio = totalAllMembers > 0 ? (totalClubMembers / totalAllMembers) * 100 : 0;
@@ -1887,7 +1935,13 @@ window.__installExportReports = function (B) {
                 .map(([n, cnt]) => `${n} ${cnt}회`)
                 .join(', ');
             return {
-                ...r,
+                name: r.name,
+                budget: r.budget,
+                support: r.support,
+                eventCount: r.eventCount,
+                regularMembers: r.regularMembers,
+                actualMembers,
+                nonMembers: r.nonMembers,
                 remaining,
                 totalMembers: totalClubMembers,
                 budgetRatio,
@@ -1898,6 +1952,9 @@ window.__installExportReports = function (B) {
                 noteText
             };
         }).sort((a, b) => {
+            const aPin = isPinnedInterimBottomClub(a.name);
+            const bPin = isPinnedInterimBottomClub(b.name);
+            if (aPin !== bPin) return aPin ? 1 : -1;
             const aFull = (a.budget > 0 && a.burnRate >= 99.95) ? 1 : 0;
             const bFull = (b.budget > 0 && b.burnRate >= 99.95) ? 1 : 0;
             if (bFull !== aFull) return bFull - aFull;
@@ -1906,32 +1963,32 @@ window.__installExportReports = function (B) {
             return a.name.localeCompare(b.name, 'ko');
         });
 
-        const totals = {
-            name: '총합계',
-            budget: totalBudget,
-            support: totalSupport,
-            remaining: totalBudget - totalSupport,
-            eventCount: totalEvents,
-            regularMembers: totalRegular,
-            nonMembers: totalNonMembers,
-            totalMembers: totalAllMembers,
-            budgetRatio: totalBudget > 0 ? 100 : 0,
-            memberRatio: totalAllMembers > 0 ? 100 : 0,
-            burnRate: totalBudget > 0 ? (totalSupport / totalBudget) * 100 : 0,
-            perPersonSupport: totalAllMembers > 0 ? Math.round(totalSupport / totalAllMembers) : 0,
-            avgParticipants: totalEvents > 0 ? Math.round(totalAllMembers / totalEvents) : 0,
-            noteText: ''
-        };
-
         const labTotalBudget = yearStr === 'ALL'
             ? Math.max(0, Number(AppState.clubTotalBudget) || 0)
             : Math.max(0, Number(AppState.getClubTotalBudgetForYear(yearStr)) || 0);
-        const labRemainingBudget = labTotalBudget - totalBudget;
+        const { totals, labRemainingBudget } = computeInterimTotals(computedRows, labTotalBudget);
 
         return { year: yearStr, rows: computedRows, totals, labTotalBudget, labRemainingBudget };
     }
 
     let currentInterimSummaryData = null;
+    let _activeInterimFilterPopover = null;
+    let _activeInterimFilterCol = null;
+
+    function closeInterimFilterPopover() {
+        if (_activeInterimFilterPopover) {
+            _activeInterimFilterPopover.remove();
+            _activeInterimFilterPopover = null;
+        }
+        _activeInterimFilterCol = null;
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+        if (!_activeInterimFilterPopover) return;
+        if (_activeInterimFilterPopover.contains(e.target)) return;
+        if (e.target.closest && e.target.closest('.interim-th-filterable')) return;
+        closeInterimFilterPopover();
+    });
 
     async function openInterimSummaryModal() {
         if (!AppState.hasAdminAccess) return;
@@ -1940,6 +1997,7 @@ window.__installExportReports = function (B) {
         const tableWrap = document.getElementById('interim-summary-table-wrap');
         if (!modal || !yearSelect || !tableWrap) return;
 
+        closeInterimFilterPopover();
         modal.classList.remove('hidden');
         tableWrap.innerHTML = '<div style="padding:2rem; text-align:center; color:var(--text-secondary);">데이터를 집계하는 중입니다...</div>';
 
@@ -1966,6 +2024,47 @@ window.__installExportReports = function (B) {
         yearSelect.innerHTML = years.map(y => `<option value="${y}" ${String(y) === defaultYear ? 'selected' : ''}>${y}년</option>`).join('') +
             `<option value="ALL" ${defaultYear === 'ALL' ? 'selected' : ''}>전체 연도</option>`;
 
+        const INTERIM_COLS = [
+            { key: 'name', label: '클럽명', align: 'left', type: 'text' },
+            { key: 'budget', label: '예산', align: 'right', type: 'currency' },
+            { key: 'support', label: '지원금', align: 'right', type: 'currency' },
+            { key: 'remaining', label: '잔여금액', align: 'right', type: 'currency' },
+            { key: 'eventCount', label: '행사수', align: 'right', type: 'number' },
+            { key: 'regularMembers', label: '정회원', align: 'right', type: 'number' },
+            { key: 'actualMembers', label: '실참석', align: 'right', type: 'number' },
+            { key: 'nonMembers', label: '비회원', align: 'right', type: 'number' },
+            { key: 'budgetRatio', label: '예산 비율', align: 'right', type: 'percent' },
+            { key: 'memberRatio', label: '인원 비율', align: 'right', type: 'percent' },
+            { key: 'burnRate', label: '소진율', align: 'right', type: 'percent' },
+            { key: 'perPersonSupport', label: '인당 지원금', align: 'right', type: 'currency' },
+            { key: 'avgParticipants', label: '평균 참여 인원수', align: 'right', type: 'number' },
+            { key: 'noteText', label: '비고', align: 'left', type: 'text' }
+        ];
+        const colDefMap = Object.fromEntries(INTERIM_COLS.map(c => [c.key, c]));
+
+        let interimSortKey = null;
+        let interimSortDir = 'asc';
+        const interimColFilters = Object.fromEntries(INTERIM_COLS.map(c => [c.key, null]));
+
+        const getInterimColKey = (row, colKey) => {
+            const def = colDefMap[colKey];
+            if (!def) return '';
+            if (def.type === 'percent') return (Number(row[colKey]) || 0).toFixed(1);
+            if (def.type === 'currency' || def.type === 'number') return String(Number(row[colKey]) || 0);
+            if (colKey === 'noteText') return String(row.noteText || '').trim() || '-';
+            return String(row[colKey] || '').trim();
+        };
+
+        const getInterimColLabel = (row, colKey) => {
+            const def = colDefMap[colKey];
+            if (!def) return '';
+            if (def.type === 'currency') return SettlementCalculator.formatCurrency(Number(row[colKey]) || 0);
+            if (def.type === 'percent') return `${(Number(row[colKey]) || 0).toFixed(1)}%`;
+            if (def.type === 'number') return `${Number(row[colKey]) || 0}`;
+            if (colKey === 'noteText') return String(row.noteText || '').trim() || '-';
+            return String(row[colKey] || '').trim();
+        };
+
         const formatInterimTitle = (selYear) => {
             const now = new Date();
             const curY = now.getFullYear();
@@ -1980,6 +2079,186 @@ window.__installExportReports = function (B) {
             return `${selYear}년 1월 ~ ${selYear}년 12월 진행 내역`;
         };
 
+        const openInterimFilterPopover = (colKey, anchorEl, allBaseRows) => {
+            if (_activeInterimFilterPopover && _activeInterimFilterCol === colKey) {
+                closeInterimFilterPopover();
+                return;
+            }
+            closeInterimFilterPopover();
+            _activeInterimFilterCol = colKey;
+
+            const def = colDefMap[colKey];
+            const isTextCol = def.type === 'text';
+
+            const baseRows = allBaseRows.filter(item => {
+                for (const other of INTERIM_COLS) {
+                    if (other.key === colKey) continue;
+                    const set = interimColFilters[other.key];
+                    if (set instanceof Set && !set.has(getInterimColKey(item, other.key))) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+            const sourceRows = baseRows.length > 0 ? baseRows : allBaseRows;
+
+            const valueMap = new Map();
+            sourceRows.forEach(row => {
+                const key = getInterimColKey(row, colKey);
+                const label = getInterimColLabel(row, colKey);
+                const numVal = isTextCol ? 0 : (Number(row[colKey]) || 0);
+                if (!valueMap.has(key)) {
+                    valueMap.set(key, { key, label, numVal, count: 1 });
+                } else {
+                    valueMap.get(key).count += 1;
+                }
+            });
+            const existingSet = interimColFilters[colKey];
+            if (existingSet instanceof Set) {
+                allBaseRows.forEach(row => {
+                    const key = getInterimColKey(row, colKey);
+                    if (existingSet.has(key) && !valueMap.has(key)) {
+                        valueMap.set(key, {
+                            key,
+                            label: getInterimColLabel(row, colKey),
+                            numVal: isTextCol ? 0 : (Number(row[colKey]) || 0),
+                            count: 0
+                        });
+                    }
+                });
+            }
+
+            const uniqueItems = Array.from(valueMap.values()).sort((a, b) => {
+                if (isTextCol) return a.label.localeCompare(b.label, 'ko-KR');
+                return b.numVal - a.numVal;
+            });
+
+            const ascLabel = isTextCol ? '↑ 가나다순 정렬 (오름차순)' : '↑ 낮은순 정렬 (오름차순)';
+            const descLabel = isTextCol ? '↓ 가나다 역순 정렬 (내림차순)' : '↓ 높은순 정렬 (내림차순)';
+
+            const popover = document.createElement('div');
+            popover.className = 'club-excel-filter-popover';
+            popover.style.zIndex = '10400';
+            popover.setAttribute('role', 'dialog');
+            popover.setAttribute('aria-label', `${def.label} 정렬 및 필터`);
+
+            const isAscActive = interimSortKey === colKey && interimSortDir === 'asc';
+            const isDescActive = interimSortKey === colKey && interimSortDir === 'desc';
+
+            popover.innerHTML = `
+                <div class="club-excel-filter-section-title">${AppState.escapeHtml(def.label)} 정렬</div>
+                <button type="button" class="club-excel-sort-btn ${isDescActive ? 'is-active' : ''}" data-sort-dir="desc">${descLabel}</button>
+                <button type="button" class="club-excel-sort-btn ${isAscActive ? 'is-active' : ''}" data-sort-dir="asc">${ascLabel}</button>
+                <div class="club-excel-divider"></div>
+                <div class="club-excel-filter-section-title">목록 필터 (체크 선택)</div>
+                <input type="text" class="club-excel-search-input" placeholder="${isTextCol ? '텍스트 검색...' : '값 검색...'}" autocomplete="off">
+                <div class="club-excel-checklist"></div>
+                <div class="club-excel-actions">
+                    <button type="button" class="btn-secondary club-excel-clear-btn">전체 해제/초기화</button>
+                    <button type="button" class="btn-primary-sm club-excel-apply-btn">확인</button>
+                </div>
+            `;
+
+            const checklistEl = popover.querySelector('.club-excel-checklist');
+            const searchInputEl = popover.querySelector('.club-excel-search-input');
+            const selectedKeys = new Set(
+                existingSet instanceof Set ? Array.from(existingSet) : uniqueItems.map(it => it.key)
+            );
+
+            function renderChecklist(keyword = '') {
+                const kw = keyword.trim().toLowerCase();
+                const visibleItems = kw
+                    ? uniqueItems.filter(it => it.label.toLowerCase().includes(kw) || it.key.toLowerCase().includes(kw))
+                    : uniqueItems;
+                const frag = document.createDocumentFragment();
+
+                const allRow = document.createElement('label');
+                allRow.className = 'club-excel-check-item select-all-row';
+                const allChecked = visibleItems.length > 0 && visibleItems.every(it => selectedKeys.has(it.key));
+                const someChecked = visibleItems.some(it => selectedKeys.has(it.key));
+                allRow.innerHTML = `
+                    <input type="checkbox" class="club-excel-check-all" ${allChecked ? 'checked' : ''}>
+                    <span class="club-excel-check-label">(전체 선택)</span>
+                    <span class="club-excel-check-count">${visibleItems.length}개</span>
+                `;
+                const allCheckbox = allRow.querySelector('.club-excel-check-all');
+                if (allCheckbox && !allChecked && someChecked) {
+                    allCheckbox.indeterminate = true;
+                }
+                allCheckbox.addEventListener('change', () => {
+                    if (allCheckbox.checked) visibleItems.forEach(it => selectedKeys.add(it.key));
+                    else visibleItems.forEach(it => selectedKeys.delete(it.key));
+                    renderChecklist(searchInputEl.value);
+                });
+                frag.appendChild(allRow);
+
+                visibleItems.forEach(it => {
+                    const itemLabel = document.createElement('label');
+                    itemLabel.className = 'club-excel-check-item';
+                    const checked = selectedKeys.has(it.key);
+                    itemLabel.innerHTML = `
+                        <input type="checkbox" class="club-excel-check-val" data-val-key="${AppState.escapeHtml(it.key)}" ${checked ? 'checked' : ''}>
+                        <span class="club-excel-check-label" title="${AppState.escapeHtml(it.label)}">${AppState.escapeHtml(it.label)}</span>
+                        ${it.count > 1 ? `<span class="club-excel-check-count">(${it.count})</span>` : ''}
+                    `;
+                    const cb = itemLabel.querySelector('.club-excel-check-val');
+                    cb.addEventListener('change', () => {
+                        if (cb.checked) selectedKeys.add(it.key);
+                        else selectedKeys.delete(it.key);
+                        const nowAll = visibleItems.length > 0 && visibleItems.every(v => selectedKeys.has(v.key));
+                        const nowSome = visibleItems.some(v => selectedKeys.has(v.key));
+                        allCheckbox.checked = nowAll;
+                        allCheckbox.indeterminate = !nowAll && nowSome;
+                    });
+                    frag.appendChild(itemLabel);
+                });
+                checklistEl.replaceChildren(frag);
+            }
+
+            renderChecklist('');
+            searchInputEl.addEventListener('input', () => renderChecklist(searchInputEl.value));
+
+            popover.querySelectorAll('.club-excel-sort-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    interimSortKey = colKey;
+                    interimSortDir = btn.getAttribute('data-sort-dir') === 'desc' ? 'desc' : 'asc';
+                    closeInterimFilterPopover();
+                    renderTable();
+                });
+            });
+
+            popover.querySelector('.club-excel-clear-btn').addEventListener('click', () => {
+                interimColFilters[colKey] = null;
+                closeInterimFilterPopover();
+                renderTable();
+            });
+
+            popover.querySelector('.club-excel-apply-btn').addEventListener('click', () => {
+                if (selectedKeys.size === 0 || selectedKeys.size >= uniqueItems.length) {
+                    interimColFilters[colKey] = selectedKeys.size === 0 ? new Set() : null;
+                } else {
+                    interimColFilters[colKey] = new Set(selectedKeys);
+                }
+                closeInterimFilterPopover();
+                renderTable();
+            });
+
+            document.body.appendChild(popover);
+            const rect = anchorEl.getBoundingClientRect();
+            const popRect = popover.getBoundingClientRect();
+            let left = rect.left;
+            if (left + popRect.width > window.innerWidth - 12) {
+                left = Math.max(12, window.innerWidth - popRect.width - 12);
+            }
+            let top = rect.bottom + 6;
+            if (top + popRect.height > window.innerHeight - 12) {
+                top = Math.max(12, rect.top - popRect.height - 6);
+            }
+            popover.style.left = `${left}px`;
+            popover.style.top = `${top}px`;
+            _activeInterimFilterPopover = popover;
+        };
+
         const renderTable = () => {
             const selYear = yearSelect.value || defaultYear;
             const titleText = formatInterimTitle(selYear);
@@ -1987,48 +2266,91 @@ window.__installExportReports = function (B) {
             if (titleEl) titleEl.textContent = `📋 ${titleText}`;
 
             const targetClubRegistry = selYear === 'ALL' ? AppState.clubRegistry : AppState.getClubRegistryForYear(selYear);
-            const summary = buildInterimSummaryData(selYear, historyList, targetClubRegistry);
-            summary.titleText = titleText;
-            currentInterimSummaryData = summary;
+            const baseSummary = buildInterimSummaryData(selYear, historyList, targetClubRegistry);
+            const baseRows = baseSummary.rows;
+
+            // 엑셀형 필터 적용
+            const filteredRows = baseRows.filter(item => {
+                for (const col of INTERIM_COLS) {
+                    const set = interimColFilters[col.key];
+                    if (set instanceof Set && !set.has(getInterimColKey(item, col.key))) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // 정렬 적용 (단, 3M 동탄 운영진은 정렬/필터 여부와 무관하게 항상 맨 아래 고정)
+            const sortedRows = filteredRows.slice();
+            if (interimSortKey) {
+                const def = colDefMap[interimSortKey];
+                const dirFactor = interimSortDir === 'desc' ? -1 : 1;
+                sortedRows.sort((a, b) => {
+                    const aPin = isPinnedInterimBottomClub(a.name);
+                    const bPin = isPinnedInterimBottomClub(b.name);
+                    if (aPin !== bPin) return aPin ? 1 : -1;
+                    let cmp = 0;
+                    if (def && def.type === 'text') {
+                        cmp = String(a[interimSortKey] || '').localeCompare(String(b[interimSortKey] || ''), 'ko-KR');
+                    } else {
+                        cmp = (Number(a[interimSortKey]) || 0) - (Number(b[interimSortKey]) || 0);
+                    }
+                    if (cmp !== 0) return cmp * dirFactor;
+                    return a.name.localeCompare(b.name, 'ko-KR');
+                });
+            }
+
+            const { totals: filteredTotals, labRemainingBudget } = computeInterimTotals(sortedRows, baseSummary.labTotalBudget);
+            currentInterimSummaryData = {
+                year: baseSummary.year,
+                titleText,
+                rows: sortedRows,
+                totals: filteredTotals,
+                labTotalBudget: baseSummary.labTotalBudget,
+                labRemainingBudget
+            };
 
             const isLight = document.documentElement.getAttribute('data-app-theme') === 'light';
-            const thStyle = `padding:0.5rem 0.55rem; font-size:0.78rem; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--card-border); background:${isLight ? '#e2e8f0' : 'rgba(15,23,42,0.92)'}; color:var(--text-primary); position:sticky; top:0; z-index:2;`;
+            const thStyle = `padding:0.5rem 0.55rem; font-size:0.78rem; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--card-border); background:${isLight ? '#e2e8f0' : 'rgba(15,23,42,0.92)'}; color:var(--text-primary); position:sticky; top:0; z-index:2; cursor:pointer; user-select:none;`;
             const tdBase = `padding:0.42rem 0.55rem; font-size:0.8rem; border-bottom:1px solid var(--card-border); white-space:nowrap;`;
 
-            const bodyHtml = summary.rows.map(r => {
-                const isExhausted = r.budget > 0 && r.burnRate >= 99.95;
-                const rowHighlight = isExhausted
-                    ? (isLight ? 'background:rgba(250,204,21,0.22);' : 'background:rgba(250,204,21,0.12);')
-                    : '';
-                const burnBg = isExhausted
-                    ? (isLight ? 'background:#15803d; color:#ffffff; font-weight:700;' : 'background:rgba(22,163,74,0.85); color:#ffffff; font-weight:700;')
-                    : '';
-                const remColor = r.remaining < 0
-                    ? (isLight ? 'color:#dc2626; font-weight:700;' : 'color:#f87171; font-weight:700;')
-                    : (r.remaining === 0 ? 'color:var(--text-muted);' : (isLight ? 'color:#1e40af; font-weight:600;' : 'color:#93c5fd; font-weight:600;'));
-                return `
-                    <tr style="${rowHighlight}">
-                        <td style="${tdBase} font-weight:700; text-align:left;">${AppState.escapeHtml(r.name)}</td>
-                        <td style="${tdBase} text-align:right;">${formatAmount(r.budget)}</td>
-                        <td style="${tdBase} text-align:right;">${formatAmount(r.support)}</td>
-                        <td style="${tdBase} text-align:right; ${remColor}">${formatAmount(r.remaining)}</td>
-                        <td style="${tdBase} text-align:right;">${r.eventCount}</td>
-                        <td style="${tdBase} text-align:right;">${r.regularMembers}</td>
-                        <td style="${tdBase} text-align:right;">${r.nonMembers}</td>
-                        <td style="${tdBase} text-align:right;">${r.budgetRatio.toFixed(1)}%</td>
-                        <td style="${tdBase} text-align:right;">${r.memberRatio.toFixed(1)}%</td>
-                        <td style="${tdBase} text-align:right; ${burnBg}">${r.burnRate.toFixed(1)}%</td>
-                        <td style="${tdBase} text-align:right;">${formatAmount(r.perPersonSupport)}</td>
-                        <td style="${tdBase} text-align:right;">${r.avgParticipants}</td>
-                        <td style="${tdBase} text-align:left; color:${r.noteText ? 'var(--color-secondary)' : 'var(--text-muted)'}; font-weight:${r.noteText ? '600' : '400'};">${AppState.escapeHtml(r.noteText || '-')}</td>
-                    </tr>
-                `;
-            }).join('');
+            const bodyHtml = sortedRows.length > 0
+                ? sortedRows.map(r => {
+                    const isExhausted = r.budget > 0 && r.burnRate >= 99.95;
+                    const rowHighlight = isExhausted
+                        ? (isLight ? 'background:rgba(250,204,21,0.22);' : 'background:rgba(250,204,21,0.12);')
+                        : '';
+                    const burnBg = isExhausted
+                        ? (isLight ? 'background:#15803d; color:#ffffff; font-weight:700;' : 'background:rgba(22,163,74,0.85); color:#ffffff; font-weight:700;')
+                        : '';
+                    const remColor = r.remaining < 0
+                        ? (isLight ? 'color:#dc2626; font-weight:700;' : 'color:#f87171; font-weight:700;')
+                        : (r.remaining === 0 ? 'color:var(--text-muted);' : (isLight ? 'color:#1e40af; font-weight:600;' : 'color:#93c5fd; font-weight:600;'));
+                    return `
+                        <tr style="${rowHighlight}">
+                            <td style="${tdBase} font-weight:700; text-align:left;">${AppState.escapeHtml(r.name)}</td>
+                            <td style="${tdBase} text-align:right;">${formatAmount(r.budget)}</td>
+                            <td style="${tdBase} text-align:right;">${formatAmount(r.support)}</td>
+                            <td style="${tdBase} text-align:right; ${remColor}">${formatAmount(r.remaining)}</td>
+                            <td style="${tdBase} text-align:right;">${r.eventCount}</td>
+                            <td style="${tdBase} text-align:right;">${r.regularMembers}</td>
+                            <td style="${tdBase} text-align:right; font-weight:600; color:var(--color-primary);">${r.actualMembers}</td>
+                            <td style="${tdBase} text-align:right;">${r.nonMembers}</td>
+                            <td style="${tdBase} text-align:right;">${r.budgetRatio.toFixed(1)}%</td>
+                            <td style="${tdBase} text-align:right;">${r.memberRatio.toFixed(1)}%</td>
+                            <td style="${tdBase} text-align:right; ${burnBg}">${r.burnRate.toFixed(1)}%</td>
+                            <td style="${tdBase} text-align:right;">${formatAmount(r.perPersonSupport)}</td>
+                            <td style="${tdBase} text-align:right;">${r.avgParticipants}</td>
+                            <td style="${tdBase} text-align:left; color:${r.noteText ? 'var(--color-secondary)' : 'var(--text-muted)'}; font-weight:${r.noteText ? '600' : '400'};">${AppState.escapeHtml(r.noteText || '-')}</td>
+                        </tr>
+                    `;
+                }).join('')
+                : `<tr><td colspan="14" style="padding:1.8rem 1rem; text-align:center; color:var(--text-secondary);">선택한 필터 조건에 일치하는 클럽이 없습니다. <button type="button" id="interim-reset-all-filters-btn" class="btn-secondary" style="margin-left:0.5rem; padding:0.25rem 0.65rem; font-size:0.76rem;">필터 모두 해제</button></td></tr>`;
 
-            const t = summary.totals;
+            const t = filteredTotals;
             const totalRowBg = isLight ? 'background:#e2e8f0; color:#0f172a;' : 'background:rgba(30,41,59,0.95); color:#f8fafc;';
             const labRowBg = isLight ? 'background:#fef9c3; color:#0f172a;' : 'background:rgba(234,179,8,0.14); color:#fef08a;';
-            const labBalColor = summary.labRemainingBudget < 0
+            const labBalColor = labRemainingBudget < 0
                 ? (isLight ? 'color:#dc2626;' : 'color:#f87171;')
                 : (isLight ? 'color:#1e40af;' : 'color:#93c5fd;');
             const footHtml = `
@@ -2039,6 +2361,7 @@ window.__installExportReports = function (B) {
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${formatAmount(t.remaining)}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.eventCount}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.regularMembers}</td>
+                    <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border); color:var(--color-primary);">${t.actualMembers}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.nonMembers}</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.budgetRatio.toFixed(1)}%</td>
                     <td style="${tdBase} text-align:right; border-top:2px solid var(--card-border);">${t.memberRatio.toFixed(1)}%</td>
@@ -2049,46 +2372,63 @@ window.__installExportReports = function (B) {
                 </tr>
                 <tr style="${labRowBg} font-weight:800;">
                     <td style="${tdBase} text-align:left; border-top:1px solid var(--card-border);">연구소 총 예산</td>
-                    <td style="${tdBase} text-align:right; border-top:1px solid var(--card-border);">${formatAmount(summary.labTotalBudget)}</td>
-                    <td colspan="11" style="${tdBase} text-align:left; border-top:1px solid var(--card-border); font-weight:500; font-size:0.74rem; color:var(--text-secondary);"></td>
+                    <td style="${tdBase} text-align:right; border-top:1px solid var(--card-border);">${formatAmount(baseSummary.labTotalBudget)}</td>
+                    <td colspan="12" style="${tdBase} text-align:left; border-top:1px solid var(--card-border); font-weight:500; font-size:0.74rem; color:var(--text-secondary);"></td>
                 </tr>
                 <tr style="${labRowBg} font-weight:800;">
                     <td style="${tdBase} text-align:left; border-top:1px solid var(--card-border);">연구소 예산 잔액</td>
-                    <td style="${tdBase} text-align:right; border-top:1px solid var(--card-border); ${labBalColor}">${formatAmount(summary.labRemainingBudget)}</td>
-                    <td colspan="11" style="${tdBase} text-align:left; border-top:1px solid var(--card-border);"></td>
+                    <td style="${tdBase} text-align:right; border-top:1px solid var(--card-border); ${labBalColor}">${formatAmount(labRemainingBudget)}</td>
+                    <td colspan="12" style="${tdBase} text-align:left; border-top:1px solid var(--card-border);"></td>
                 </tr>
             `;
 
+            const headHtml = INTERIM_COLS.map(col => {
+                const isFiltered = interimColFilters[col.key] instanceof Set;
+                const isSorted = interimSortKey === col.key;
+                const arrow = isSorted ? (interimSortDir === 'desc' ? '▼' : '▲') : (isFiltered ? '⏷' : '▾');
+                const activeStyle = (isFiltered || isSorted) ? 'color:var(--color-primary);' : 'opacity:0.65;';
+                return `<th class="interim-th-filterable ${isFiltered || isSorted ? 'is-filtered' : ''}" data-interim-col="${col.key}" style="${thStyle} text-align:${col.align};" title="클릭하여 정렬/필터">${col.label} <span class="club-th-arrow" style="font-size:0.68rem; margin-left:2px; ${activeStyle}">${arrow}</span></th>`;
+            }).join('');
+
             tableWrap.innerHTML = `
-                <table style="width:100%; border-collapse:collapse; min-width:960px;">
+                <table style="width:100%; border-collapse:collapse; min-width:1020px;">
                     <thead>
-                        <tr>
-                            <th style="${thStyle} text-align:left;">클럽명</th>
-                            <th style="${thStyle} text-align:right;">예산</th>
-                            <th style="${thStyle} text-align:right;">지원금</th>
-                            <th style="${thStyle} text-align:right;">잔여금액</th>
-                            <th style="${thStyle} text-align:right;">행사수</th>
-                            <th style="${thStyle} text-align:right;">정회원</th>
-                            <th style="${thStyle} text-align:right;">비회원</th>
-                            <th style="${thStyle} text-align:right;">예산 비율</th>
-                            <th style="${thStyle} text-align:right;">인원 비율</th>
-                            <th style="${thStyle} text-align:right;">소진율</th>
-                            <th style="${thStyle} text-align:right;">인당 지원금</th>
-                            <th style="${thStyle} text-align:right;">평균 참여 인원수</th>
-                            <th style="${thStyle} text-align:left;">비고</th>
-                        </tr>
+                        <tr>${headHtml}</tr>
                     </thead>
                     <tbody>${bodyHtml}</tbody>
                     <tfoot>${footHtml}</tfoot>
                 </table>
             `;
+
+            tableWrap.querySelectorAll('.interim-th-filterable').forEach(th => {
+                th.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const colKey = th.getAttribute('data-interim-col');
+                    if (colKey) openInterimFilterPopover(colKey, th, baseRows);
+                });
+            });
+
+            const resetAllBtn = document.getElementById('interim-reset-all-filters-btn');
+            if (resetAllBtn) {
+                resetAllBtn.addEventListener('click', () => {
+                    INTERIM_COLS.forEach(c => { interimColFilters[c.key] = null; });
+                    interimSortKey = null;
+                    renderTable();
+                });
+            }
         };
 
-        yearSelect.onchange = renderTable;
+        yearSelect.onchange = () => {
+            INTERIM_COLS.forEach(c => { interimColFilters[c.key] = null; });
+            interimSortKey = null;
+            closeInterimFilterPopover();
+            renderTable();
+        };
         renderTable();
     }
 
     function closeInterimSummaryModal() {
+        closeInterimFilterPopover();
         document.getElementById('interim-summary-modal')?.classList.add('hidden');
     }
 
@@ -2098,7 +2438,7 @@ window.__installExportReports = function (B) {
             return;
         }
         const { year, titleText, rows, totals, labTotalBudget, labRemainingBudget } = currentInterimSummaryData;
-        const headers = ['클럽명', '예산', '지원금', '잔여금액', '행사수', '정회원', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
+        const headers = ['클럽명', '예산', '지원금', '잔여금액', '행사수', '정회원', '실참석', '비회원', '예산 비율(%)', '인원 비율(%)', '소진율(%)', '인당 지원금', '평균 참여 인원수', '비고'];
         const aoa = [
             [titleText || `${year}년 진행 내역`],
             [],
@@ -2112,6 +2452,7 @@ window.__installExportReports = function (B) {
                 r.remaining,
                 r.eventCount,
                 r.regularMembers,
+                r.actualMembers || 0,
                 r.nonMembers,
                 Number(r.budgetRatio.toFixed(1)),
                 Number(r.memberRatio.toFixed(1)),
@@ -2128,6 +2469,7 @@ window.__installExportReports = function (B) {
             totals.remaining,
             totals.eventCount,
             totals.regularMembers,
+            totals.actualMembers || 0,
             totals.nonMembers,
             Number(totals.budgetRatio.toFixed(1)),
             Number(totals.memberRatio.toFixed(1)),
@@ -2136,22 +2478,22 @@ window.__installExportReports = function (B) {
             totals.avgParticipants,
             ''
         ]);
-        aoa.push(['연구소 총 예산', labTotalBudget, '', '', '', '', '', '', '', '', '', '', '']);
-        aoa.push(['연구소 예산 잔액', labRemainingBudget, '', '', '', '', '', '', '', '', '', '', '']);
+        aoa.push(['연구소 총 예산', labTotalBudget, '', '', '', '', '', '', '', '', '', '', '', '']);
+        aoa.push(['연구소 예산 잔액', labRemainingBudget, '', '', '', '', '', '', '', '', '', '', '', '']);
 
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         ws['!cols'] = [
             { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 9 },
-            { wch: 9 }, { wch: 9 }, { wch: 13 }, { wch: 13 },
+            { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 13 }, { wch: 13 },
             { wch: 11 }, { wch: 13 }, { wch: 17 }, { wch: 24 }
         ];
         const totalRow1 = 4 + rows.length;
         const labTotalRow1 = totalRow1 + 1;
         const labRemainRow1 = totalRow1 + 2;
         ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
-            { s: { r: labTotalRow1 - 1, c: 1 }, e: { r: labTotalRow1 - 1, c: 12 } },
-            { s: { r: labRemainRow1 - 1, c: 1 }, e: { r: labRemainRow1 - 1, c: 12 } }
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
+            { s: { r: labTotalRow1 - 1, c: 1 }, e: { r: labTotalRow1 - 1, c: 13 } },
+            { s: { r: labRemainRow1 - 1, c: 1 }, e: { r: labRemainRow1 - 1, c: 13 } }
         ];
         ws['!rows'] = [
             { hpt: 28 },
@@ -2290,11 +2632,11 @@ window.__installExportReports = function (B) {
             const fixedStylesXml = stylesXml.replace('<fills count="7">', '<fills count="9">');
             zip.file('xl/styles.xml', fixedStylesXml);
 
-            // 행/열별 스타일 인덱스 매핑
-            const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'];
+            // 행/열별 스타일 인덱스 매핑 (A~N, 14열)
+            const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'];
             const styleMap = new Map();
             cols.forEach(c => styleMap.set(`${c}1`, 1));
-            cols.forEach((c, idx) => styleMap.set(`${c}3`, (idx === 0 || idx === 12) ? 2 : 3));
+            cols.forEach((c, idx) => styleMap.set(`${c}3`, (idx === 0 || idx === 13) ? 2 : 3));
 
             rows.forEach((r, i) => {
                 const rowNum = 4 + i;
@@ -2304,9 +2646,9 @@ window.__installExportReports = function (B) {
                     cols.forEach((c, idx) => {
                         let s = 16;
                         if (idx === 0) s = 15;
-                        else if (idx === 7 || idx === 8) s = 17;
-                        else if (idx === 9) s = 18; // 100% 소진율 진녹색 배지
-                        else if (idx === 12) s = 21;
+                        else if (idx === 8 || idx === 9) s = 17;
+                        else if (idx === 10) s = 18; // 100% 소진율 진녹색 배지
+                        else if (idx === 13) s = 21;
                         styleMap.set(`${c}${rowNum}`, s);
                     });
                 } else {
@@ -2315,9 +2657,9 @@ window.__installExportReports = function (B) {
                         if (idx === 0) s = zebra ? 5 : 4;
                         else if (idx === 3) {
                             s = r.remaining < 0 ? 14 : (r.remaining > 0 ? (zebra ? 13 : 12) : (zebra ? 7 : 6));
-                        } else if (idx === 7 || idx === 8) s = zebra ? 9 : 8;
-                        else if (idx === 9) s = zebra ? 11 : 10;
-                        else if (idx === 12) s = zebra ? 20 : 19;
+                        } else if (idx === 8 || idx === 9) s = zebra ? 9 : 8;
+                        else if (idx === 10) s = zebra ? 11 : 10;
+                        else if (idx === 13) s = zebra ? 20 : 19;
                         styleMap.set(`${c}${rowNum}`, s);
                     });
                 }
@@ -2325,9 +2667,9 @@ window.__installExportReports = function (B) {
 
             cols.forEach((c, idx) => {
                 let s = 23;
-                if (idx === 0 || idx === 12) s = 22;
-                else if (idx === 7 || idx === 8) s = 24;
-                else if (idx === 9) s = 25;
+                if (idx === 0 || idx === 13) s = 22;
+                else if (idx === 8 || idx === 9) s = 24;
+                else if (idx === 10) s = 25;
                 styleMap.set(`${c}${totalRow1}`, s);
             });
             cols.forEach((c, idx) => {

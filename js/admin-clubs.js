@@ -476,8 +476,12 @@ window.__installAdminClubs = function (B) {
                 return true;
             });
 
+            const isPinnedBottomClub = (name) => String(name || '').replace(/\s+/g, ' ').trim() === '3M 동탄 운영진';
             const dirFactor = _clubMgmtSortDir === 'desc' ? -1 : 1;
             filteredClubRows.sort((a, b) => {
+                const aPin = isPinnedBottomClub(a.club && a.club.name);
+                const bPin = isPinnedBottomClub(b.club && b.club.name);
+                if (aPin !== bPin) return aPin ? 1 : -1;
                 let cmp = 0;
                 if (_clubMgmtSortKey === 'budget') {
                     cmp = (a.budget || 0) - (b.budget || 0);
