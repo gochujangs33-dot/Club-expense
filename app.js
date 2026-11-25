@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.57';
+const APP_VERSION      = '1.7.58';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -4517,7 +4517,23 @@ const AppState = {
             return false;
         }
 
-        if (!skipConfirm && !confirm(t('confirm.finalize_settlement'))) return false;
+        if (!skipConfirm) {
+            const confirmed = await new Promise((resolve) => {
+                if (typeof showConfirmModal === 'function') {
+                    showConfirmModal(
+                        t('confirm.finalize_settlement'),
+                        () => resolve(true),
+                        '정산 확정',
+                        '정산 확정 확인',
+                        '💾',
+                        () => resolve(false)
+                    );
+                } else {
+                    resolve(confirm(t('confirm.finalize_settlement')));
+                }
+            });
+            if (!confirmed) return false;
+        }
         if (this._finalizeInProgress) return false;
         this._finalizeInProgress = true;
 
@@ -5521,22 +5537,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (element) element.addEventListener(id === 'audit-log-search-input' ? 'input' : 'change', renderAuditLogList);
     });
     document.getElementById('audit-log-refresh-btn')?.addEventListener('click', () => loadAuditLogs({ reset: true }));
-    document.getElementById('audit-log-clear-btn')?.addEventListener('click', async () => {
+    document.getElementById('audit-log-clear-btn')?.addEventListener('click', () => {
         if (!AppState.hasAdminAccess || !firebaseDb) return;
-        if (!confirm('저장된 전체 작업 로그를 모두 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다.)')) return;
-        try {
-            await firebaseDb.ref('auditLogs').remove();
-            auditLogEntries = [];
-            auditLogOldestKey = null;
-            auditLogHasMore = false;
-            renderAuditLogList();
-            const statusEl = document.getElementById('audit-log-load-status');
-            if (statusEl) statusEl.textContent = '모든 작업 로그가 삭제되었습니다.';
-            alert('작업 로그가 모두 삭제되었습니다.');
-        } catch (e) {
-            console.error('로그 삭제 실패:', e);
-            alert('로그 삭제 실패: ' + (e.message || ''));
-        }
+        showConfirmModal(
+            '저장된 전체 작업 로그를 모두 삭제하시겠습니까?\n(삭제 후 복구할 수 없습니다.)',
+            async () => {
+                try {
+                    await firebaseDb.ref('auditLogs').remove();
+                    auditLogEntries = [];
+                    auditLogOldestKey = null;
+                    auditLogHasMore = false;
+                    renderAuditLogList();
+                    const statusEl = document.getElementById('audit-log-load-status');
+                    if (statusEl) statusEl.textContent = '모든 작업 로그가 삭제되었습니다.';
+                    showAlertModal('작업 로그가 모두 삭제되었습니다.', '삭제 완료', '✅');
+                } catch (e) {
+                    console.error('로그 삭제 실패:', e);
+                    showAlertModal('로그 삭제 실패: ' + (e.message || ''), '오류', '⚠️');
+                }
+            }
+        );
     });
     document.getElementById('audit-log-load-more-btn')?.addEventListener('click', () => loadAuditLogs());
     document.getElementById('audit-log-reset-filter-btn')?.addEventListener('click', () => {
@@ -5883,9 +5903,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear attendees handler
     document.getElementById('clear-attendees-btn').addEventListener('click', () => {
         if (AppState.attendees.length > 0) {
-            if (confirm(t('confirm.clear_all_attendees'))) {
+            showConfirmModal(t('confirm.clear_all_attendees'), () => {
                 AppState.clearAttendees();
-            }
+            }, null, '전체 비우기 확인', '🗑️');
         }
     });
 
@@ -6406,10 +6426,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (adminResetRulesBtn) {
         adminResetRulesBtn.addEventListener('click', () => {
             const targetYear = getSelectedAdminRulesYear();
-            if (confirm(`${targetYear}년 정산 구간 및 한도 설정을 기본값으로 복원하시겠습니까?`)) {
-                AppState.resetRules(targetYear);
-                setAdminRulesFormValues(AppState.getRulesForYear(targetYear));
-            }
+            showConfirmModal(
+                `${targetYear}년 정산 구간 및 한도 설정을 기본값으로 복원하시겠습니까?`,
+                () => {
+                    AppState.resetRules(targetYear);
+                    setAdminRulesFormValues(AppState.getRulesForYear(targetYear));
+                },
+                '복원',
+                '기본값 복원 확인',
+                '🔄'
+            );
         });
     }
 
@@ -7341,19 +7367,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(t('alert.select_items_to_delete'));
                 return;
             }
-            if (!confirm(`선택한 ${checked.length}건의 요청사항을 삭제하시겠습니까?`)) return;
-            const updates = {};
-            checked.forEach(cb => { updates[`requests/${cb.getAttribute('data-key')}`] = null; });
-            AppState.appendAuditUpdate(updates, {
-                action: 'DELETE',
-                targetType: '요청사항',
-                targetLabel: `선택 요청사항 ${checked.length}건`,
-                summary: `선택한 요청사항 ${checked.length}건 일괄 삭제`,
-                details: { 삭제건수: checked.length }
-            });
-            firebaseDb.ref().update(updates).then(() => {
-                renderFeedbackList();
-            });
+            showConfirmModal(
+                `선택한 ${checked.length}건의 요청사항을 삭제하시겠습니까?`,
+                () => {
+                    const updates = {};
+                    checked.forEach(cb => { updates[`requests/${cb.getAttribute('data-key')}`] = null; });
+                    AppState.appendAuditUpdate(updates, {
+                        action: 'DELETE',
+                        targetType: '요청사항',
+                        targetLabel: `선택 요청사항 ${checked.length}건`,
+                        summary: `선택한 요청사항 ${checked.length}건 일괄 삭제`,
+                        details: { 삭제건수: checked.length }
+                    });
+                    firebaseDb.ref().update(updates).then(() => {
+                        renderFeedbackList();
+                    });
+                }
+            );
         });
     }
 
@@ -7920,6 +7950,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.58', date: '2026.11.25', items: ['삭제·비우기·완료·안내 등 모든 상단 브라우저 팝업(alert/confirm)을 화면 정가운데 인앱 커스텀 모달로 전면 통일', '관리자 클럽 관리의 정회원 버튼 문구에서 인원수 표기를 제거하고 "정회원"으로 간소화'] },
         { ver: '1.7.57', date: '2026.11.25', items: ['정회원 관리 모달 이름 검색 시 동명이인 최근 참석자(✅ 최근 참석) 강조 표시 및 선택 후 Enter로 바로 추가 지원', '정산 수정 모드에서 상단 취소 버튼을 제거하고 우측 하단 [수정 완료] 버튼 아래 [❌ 수정 취소] 버튼 배치', '관리자 클럽 관리 헤더 "상품비(한도 50만원)"를 "상품비"로 축약하고 열 폭을 최적화해 우측 삭제 버튼 잘림 해소', '중간 결산 팝업 및 엑셀 출력의 "정회원" 컬럼명을 "총 참석자"로 변경'] },
         { ver: '1.7.56', date: '2026.11.25', items: ['정산 수정 모드에서 상단 수정 완료 버튼을 제거하고 우측 하단 버튼을 [수정 완료]로 전환하여 클릭 시 수정 저장과 함께 수정된 정산 메일이 재발송되도록 통합', '[현재 참석자] 탭 우측 창 상단에 정회원 불러오기·종전 참석자 불러오기·정회원 관리 메뉴를 배치하고, 아래 줄에 현재 참석자 명단(좌)과 전체 비우기(우)를 정렬 배치'] },
         { ver: '1.7.55', date: '2026.11.25', items: ['정산 이력 관리자·사용자 페이지 불일치 및 삭제된 이력(id 누락 좀비 노드) 중복 표시 버그 수정 (extractValidGlobalHistory 공통 정제 및 All balls 잔여 예산 정상화)', '동일 클럽·동일 날짜 선택 시 관리자 DB(globalHistory) 실시간 조회 및 인앱 팝업 모달(중복 정산 날짜 알림) 즉시 표시로 강화', '클럽별 정회원 인원 관리 모달 및 [현재 참석자] 탭 [⭐ 정회원 불러오기] · [📋 종전 참석자 불러오기] · [⚙️ 정회원 관리] 버튼 추가'] },
@@ -11138,12 +11169,20 @@ function showEditModal(title, hint, defaultValue, onConfirm) {
 // 확인 커스텀 모달 (테마 적용)
 // 확인 커스텀 모달 (테마 적용)
 // okLabel 미지정 → 삭제 스타일(빨강), 지정 시 확인 스타일(파랑/보라)
-function showConfirmModal(message, onConfirm, okLabel, customTitle, customIcon) {
+let _activeConfirmModalCleanup = null;
+function showConfirmModal(message, onConfirm, okLabel, customTitle, customIcon, onCancel) {
     const overlay   = document.getElementById('confirm-modal-overlay');
     const msgEl     = document.getElementById('confirm-modal-msg');
     const okBtn     = document.getElementById('confirm-modal-ok');
     const cancelBtn = document.getElementById('confirm-modal-cancel');
-    if (!overlay || !msgEl) { if (confirm(message)) onConfirm && onConfirm(); return; }
+    if (!overlay || !msgEl) {
+        if (confirm(message)) { onConfirm && onConfirm(); } else { onCancel && onCancel(); }
+        return;
+    }
+
+    if (typeof _activeConfirmModalCleanup === 'function') {
+        _activeConfirmModalCleanup();
+    }
 
     const isDelete = !okLabel;
     const isLight  = document.documentElement.getAttribute('data-app-theme') === 'light';
@@ -11189,22 +11228,47 @@ function showConfirmModal(message, onConfirm, okLabel, customTitle, customIcon) 
 
     overlay.style.display = 'flex';
 
-    const close = () => {
+    const cleanup = () => {
         overlay.style.display = 'none';
         okBtn.removeEventListener('click', handleOk);
         cancelBtn.removeEventListener('click', handleCancel);
         overlay.removeEventListener('click', handleOverlay);
         document.removeEventListener('keydown', handleKey);
+        _activeConfirmModalCleanup = null;
     };
-    const handleOk      = () => { close(); onConfirm && onConfirm(); };
-    const handleCancel  = () => close();
-    const handleOverlay = (e) => { if (e.target === overlay) close(); };
-    const handleKey     = (e) => { if (e.key === 'Escape') close(); };
+    _activeConfirmModalCleanup = cleanup;
+    const handleOk      = () => { cleanup(); onConfirm && onConfirm(); };
+    const handleCancel  = () => { cleanup(); onCancel && onCancel(); };
+    const handleOverlay = (e) => { if (e.target === overlay) { cleanup(); onCancel && onCancel(); } };
+    const handleKey     = (e) => { if (e.key === 'Escape') { cleanup(); onCancel && onCancel(); } };
 
     okBtn.addEventListener('click', handleOk);
     cancelBtn.addEventListener('click', handleCancel);
     overlay.addEventListener('click', handleOverlay);
     document.addEventListener('keydown', handleKey);
+}
+
+// 브라우저 상단 alert() 대신 화면 정가운데 인앱 팝업으로 표시
+const _nativeWindowAlert = (typeof window !== 'undefined' && typeof window.alert === 'function')
+    ? window.alert.bind(window)
+    : null;
+function showAlertModal(message, customTitle, customIcon) {
+    const text = String(message ?? '');
+    const overlay = document.getElementById('confirm-modal-overlay');
+    const msgEl   = document.getElementById('confirm-modal-msg');
+    if (!overlay || !msgEl) {
+        if (_nativeWindowAlert) _nativeWindowAlert(text);
+        return;
+    }
+    const isErr = /실패|오류|불가|없습니다|삭제|❌|🚨|⚠️/.test(text);
+    const isDone = /완료|저장|복사|발송/.test(text) && !isErr;
+    const icon = customIcon || (isErr ? '⚠️' : (isDone ? '✅' : 'ℹ️'));
+    const title = customTitle || (isErr ? '안내' : (isDone ? '완료' : '알림'));
+    showConfirmModal(text, null, '확인', title, icon);
+}
+if (typeof window !== 'undefined') {
+    window.showAlertModal = showAlertModal;
+    window.alert = (msg) => showAlertModal(msg);
 }
 
 function showPrizeModal(message, onOk, type) {
