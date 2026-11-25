@@ -608,7 +608,7 @@ window.__installAdminClubs = function (B) {
                     showConfirmModal(msg, () => {
                         AppState.setClubFacilityFullBudgetApproval(clubId, willAllow);
                         renderClubManagement();
-                    }, willAllow ? '승인' : '승인 취소', willAllow ? '시설 전액 사용 승인' : '시설 전액 사용 승인 취소', willAllow ? '✅' : '⚠️');
+                    }, willAllow ? '승인' : '승인 취소', willAllow ? '시설 장비 사용 승인' : '시설 장비 사용 승인 취소', willAllow ? '✅' : '⚠️');
                 });
             });
             clubListContainer.querySelectorAll('.club-name-color-picker-label').forEach(label => {
