@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.53';
+const APP_VERSION      = '1.7.54';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3107,32 +3107,7 @@ const AppState = {
                         const newCount = Math.max(0, parseInt(input.value, 10) || 0);
                         input.value = newCount;
                         if (this.directory[dirName] !== undefined) {
-                            const cur = this.directory[dirName];
-                            const curId = typeof cur === 'object' ? cur.id : cur;
-                            const curIds = typeof cur === 'object' && Array.isArray(cur.ids) ? cur.ids : [curId];
-                            const curCounts = (typeof cur === 'object' && cur.counts) ? Object.assign({}, cur.counts) : {};
-                            const previousCount = dirId ? (curCounts[dirId] || 0) : 0;
-                            if (dirId) curCounts[dirId] = newCount;
-                            // 전체 count는 사번별 counts 합산으로 갱신
-                            const totalCount = Object.values(curCounts).reduce((s, v) => s + v, 0);
-                            this.directory[dirName] = { id: curId, count: totalCount, ids: curIds, counts: curCounts };
-                            if (this.firebaseDb) {
-                                const updates = { 'settlements/000000/directory': this.directory };
-                                if (this.currentPin && this.currentPin !== '000000') {
-                                    updates[`settlements/${this.currentPin}/directory`] = this.directory;
-                                }
-                                this.firebaseDb.ref().update(updates).catch(e => console.error("공유 명부 카운트 동기화 실패:", e));
-                            }
-                            const savePromise = this.save();
-                            this.writeAuditAfterSave(savePromise, {
-                                action: 'UPDATE',
-                                targetType: '전사원 명부 카운트 변경',
-                                targetId: dirId || '',
-                                targetLabel: `${dirName} (${dirId || '-'})`,
-                                summary: `전사원 명부 '${dirName} (${dirId || '-'})' 누적 참석 횟수 수정: ${previousCount}회 → ${newCount}회`,
-                                details: { 이전횟수: previousCount, 변경횟수: newCount }
-                            });
-                            this.render();
+                            this.updateDirectoryMemberCount(dirName, dirId, newCount);
                         }
                     });
                 });
@@ -4058,6 +4033,7 @@ const AppState = {
             ? this.buildDirectoryCountsForHistory(nextSettlementHistory)
             : null;
         let nextGlobalDirectory = null;
+        const pendingGlobalDirUpdates = {};
         let creatorHistory = null;
         let creatorDirectory = null;
 
@@ -4076,7 +4052,9 @@ const AppState = {
                     if (!historyEntry) return;
                     globalHistory.push(String(historyEntry.id) === String(id) ? merged : historyEntry);
                 });
-                nextGlobalDirectory = this.buildDirectoryCountsForHistory(globalHistory);
+                nextGlobalDirectory = typeof this.prepareGlobalDirectorySync === 'function'
+                    ? await this.prepareGlobalDirectorySync(globalHistory, pendingGlobalDirUpdates)
+                    : this.buildDirectoryCountsForHistory(globalHistory);
 
                 // 다른 회원이 공유 이력을 수정해도 원 작성자의 개인 이력과 참석 누적 횟수는
                 // 함께 갱신한다. 현재 로그인 계정의 명부에 타인의 이력을 섞지 않는다.
@@ -4114,7 +4092,9 @@ const AppState = {
                 if (ownPersonalDirectory && this.currentPin) {
                     firebaseUpdates[`settlements/${this.currentPin}/directory`] = ownPersonalDirectory;
                 }
-                if (nextGlobalDirectory) {
+                if (Object.keys(pendingGlobalDirUpdates).length > 0) {
+                    Object.assign(firebaseUpdates, pendingGlobalDirUpdates);
+                } else if (nextGlobalDirectory) {
                     firebaseUpdates['settlements/000000/directory'] = nextGlobalDirectory;
                 }
                 if (creatorHistory && creatorPin) {
@@ -4476,6 +4456,7 @@ const AppState = {
             const nextSettlementHistory = [newHistoryItem, ...(this.settlementHistory || [])];
             const nextPersonalDirectory = this.buildDirectoryCountsForHistory(nextSettlementHistory);
             let nextGlobalDirectory = null;
+            const pendingGlobalDirUpdates = {};
             if (this.getHistoryMediaBytes(newHistoryItem) > MediaStoragePolicy.maxSettlementBytes) {
                 throw new Error('첨부 사진·영수증 용량이 너무 큽니다. 일부 파일을 삭제한 뒤 다시 시도해 주세요.');
             }
@@ -4499,7 +4480,9 @@ const AppState = {
                         if (!historyEntry || String(historyEntry.id) === String(newHistoryItem.id)) return;
                         globalHistoryWithNew.push(historyEntry);
                     });
-                    nextGlobalDirectory = this.buildDirectoryCountsForHistory(globalHistoryWithNew);
+                    nextGlobalDirectory = typeof this.prepareGlobalDirectorySync === 'function'
+                        ? await this.prepareGlobalDirectorySync(globalHistoryWithNew, pendingGlobalDirUpdates)
+                        : this.buildDirectoryCountsForHistory(globalHistoryWithNew);
                 } catch (dirErr) {
                     console.warn('정산 확정 시 공유 명부 누적 재계산 실패, 개인 명부로 폴백:', dirErr);
                 }
@@ -4507,7 +4490,9 @@ const AppState = {
                 const firebaseUpdates = {
                     [`globalHistory/${newHistoryItem.id}`]: newHistoryItem,
                 };
-                if (nextGlobalDirectory) {
+                if (Object.keys(pendingGlobalDirUpdates).length > 0) {
+                    Object.assign(firebaseUpdates, pendingGlobalDirUpdates);
+                } else if (nextGlobalDirectory) {
                     firebaseUpdates['settlements/000000/directory'] = nextGlobalDirectory;
                 }
                 if (this.currentPin) {
@@ -7500,6 +7485,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.54', date: '2026.11.25', items: ['신입사원 명부 등록 후 사라지는 문제 원인 해결: 전사원 명부 전용 모듈(js/directory.js) 분리 및 Firebase 공유 명부(settlements/000000/directory) 전체 덮어쓰기 제거(사원 개별 키 단위 원자적 업데이트 + 정산 확정/수정/삭제 시 원격 최신 스냅샷 병합 후 count/counts 부분 패치)'] },
         { ver: '1.7.53', date: '2026.11.25', items: ['관리자 클럽 관리 테이블 헤더·모달·로그 문구의 "시설 전액"을 "시설 장비"로 변경'] },
         { ver: '1.7.52', date: '2026.11.25', items: ['클럽 관리 및 중간 결산에서 "3M 동탄 운영진"이 필터·정렬 여부와 무관하게 항상 맨 아래에 배치되도록 고정', '중간 결산 팝업 및 엑셀 출력에 정회원·실참석(중복 제외)·비회원 순으로 실참석 컬럼 추가', '중간 결산 팝업 제목줄에 엑셀형 정렬·체크박스 필터 기능 추가 및 필터링된 화면 그대로 엑셀 출력 지원'] },
         { ver: '1.7.51', date: '2026.11.25', items: ['정산 완료 메일 발송 시 제목 형식을 "클럽명, 행사진행한 날짜, 정산 보고서"로 변경 (정산 날짜 선택값 반영)'] },
@@ -8716,7 +8702,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const nextHistoryList = Object.values(liveHistoryMap)
                         .filter(historyEntry => historyEntry && !liveDeletedMap[String(historyEntry.id)] && String(historyEntry.id) !== String(id))
                         .sort(compareHistoryEntriesNewestFirst);
-                    const nextAdminDirectory = AppState.buildDirectoryCountsForHistory(nextHistoryList);
+                    const pendingAdminDirUpdates = {};
+                    const nextAdminDirectory = typeof AppState.prepareGlobalDirectorySync === 'function'
+                        ? await AppState.prepareGlobalDirectorySync(nextHistoryList, pendingAdminDirUpdates)
+                        : AppState.buildDirectoryCountsForHistory(nextHistoryList);
                     let creatorHistory = null;
                     let creatorDirectory = null;
 
@@ -8752,9 +8741,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const firebaseUpdates = {
                         [`globalHistory/${id}`]: null,
-                        [`deletedHistoryIds/${id}`]: true,
-                        'settlements/000000/directory': nextAdminDirectory
+                        [`deletedHistoryIds/${id}`]: true
                     };
+                    if (Object.keys(pendingAdminDirUpdates).length > 0) {
+                        Object.assign(firebaseUpdates, pendingAdminDirUpdates);
+                    } else {
+                        firebaseUpdates['settlements/000000/directory'] = nextAdminDirectory;
+                    }
                     if (creatorHistory) {
                         firebaseUpdates[`settlements/${entry.creatorPin}/settlementHistory`] = AppState.buildPersonalHistoryForSync(creatorHistory);
                     }
