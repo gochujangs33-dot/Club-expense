@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.70';
+const APP_VERSION      = '1.7.71';
 const APP_VERSION_DATE = '2026.11.26';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1510,17 +1510,6 @@ const AppState = {
         this.render();
     },
 
-    clearAll() {
-        this.expenseItems = [];
-        this.attendees = [];
-        this.memberCount = 0;
-        this.nonMemberCount = 0;
-        this.eventNote = '';
-        this.cancelEdit();
-        this.save();
-        this.render();
-    },
-
     startEditExpense(id) {
         const item = this.expenseItems.find(item => item.id === id);
         if (item) {
@@ -2007,13 +1996,6 @@ const AppState = {
                 countEl.innerHTML = `<span style="color:var(--color-secondary); font-weight:700;">${matchCount}</span><span style="font-size:0.85em; opacity:0.8;">/${totalCount}</span>`;
             }
         }
-    },
-
-    updateAttendance(_memberCount, previousPrizeTotal) {
-        this.memberCount = this.attendees.length; // Override count from attendees
-        this.previousPrizeTotal = Math.max(0, previousPrizeTotal);
-        this.save();
-        this.render();
     },
 
     // updateRules / resetRules 는 js/rules-manager.js 로 분리됨 (v1.7.70)
@@ -4190,7 +4172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!AppState.hasSelectedClub()) {
             alert('먼저 상단에서 정산할 클럽을 선택해 주세요.');
-            const clubSel = document.getElementById('club-select');
+            const clubSel = document.getElementById('club-name-select');
             if (clubSel) {
                 clubSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 clubSel.focus();
@@ -4846,28 +4828,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateRemainingDisplay() {
-        // 항상 관리자 설정 기준 예산 사용 (입력란 값이 아닌 registry 직접 조회)
-        const annual = AppState.getClubBudget();
-        const used = AppState.getClubUsedBudget();
-        const annualEl = document.getElementById('setting-annual-budget');
-        const usedEl = document.getElementById('setting-used-budget');
-        const remEl = document.getElementById('setting-remaining-display');
-        if (annualEl) annualEl.value = formatAmount(annual);
-        if (usedEl) usedEl.value = formatAmount(used);
-        if (remEl) {
-            if (annual > 0) {
-                const rem = annual - used;
-                remEl.textContent = SettlementCalculator.formatCurrency(rem);
-                remEl.style.color = rem >= 0 ? 'var(--color-secondary)' : 'var(--warning-text)';
-            } else {
-                remEl.textContent = '미설정';
-                remEl.style.color = '';
-            }
-        }
-    }
-    updateRemainingDisplay();
-
     // Event photo upload handler (여러 장 지원)
     const eventPhotoInput = document.getElementById('event-photo-input');
     const eventPhotoStatus = document.getElementById('event-photo-status');
@@ -5328,6 +5288,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.71', date: '2026.11.26', items: ['전체 모듈 코드 정적 감사 및 정리: 미사용 구버전 함수(clearAll·updateAttendance·updateRemainingDisplay) 제거 및 클럽 미선택 시 구형 셀렉터(#club-select → #club-name-select) 포커스 이동 보완'] },
         { ver: '1.7.70', date: '2026.11.26', items: ['연도별 정산 구간·비율·한도 설정을 전용 모듈(js/rules-manager.js)로 분리하고, 신규 연도 설정 미입력 시 직전 연도 설정을 자동 승계하도록 보완 (조회 연도 전환 시 이전 연도 값 즉시 표시)'] },
         { ver: '1.7.69', date: '2026.11.26', items: ['PIN 로그인·권한 전환·오프라인 전환 및 Firebase 부트스트랩(loadFromFirebase·loadClubRegistry·loadGlobalSettings)을 전용 모듈(js/auth-firebase.js)로 분리'] },
         { ver: '1.7.68', date: '2026.11.26', items: ['공통 모달(showConfirmModal·showAlertModal·showEditModal·showPrizeModal)·정산 규정 안내·전역 툴팁·이미지 압축 유틸을 전용 모듈(js/ui-modals.js)로 분리'] },

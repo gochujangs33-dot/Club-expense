@@ -359,7 +359,11 @@ window.__installEmailReport = function (targetAppState) {
         async downloadExcelOnly(skipEditSave = false) {
             if (!this.hasSelectedClub()) {
                 alert('먼저 상단에서 정산할 클럽을 선택해 주세요.');
-                document.getElementById('club-select')?.focus();
+                const clubSel = document.getElementById('club-name-select');
+                if (clubSel) {
+                    clubSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    clubSel.focus();
+                }
                 return;
             }
             try {
