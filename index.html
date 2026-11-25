@@ -2105,34 +2105,37 @@
 
     <!-- 클럽별 정회원 관리 모달 -->
     <div id="club-regular-members-modal" class="modal hidden" style="z-index:10355;">
-        <div class="modal-content-card" style="max-width:540px; width:calc(100% - 2rem); max-height:88vh; display:flex; flex-direction:column; padding:1.25rem;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+        <div class="modal-content-card" style="max-width:560px; width:calc(100% - 2rem); max-height:88vh; display:flex; flex-direction:column; padding:1.35rem 1.4rem;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:0.85rem;">
                 <div>
-                    <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">⭐ 클럽별 정회원 인원 관리</h3>
-                    <p style="margin:0.15rem 0 0; font-size:0.76rem; color:var(--text-secondary);">클럽에 정회원을 등록해 두면 [정회원 불러오기] 버튼으로 한 번에 참석자에 추가됩니다.</p>
+                    <h3 style="margin:0; font-size:1.08rem; font-weight:700; color:var(--text-primary);">⭐ 클럽별 정회원 인원 관리</h3>
+                    <p style="margin:0.2rem 0 0; font-size:0.78rem; color:var(--text-secondary);">클럽에 정회원을 등록해 두면 [정회원 불러오기] 버튼으로 한 번에 참석자에 추가됩니다.</p>
                 </div>
-                <button type="button" id="close-regular-members-modal-btn" class="close-btn" style="position:static; font-size:1.3rem; line-height:1;">&times;</button>
+                <button type="button" id="close-regular-members-modal-btn" class="close-btn" style="position:static; font-size:1.35rem; line-height:1;">&times;</button>
             </div>
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem; padding:0.45rem 0.7rem; border-radius:8px; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.28);">
-                <span style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); white-space:nowrap;">대상 클럽</span>
-                <strong id="regular-members-club-name" style="font-size:0.92rem; font-weight:700; color:var(--color-primary);"></strong>
+            <div class="regular-members-club-banner">
+                <div style="display:flex; align-items:center; gap:0.55rem;">
+                    <span style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); white-space:nowrap;">대상 클럽</span>
+                    <strong id="regular-members-club-name" style="font-size:0.95rem; font-weight:700; color:var(--color-primary);"></strong>
+                </div>
+                <span id="regular-members-year-badge" class="regular-members-year-badge">2026년 기준</span>
                 <input type="hidden" id="regular-members-club-id" value="">
             </div>
-            <div style="display:flex; gap:0.45rem; margin-bottom:0.65rem; position:relative; align-items:stretch;">
-                <div style="flex:1.2; position:relative;">
-                    <input type="text" id="regular-member-name-input" placeholder="이름 검색/입력 (전사원 명부 연동)" autocomplete="off" style="width:100%; padding:0.46rem 0.65rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.84rem;">
+            <div style="display:flex; gap:0.5rem; margin-bottom:0.8rem; position:relative; align-items:stretch;">
+                <div style="flex:1.25; position:relative;">
+                    <input type="text" id="regular-member-name-input" placeholder="이름 검색/입력 (전사원 명부 연동)" autocomplete="off" style="width:100%; padding:0.5rem 0.7rem; border-radius:9px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.85rem;">
                     <div id="regular-member-name-dropdown" class="hidden attendee-dropdown" style="z-index:10370;"></div>
                 </div>
-                <input type="text" id="regular-member-id-input" placeholder="사번" autocomplete="off" style="width:105px; padding:0.46rem 0.6rem; border-radius:8px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.84rem;">
-                <button type="button" id="add-regular-member-btn" class="btn-primary" style="width:auto; padding:0.46rem 0.85rem; font-size:0.82rem; font-weight:700; border-radius:8px; white-space:nowrap;">+ 정회원 추가</button>
+                <input type="text" id="regular-member-id-input" placeholder="사번" autocomplete="off" style="width:108px; padding:0.5rem 0.65rem; border-radius:9px; border:1px solid var(--card-border); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary); font-size:0.85rem;">
+                <button type="button" id="add-regular-member-btn" class="btn-primary" style="width:auto; padding:0.5rem 0.9rem; font-size:0.84rem; font-weight:700; border-radius:9px; white-space:nowrap;">+ 정회원 추가</button>
             </div>
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem; font-size:0.8rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; font-size:0.82rem;">
                 <span style="color:var(--text-secondary); font-weight:600;">등록된 정회원 명단 (<strong id="regular-members-count-label" style="color:var(--color-primary);">0</strong>명)</span>
-                <button type="button" id="clear-regular-members-btn" class="btn-text-danger" style="font-size:0.76rem; padding:0.15rem 0.4rem;">전체 삭제</button>
+                <button type="button" id="clear-regular-members-btn" class="btn-text-danger" style="font-size:0.78rem; padding:0.2rem 0.5rem;">전체 삭제</button>
             </div>
-            <div id="regular-members-list-container" class="scroll-y" style="flex:1; min-height:160px; max-height:300px; border:1px solid var(--card-border); border-radius:10px; padding:0.5rem; display:flex; flex-direction:column; gap:0.35rem;"></div>
-            <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.85rem;">
-                <button type="button" id="done-regular-members-modal-btn" class="btn-secondary" style="padding:0.48rem 1rem; font-size:0.84rem; border-radius:8px;">닫기</button>
+            <div id="regular-members-list-container" class="scroll-y regular-members-list"></div>
+            <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.95rem;">
+                <button type="button" id="done-regular-members-modal-btn" class="btn-secondary" style="padding:0.5rem 1.15rem; font-size:0.85rem; border-radius:9px;">닫기</button>
             </div>
         </div>
     </div>
@@ -2257,6 +2260,7 @@
     <script src="js/calc-locked.js" defer></script>
     <script src="app.js" defer></script>
     <script src="js/directory.js" defer></script>
+    <script src="js/regular-members.js" defer></script>
     <script src="js/charts.js" defer></script>
     <script src="js/export-reports.js" defer></script>
     <script src="js/admin-clubs.js" defer></script>
