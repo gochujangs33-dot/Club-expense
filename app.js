@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.59';
+const APP_VERSION      = '1.7.60';
 const APP_VERSION_DATE = '2026.11.25';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -6000,17 +6000,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const modal = document.getElementById('club-regular-members-modal');
         const closeBtn = document.getElementById('close-regular-members-modal-btn');
         const doneBtn = document.getElementById('done-regular-members-modal-btn');
-        const clubSelect = document.getElementById('regular-members-club-select');
+        const clubNameLabel = document.getElementById('regular-members-club-name');
+        const clubIdHidden = document.getElementById('regular-members-club-id');
         const nameInput = document.getElementById('regular-member-name-input');
         const dropdown = document.getElementById('regular-member-name-dropdown');
         const idInput = document.getElementById('regular-member-id-input');
         const addBtn = document.getElementById('add-regular-member-btn');
-        const importCurBtn = document.getElementById('import-current-to-regular-btn');
-        const importHistBtn = document.getElementById('import-history-to-regular-btn');
         const clearAllBtn = document.getElementById('clear-regular-members-btn');
         const loadNowBtn = document.getElementById('regular-members-load-now-btn');
         const countLabel = document.getElementById('regular-members-count-label');
         const listContainer = document.getElementById('regular-members-list-container');
+
+        function getActiveRegularClubId() {
+            return (clubIdHidden ? clubIdHidden.value : '') || '';
+        }
 
         function resolveClubEntry(preferClubId) {
             const registry = AppState.clubRegistry || {};
@@ -6066,8 +6069,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function renderRegularMembersList() {
-            if (!clubSelect || !listContainer) return;
-            const clubId = clubSelect.value;
+            if (!listContainer) return;
+            const clubId = getActiveRegularClubId();
             const club = clubId && AppState.clubRegistry ? AppState.clubRegistry[clubId] : null;
             const regList = (club && Array.isArray(club.regularMembers)) ? club.regularMembers : [];
             if (countLabel) countLabel.textContent = String(regList.length);
@@ -6100,28 +6103,36 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        function populateRegularClubSelect(preferClubId) {
-            if (!clubSelect) return;
-            const entries = Object.entries(AppState.clubRegistry || {})
-                .filter(([, c]) => c && c.name)
-                .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || '', 'ko-KR'));
-            clubSelect.innerHTML = entries
-                .map(([id, c]) => `<option value="${AppState.escapeHtml(id)}">${AppState.escapeHtml(c.name)} (${Array.isArray(c.regularMembers) ? c.regularMembers.length : 0}명)</option>`)
-                .join('');
-            const [resolvedId] = resolveClubEntry(preferClubId);
-            if (resolvedId && entries.some(([id]) => id === resolvedId)) {
-                clubSelect.value = resolvedId;
-            }
-        }
-
         function openClubRegularMembersModal(preferClubId) {
             if (!modal) return;
-            populateRegularClubSelect(preferClubId);
+            const [resolvedId, resolvedClub] = resolveClubEntry(preferClubId);
+            if (!resolvedId || !resolvedClub) {
+                alert('상단에서 먼저 클럽을 선택해 주세요.');
+                return;
+            }
+            if (clubIdHidden) clubIdHidden.value = resolvedId;
+            if (clubNameLabel) clubNameLabel.textContent = resolvedClub.name || '';
             renderRegularMembersList();
             if (nameInput) nameInput.value = '';
             if (idInput) idInput.value = '';
             if (dropdown) dropdown.classList.add('hidden');
             modal.classList.remove('hidden');
+
+            // 동명이인 최근 참석 표시를 위해 전체 이력 캐시가 비어 있으면 백그라운드로 1회 동기화
+            if (firebaseDb && (!lastHistoryList || lastHistoryList.length === 0)) {
+                Promise.all([
+                    firebaseDb.ref('globalHistory').once('value'),
+                    firebaseDb.ref('deletedHistoryIds').once('value')
+                ]).then(([snapshot, deletedSnap]) => {
+                    const historyData = snapshot.val() || {};
+                    const delMap = deletedSnap.val() || {};
+                    lastHistoryList = extractValidGlobalHistory(historyData, delMap, firebaseDb)
+                        .sort(compareHistoryEntriesNewestFirst);
+                    if (nameInput && nameInput.value.trim()) {
+                        nameInput.dispatchEvent(new Event('input'));
+                    }
+                }).catch(() => {});
+            }
         }
 
         function closeClubRegularMembersModal() {
@@ -6152,32 +6163,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.target === modal) closeClubRegularMembersModal();
             });
         }
-        if (clubSelect) {
-            clubSelect.addEventListener('change', () => {
-                renderRegularMembersList();
-            });
-        }
 
         function getRecentClubAttendanceForTarget(employeeId, targetClubId, targetClubName) {
             const id = String(employeeId || '').trim();
             if (!id) return null;
             const sources = [...(lastHistoryList || []), ...(AppState.clubHistory || []), ...(AppState.settlementHistory || [])];
-            let latest = null;
+            let latestInClub = null;
+            let latestAny = null;
             sources.forEach(entry => {
-                if (!entry || !historyMatchesClub(entry, targetClubId, targetClubName)) return;
+                if (!entry) return;
                 const matched = (entry.attendees || []).some(a => a && a.employeeId != null && String(a.employeeId).trim() === id);
                 if (!matched) return;
                 const time = entry.settlementDate
                     ? new Date(entry.settlementDate + 'T00:00:00').getTime()
                     : (entry.date ? new Date(entry.date).getTime() : (entry.id || 0));
-                if (!latest || time > latest.time) {
-                    latest = {
-                        time,
-                        dateStr: entry.settlementDate || (entry.date ? new Date(entry.date).toISOString().slice(0, 10) : '')
-                    };
+                const dateStr = entry.settlementDate || (entry.date ? new Date(entry.date).toISOString().slice(0, 10) : '');
+                if (historyMatchesClub(entry, targetClubId, targetClubName)) {
+                    if (!latestInClub || time > latestInClub.time) {
+                        latestInClub = { time, dateStr, sameClub: true, clubName: entry.clubName || targetClubName || '' };
+                    }
+                } else {
+                    if (!latestAny || time > latestAny.time) {
+                        latestAny = { time, dateStr, sameClub: false, clubName: entry.clubName || '' };
+                    }
                 }
             });
-            return latest;
+            return latestInClub || latestAny;
         }
 
         if (nameInput && dropdown) {
@@ -6193,16 +6204,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     dropdown.classList.add('hidden');
                     return;
                 }
-                const selClubId = clubSelect ? clubSelect.value : AppState.clubId;
+                const selClubId = getActiveRegularClubId();
                 const selClub = selClubId && AppState.clubRegistry ? AppState.clubRegistry[selClubId] : null;
                 const selClubName = selClub ? selClub.name : AppState.clubName;
 
                 dropdown.innerHTML = matches.map(m => {
                     const isDupe = matches.filter(x => x.name === m.name).length > 1;
                     const recent = isDupe ? getRecentClubAttendanceForTarget(m.id, selClubId, selClubName) : null;
-                    const recentStyle = recent ? 'background:rgba(52,211,153,0.12); border-left:3px solid rgb(52,211,153);' : '';
+                    const recentStyle = recent
+                        ? (recent.sameClub
+                            ? 'background:rgba(52,211,153,0.12); border-left:3px solid rgb(52,211,153);'
+                            : 'background:rgba(59,130,246,0.09); border-left:3px solid rgb(59,130,246);')
+                        : '';
                     const recentBadge = recent
-                        ? `<span style="font-size:0.7rem; color:#10b981; font-weight:700; margin-left:0.35rem;">✅ 최근 참석 (${AppState.escapeHtml(recent.dateStr)})</span>`
+                        ? (recent.sameClub
+                            ? `<span style="font-size:0.7rem; color:#10b981; font-weight:700; margin-left:0.35rem;">✅ 최근 참석 (${AppState.escapeHtml(recent.dateStr)})</span>`
+                            : `<span style="font-size:0.7rem; color:#3b82f6; font-weight:700; margin-left:0.35rem;">📌 최근 참석 (${AppState.escapeHtml(recent.clubName)} · ${AppState.escapeHtml(recent.dateStr)})</span>`)
                         : '';
                     return `<div class="attendee-dropdown-item" data-name="${AppState.escapeHtml(m.name)}" data-id="${AppState.escapeHtml(m.id)}" style="${recentStyle} display:flex; align-items:center; justify-content:space-between; gap:0.4rem;">
                         <span><strong>${AppState.escapeHtml(m.name)}</strong> <small style="color:var(--text-secondary);">(${AppState.escapeHtml(m.id)})</small></span>
@@ -6223,8 +6240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function handleAddSingleRegularMember() {
-            if (!clubSelect) return;
-            const clubId = clubSelect.value;
+            const clubId = getActiveRegularClubId();
             const club = clubId && AppState.clubRegistry ? AppState.clubRegistry[clubId] : null;
             if (!club) return;
             const name = (nameInput ? nameInput.value : '').trim();
@@ -6259,7 +6275,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (nameInput) nameInput.value = '';
             if (idInput) idInput.value = '';
             if (dropdown) dropdown.classList.add('hidden');
-            populateRegularClubSelect(clubId);
             renderRegularMembersList();
             if (typeof renderClubManagement === 'function') renderClubManagement();
             if (nameInput) nameInput.focus();
@@ -6276,54 +6291,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        if (importCurBtn) {
-            importCurBtn.addEventListener('click', async () => {
-                const clubId = clubSelect ? clubSelect.value : '';
-                const club = clubId && AppState.clubRegistry ? AppState.clubRegistry[clubId] : null;
-                if (!club) return;
-                const curAtts = AppState.attendees || [];
-                if (curAtts.length === 0) {
-                    alert('현재 참석자 명단에 등록된 인원이 없습니다.');
-                    return;
-                }
-                const merged = [...(Array.isArray(club.regularMembers) ? club.regularMembers : []), ...curAtts];
-                await AppState.setClubRegularMembers(clubId, merged);
-                populateRegularClubSelect(clubId);
-                renderRegularMembersList();
-                if (typeof renderClubManagement === 'function') renderClubManagement();
-            });
-        }
-
-        if (importHistBtn) {
-            importHistBtn.addEventListener('click', async () => {
-                const clubId = clubSelect ? clubSelect.value : '';
-                const club = clubId && AppState.clubRegistry ? AppState.clubRegistry[clubId] : null;
-                if (!club) return;
-                if (AppState.firebaseDb) await AppState.loadClubHistory();
-                const allSources = [...(lastHistoryList || []), ...(AppState.clubHistory || []), ...(AppState.settlementHistory || [])]
-                    .filter(e => e && Array.isArray(e.attendees) && e.attendees.length > 0 && historyMatchesClub(e, clubId, club.name))
-                    .sort(compareHistoryEntriesNewestFirst);
-                if (allSources.length === 0) {
-                    alert(`'${club.name}' 클럽의 종전 정산 참석자 기록이 없습니다.`);
-                    return;
-                }
-                const latestAtts = allSources[0].attendees || [];
-                const merged = [...(Array.isArray(club.regularMembers) ? club.regularMembers : []), ...latestAtts];
-                await AppState.setClubRegularMembers(clubId, merged);
-                populateRegularClubSelect(clubId);
-                renderRegularMembersList();
-                if (typeof renderClubManagement === 'function') renderClubManagement();
-            });
-        }
-
         if (clearAllBtn) {
             clearAllBtn.addEventListener('click', () => {
-                const clubId = clubSelect ? clubSelect.value : '';
+                const clubId = getActiveRegularClubId();
                 const club = clubId && AppState.clubRegistry ? AppState.clubRegistry[clubId] : null;
                 if (!club || !Array.isArray(club.regularMembers) || club.regularMembers.length === 0) return;
                 showConfirmModal(`'${club.name}' 클럽의 등록된 정회원(${club.regularMembers.length}명)을 모두 삭제하시겠습니까?`, async () => {
                     await AppState.setClubRegularMembers(clubId, []);
-                    populateRegularClubSelect(clubId);
                     renderRegularMembersList();
                     if (typeof renderClubManagement === 'function') renderClubManagement();
                 });
@@ -6332,7 +6306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (loadNowBtn) {
             loadNowBtn.addEventListener('click', () => {
-                const clubId = clubSelect ? clubSelect.value : AppState.clubId;
+                const clubId = getActiveRegularClubId() || AppState.clubId;
                 if (loadRegularMembersToAttendees(clubId)) {
                     closeClubRegularMembersModal();
                 }
@@ -7957,6 +7931,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.60', date: '2026.11.25', items: ['정회원 관리 모달 대상 클럽을 변경 불가한 고정 클럽명 표시로 변경하고 일괄 추가 버튼 2개(+ 현재/종전 참석자에서 추가) 제거', '정회원 관리 이름 검색 시 동명이인 최근 참석자 표시가 어느 클럽에서 열어도 누락되지 않도록 전체 이력 기준 보조 표시 및 자동 로드 보강'] },
         { ver: '1.7.59', date: '2026.11.25', items: ['정산 보고서 메일 발송 시 본문 글꼴을 "맑은 고딕", 글자 크기를 9pt HTML 서식으로 전송하도록 개선 (앱 및 Google Apps Script 동시 반영)'] },
         { ver: '1.7.58', date: '2026.11.25', items: ['삭제·비우기·완료·안내 등 모든 상단 브라우저 팝업(alert/confirm)을 화면 정가운데 인앱 커스텀 모달로 전면 통일', '관리자 클럽 관리의 정회원 버튼 문구에서 인원수 표기를 제거하고 "정회원"으로 간소화'] },
         { ver: '1.7.57', date: '2026.11.25', items: ['정회원 관리 모달 이름 검색 시 동명이인 최근 참석자(✅ 최근 참석) 강조 표시 및 선택 후 Enter로 바로 추가 지원', '정산 수정 모드에서 상단 취소 버튼을 제거하고 우측 하단 [수정 완료] 버튼 아래 [❌ 수정 취소] 버튼 배치', '관리자 클럽 관리 헤더 "상품비(한도 50만원)"를 "상품비"로 축약하고 열 폭을 최적화해 우측 삭제 버튼 잘림 해소', '중간 결산 팝업 및 엑셀 출력의 "정회원" 컬럼명을 "총 참석자"로 변경'] },
