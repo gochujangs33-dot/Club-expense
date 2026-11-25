@@ -1380,45 +1380,60 @@
         if (!container) return;
         const subtitleEl = document.getElementById('recent-settlement-subtitle');
         const selectedClubs = ChartBridge().getSelectedOverallClubs();
+
+        // 입력(등록) 날짜·시간 추출: entry.date 또는 timestamp형 entry.id 우선 (행사일 settlementDate와 무관)
+        const getCreatedTimestamp = entry => {
+            if (!entry || typeof entry !== 'object') return 0;
+            if (entry.date) {
+                const t = new Date(entry.date).getTime();
+                if (Number.isFinite(t) && t > 0) return t;
+            }
+            const idNum = Number(entry.id);
+            if (Number.isFinite(idNum) && idNum > 100000000000) return idNum;
+            if (typeof entry.settlementDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(entry.settlementDate)) {
+                const [y, m, d] = entry.settlementDate.slice(0, 10).split('-').map(Number);
+                return new Date(y, m - 1, d).getTime();
+            }
+            return 0;
+        };
+
         const clubFiltered = (historyList || [])
             .filter(entry => entry && (!selectedClubs || selectedClubs.has(entry.clubName || '기본 클럽')))
             .slice()
-            .sort(compareHistoryEntriesNewestFirst);
-
-        const parseEntryDateObj = entry => {
-            if (!entry || typeof entry !== 'object') return null;
-            if (typeof entry.settlementDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(entry.settlementDate)) {
-                const [y, m, d] = entry.settlementDate.slice(0, 10).split('-').map(Number);
-                return new Date(y, m - 1, d);
-            }
-            const raw = entry.date || entry.id;
-            const dt = raw ? new Date(Number(raw) || raw) : null;
-            return (dt && !Number.isNaN(dt.getTime())) ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null;
-        };
+            .sort((a, b) => getCreatedTimestamp(b) - getCreatedTimestamp(a));
 
         const now = new Date();
-        const isCurrentYearView = !_selectedQueryYear || _selectedQueryYear === String(now.getFullYear());
+        const isCurrentYearView = !_selectedQueryYear || _selectedQueryYear === 'ALL' || _selectedQueryYear === String(now.getFullYear());
         const refDate = isCurrentYearView
             ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
-            : (parseEntryDateObj(clubFiltered[0]) || new Date(now.getFullYear(), now.getMonth(), now.getDate()));
-        const cutoffDate = new Date(refDate.getFullYear(), refDate.getMonth() - 2, refDate.getDate());
+            : (clubFiltered[0] ? new Date(getCreatedTimestamp(clubFiltered[0])) : new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+        const cutoffTime = new Date(refDate.getFullYear(), refDate.getMonth() - 2, refDate.getDate()).getTime();
 
         const entries = clubFiltered.filter(entry => {
-            const dt = parseEntryDateObj(entry);
-            return dt ? dt >= cutoffDate : false;
+            const ts = getCreatedTimestamp(entry);
+            return ts > 0 && ts >= cutoffTime;
         });
 
         if (subtitleEl) {
-            subtitleEl.textContent = `최근 2개월 (${entries.length}건) · 참석 인원과 명단 확인`;
+            subtitleEl.textContent = `최근 2개월 입력순 (${entries.length}건) · 참석 인원과 명단 확인`;
         }
         if (entries.length === 0) {
-            container.innerHTML = '<div class="recent-settlement-empty">최근 2개월 내 정산 이력이 없습니다.</div>';
+            container.innerHTML = '<div class="recent-settlement-empty">최근 2개월 내 입력된 정산 이력이 없습니다.</div>';
             return;
         }
+        const formatCreatedShort = ts => {
+            if (!ts) return '';
+            const dt = new Date(ts);
+            if (Number.isNaN(dt.getTime())) return '';
+            const pad = n => String(n).padStart(2, '0');
+            return `${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+        };
         const colorMap = getClubColorMap();
         container.innerHTML = entries.map((entry, index) => {
             const clubName = entry.clubName || '기본 클럽';
             const dateText = entry.settlementDate || (entry.date ? String(entry.date).slice(0, 10) : '날짜 없음');
+            const createdText = formatCreatedShort(getCreatedTimestamp(entry));
+            const createdSpan = createdText ? `<span style="opacity:0.78;">입력 ${AppState.escapeHtml(createdText)}</span>` : '';
             const creator = entry.creatorName ? `<span>정산인 ${AppState.escapeHtml(entry.creatorName)}</span>` : '';
             const support = Math.max(0, parseAmount(entry.finalSupportAmount));
             const memberCount = ChartBridge().getHistoryUsageBreakdown(entry).memberCount;
@@ -1428,7 +1443,7 @@
                     <span class="recent-settlement-dot" aria-hidden="true"></span>
                     <div class="recent-settlement-copy">
                         <strong>${AppState.escapeHtml(clubName)} 정산 완료</strong>
-                        <small class="recent-settlement-meta"><span>${AppState.escapeHtml(dateText)}</span><span class="recent-settlement-attendees">👥 참석 ${memberCount}명</span>${creator}</small>
+                        <small class="recent-settlement-meta"><span>행사 ${AppState.escapeHtml(dateText)}</span>${createdSpan}<span class="recent-settlement-attendees">👥 참석 ${memberCount}명</span>${creator}</small>
                     </div>
                     <span class="recent-settlement-amount">${SettlementCalculator.formatCurrency(support)}</span>
                 </button>
@@ -1506,7 +1521,8 @@
         renderClubActivityChart(historyList, animateEntrance, targetYear);
         renderClubUniqueAttendeesChart(historyList, animateEntrance, targetYear);
         renderSelfPayTrendChart(yearFilteredList, animateEntrance);
-        renderRecentSettlements(yearFilteredList);
+        const recentSourceList = (isAllYears || targetYear === thisYear) ? historyList : yearFilteredList;
+        renderRecentSettlements(recentSourceList);
     }
 
 
