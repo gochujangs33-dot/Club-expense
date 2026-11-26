@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.74';
+const APP_VERSION      = '1.7.75';
 const APP_VERSION_DATE = '2026.11.26';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -4070,6 +4070,81 @@ document.addEventListener('DOMContentLoaded', () => {
         getSelectedQueryYear: () => _selectedQueryYear
     });
 
+    // Admin: DB 기존 사진 데이터 일괄 정리
+    const cleanupDbMediaBtn = document.getElementById('cleanup-db-media-btn');
+    const cleanupDbMediaStatus = document.getElementById('cleanup-db-media-status');
+    if (cleanupDbMediaBtn) {
+        cleanupDbMediaBtn.addEventListener('click', async () => {
+            if (!AppState.isAdmin()) {
+                showAlertModal('관리자 권한이 필요합니다.', '권한 오류', '⚠️');
+                return;
+            }
+            if (!firebaseDb) {
+                showAlertModal('Firebase DB에 연결되어 있지 않습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.', '연결 오류', '⚠️');
+                return;
+            }
+            cleanupDbMediaBtn.disabled = true;
+            const prevBtnText = cleanupDbMediaBtn.textContent;
+            cleanupDbMediaBtn.textContent = '⏳ DB 사진 데이터 스캔 중...';
+            try {
+                const [globalSnap, settlementsSnap] = await Promise.all([
+                    firebaseDb.ref('globalHistory').once('value'),
+                    firebaseDb.ref('settlements').once('value')
+                ]);
+                const plan = collectLegacyMediaCleanupPlan(globalSnap.val(), settlementsSnap.val());
+                if (plan.targetCount === 0) {
+                    if (cleanupDbMediaStatus) {
+                        cleanupDbMediaStatus.textContent = '✓ 정리할 기존 사진 데이터가 없습니다.';
+                        cleanupDbMediaStatus.style.color = 'var(--color-secondary)';
+                        cleanupDbMediaStatus.style.display = 'block';
+                    }
+                    showAlertModal('DB에 정리할 기존 행사·영수증 사진이 없습니다.', '정리 대상 없음', '✅');
+                    return;
+                }
+                const mbText = (plan.totalBytes / (1024 * 1024)).toFixed(2);
+                showConfirmModal(
+                    `총 ${plan.targetCount}건의 DB 기록에서 약 ${mbText} MB 분량의 기존 행사·영수증 사진이 발견되었습니다.\n\n` +
+                    `정산 금액·항목·참석자 이력은 모두 그대로 유지되며, 사진 데이터만 DB에서 삭제됩니다.\n` +
+                    `메일로 이미 백업된 내역에는 영향이 없습니다. 계속 진행하시겠습니까?`,
+                    async () => {
+                        cleanupDbMediaBtn.disabled = true;
+                        cleanupDbMediaBtn.textContent = '⏳ DB 사진 정리 중...';
+                        try {
+                            await applyLegacyMediaCleanupUpdates(firebaseDb, plan.updates);
+                            if (typeof AppState.recordAuditLog === 'function') {
+                                await AppState.recordAuditLog('DB 기존 사진 일괄 정리', {
+                                    정리건수: plan.targetCount,
+                                    절감용량: `${mbText} MB`
+                                });
+                            }
+                            if (cleanupDbMediaStatus) {
+                                cleanupDbMediaStatus.textContent = `✓ ${plan.targetCount}건(${mbText} MB) 정리 완료`;
+                                cleanupDbMediaStatus.style.color = 'var(--color-secondary)';
+                                cleanupDbMediaStatus.style.display = 'block';
+                            }
+                            showAlertModal(`총 ${plan.targetCount}건의 기존 사진(약 ${mbText} MB)을 DB에서 안전하게 정리했습니다.`, '정리 완료', '✅');
+                        } catch (cleanErr) {
+                            console.error('DB 기존 사진 정리 실패:', cleanErr);
+                            showAlertModal('DB 사진 정리 중 오류가 발생했습니다: ' + (cleanErr.message || cleanErr), '정리 실패', '⚠️');
+                        } finally {
+                            cleanupDbMediaBtn.disabled = false;
+                            cleanupDbMediaBtn.textContent = prevBtnText;
+                        }
+                    },
+                    'DB 기존 사진 정리',
+                    '🧹',
+                    '정리 실행'
+                );
+            } catch (err) {
+                console.error('DB 사진 스캔 실패:', err);
+                showAlertModal('DB 사진 스캔 중 오류가 발생했습니다: ' + (err.message || err), '스캔 실패', '⚠️');
+            } finally {
+                cleanupDbMediaBtn.disabled = false;
+                cleanupDbMediaBtn.textContent = prevBtnText;
+            }
+        });
+    }
+
     // Admin: Google Apps Script 첨부 메일 웹훅 설정
     const emailWebhookInput = document.getElementById('admin-email-webhook-input');
     const saveEmailWebhookBtn = document.getElementById('save-email-webhook-btn');
@@ -4581,9 +4656,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const confirmMsg = isEditMode
                 ? (`수신 메일 : ${recipientEmail}\n` +
                    `디바이스 저장 : ${willSaveExcel ? '활성화' : '비활성화'}\n\n` +
+                   `📷 행사 사진 및 영수증 사진은 엑셀 파일에 첨부되어 이메일로 발송되며, DB 서버에는 저장되지 않습니다.\n\n` +
                    `수정 완료 확인 시 수정된 정산 내역 저장 및 메일이 재발송되며 현재 화면이 초기화됩니다.`)
                 : (`수신 메일 : ${recipientEmail}\n` +
                    `디바이스 저장 : ${willSaveExcel ? '활성화' : '비활성화'}\n\n` +
+                   `📷 행사 사진 및 영수증 사진은 엑셀 파일에 첨부되어 이메일로 발송되며, DB 서버에는 저장되지 않습니다.\n\n` +
                    `정산 완료 확인 시 현재 화면이 초기화됩니다.`);
 
             // ── 관리자 DB 중복 정산 사전 검증 (이메일 발송/엑셀 다운로드 전 원천 차단) ──
@@ -4860,16 +4937,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 AppState.eventPhotos.push(...accepted);
                 AppState.render();
-                const synced = await AppState.save();
+                await AppState.save();
                 const totalBytes = accepted.reduce((sum, value) => sum + getMediaDataSize(value), 0);
                 if (eventPhotoStatus) {
-                    if (synced) {
-                        eventPhotoStatus.textContent = `✓ ${accepted.length}장 서버 임시 저장 완료 (${formatMediaSize(totalBytes)})${rejected ? ` · ${rejected}장은 용량 초과로 제외` : ''}`;
-                        eventPhotoStatus.style.color = 'var(--color-secondary)';
-                    } else {
-                        eventPhotoStatus.textContent = '⚠ 사진은 이 기기에만 저장됐습니다. 네트워크를 확인한 뒤 다시 저장해 주세요.';
-                        eventPhotoStatus.style.color = 'var(--warning-text)';
-                    }
+                    eventPhotoStatus.textContent = `✓ ${accepted.length}장 이 기기에 임시 저장 완료 (${formatMediaSize(totalBytes)} · 엑셀·메일 발송 시 포함)${rejected ? ` · ${rejected}장은 용량 초과로 제외` : ''}`;
+                    eventPhotoStatus.style.color = 'var(--color-secondary)';
                 }
             } catch (err) {
                 console.error('행사 사진 저장 실패:', err);
@@ -4891,12 +4963,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isNaN(idx)) {
                 AppState.eventPhotos.splice(idx, 1);
                 AppState.render();
-                AppState.save().then(synced => {
+                AppState.save().then(() => {
                     if (!eventPhotoStatus) return;
-                    eventPhotoStatus.textContent = synced
-                        ? '✓ 행사 사진 삭제 내용이 서버에 반영됐습니다.'
-                        : '⚠ 행사 사진 삭제 내용이 이 기기에만 저장됐습니다.';
-                    eventPhotoStatus.style.color = synced ? 'var(--color-secondary)' : 'var(--warning-text)';
+                    eventPhotoStatus.textContent = '✓ 행사 사진 삭제 내용이 이 기기에 반영됐습니다.';
+                    eventPhotoStatus.style.color = 'var(--color-secondary)';
                 });
             }
         });
@@ -5288,6 +5358,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.75', date: '2026.11.26', items: ['정산 완료·수정 완료 확인 팝업에 행사·영수증 사진이 엑셀에 첨부되어 이메일로 발송되며 DB 서버에는 저장되지 않는다는 안내 문구 추가', '행사 사진 첨부·삭제 안내 문구를 실제 동작(이 기기에 임시 저장)과 일치하도록 개선', '관리자 페이지에 과거 DB(globalHistory·settlements)에 남아 있는 행사·영수증 사진(Base64)을 스캔해 정산 금액·이력 손실 없이 일괄 정리하는 [DB 기존 사진 데이터 정리] 기능 추가'] },
         { ver: '1.7.74', date: '2026.11.26', items: ['영수증·행사 사진(Base64)을 Firebase DB(globalHistory·settlements)에 저장하지 않도록 개선 (엑셀·이메일 발송 시에는 메모리/로컬 상태 그대로 정상 포함)', '한국 로컬 시간대 날짜 유틸(formatLocalDateYMD)을 도입해 새벽 시간대(00:00~08:59) UTC 전날 밀림 버그 14곳 일괄 수정', '미사용 PPT 차트 이미지 헬퍼 제거 및 핵심 계산·날짜·미디어 정책 자동 검증 테스트(tests/verify_core.js) 추가'] },
         { ver: '1.7.73', date: '2026.11.26', items: ['차트 탭 [최근 정산 알림]을 행사일순이 아닌 실제 입력(등록) 날짜·시간 최신순으로 정렬·필터링해 몇 달 전 정산을 지금 입력해도 최상단에 즉시 표시되도록 개선'] },
         { ver: '1.7.72', date: '2026.11.26', items: ['차트 탭 [최근 정산 알림] 표시 범위를 최신 5건에서 최근 2개월 전체로 확대하고 목록 스크롤(마우스 휠) 지원', '관리자 [클럽 관리] 상품비 금액에 마우스를 올리면 날짜별 상품비 입력 내역을 툴팁으로 즉시 표시'] },
