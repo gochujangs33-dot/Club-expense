@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.77';
+const APP_VERSION      = '1.7.78';
 const APP_VERSION_DATE = '2026.11.26';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -4214,8 +4214,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const _clubEntry = (AppState.clubId && AppState.clubRegistry[AppState.clubId])
                             ? AppState.clubRegistry[AppState.clubId]
                             : (AppState.clubName ? Object.values(AppState.clubRegistry || {}).find(c => c.name === AppState.clubName) : null);
-                        if (_clubEntry && _clubEntry.allowOverLimitSupport) {
-                            // 관리자 승인된 클럽 → 클럽 잔여 예산 내에서 사용 가능한 최대 금액으로 재계산 후 진행
+                        const _hasOverLimitApproval = Boolean((_clubEntry && _clubEntry.allowOverLimitSupport) || (AppState.editingHistoryId && AppState._editingOverLimitApproved));
+                        if (_hasOverLimitApproval) {
+                            // 관리자 승인된 클럽(또는 기존 승인 이력 수정 중) → 클럽 잔여 예산 내에서 사용 가능한 최대 금액으로 재계산 후 진행
                             const _cb = AppState.getClubBudget ? AppState.getClubBudget() : 0;
                             const _cu = AppState.getClubUsedBudget ? AppState.getClubUsedBudget() : 0;
                             const _already = _existItems.reduce((s, i) => s + (i.corporateAmount || 0), 0);
@@ -4253,7 +4254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const _facilityClubEntry = (AppState.clubId && AppState.clubRegistry[AppState.clubId])
                 ? AppState.clubRegistry[AppState.clubId]
                 : (AppState.clubName ? Object.values(AppState.clubRegistry || {}).find(c => c.name === AppState.clubName) : null);
-            const _facilityFullApproved = Boolean(_facilityClubEntry && _facilityClubEntry.allowFacilityFullBudget);
+            const _facilityFullApproved = Boolean((_facilityClubEntry && _facilityClubEntry.allowFacilityFullBudget) || (AppState.editingHistoryId && AppState._editingFacilityFullApproved));
             if (category === ExpenseCategory.FACILITY && _requestedCorp > 0 && !_facilityFullApproved) {
                 const _fMemberCount = AppState.memberCount || 0;
                 if (_fMemberCount > 0) {
@@ -5268,6 +5269,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.78', date: '2026.11.26', items: ['시설·장비 전액 또는 85,000원 초과 지원 승인을 받아 완료된 정산 이력을 추후 수정할 때, 해당 이력 수정 중에는 기존 승인 상태가 그대로 유지되어 재승인 없이 수정 가능하도록 개선 (기존 저장된 구버전 이력도 자동 인식)'] },
         { ver: '1.7.77', date: '2026.11.26', items: ['라이트 모드 대시보드 [현재 사용 금액] 오렌지 색상(#c2410c) 및 [예산 소진율 80%↑] 경고 색상(rgb(217, 119, 6))의 대비를 높여 가독성 개선', '전사원 명부 "(올해 누적: N회)"를 실시간 자동 집계 전용 읽기 전용 표시로 변경해 불필요한 수동 입력란 제거'] },
         { ver: '1.7.76', date: '2026.11.26', items: ['기존 DB 사진 데이터 정리가 완료되어 관리자 페이지의 일회성 [DB 기존 사진 데이터 정리] 카드 및 관련 코드 제거'] },
         { ver: '1.7.75', date: '2026.11.26', items: ['정산 완료·수정 완료 확인 팝업에 행사·영수증 사진이 엑셀에 첨부되어 이메일로 발송되며 DB 서버에는 저장되지 않는다는 안내 문구 추가', '행사 사진 첨부·삭제 안내 문구를 실제 동작(이 기기에 임시 저장)과 일치하도록 개선'] },
@@ -6324,8 +6326,8 @@ function _calcCorpForItem(amount, category) {
         const currentClubEntry = (AppState.clubId && AppState.clubRegistry && AppState.clubRegistry[AppState.clubId])
             ? AppState.clubRegistry[AppState.clubId]
             : (AppState.clubName && AppState.clubRegistry ? Object.values(AppState.clubRegistry).find(c => c.name === AppState.clubName) : null);
-        // 관리자 [클럽 관리 > 시설 전액] 1회 승인된 클럽만 인당 85,000원 캡을 해제하고 잔여 예산 전액까지 법인카드 제안 (초과분은 개인카드 분배)
-        if (currentClubEntry && currentClubEntry.allowFacilityFullBudget) {
+        // 관리자 [클럽 관리 > 시설 전액] 1회 승인된 클럽(또는 기존 승인 이력 수정 중)만 인당 85,000원 캡을 해제하고 잔여 예산 전액까지 법인카드 제안 (초과분은 개인카드 분배)
+        if ((currentClubEntry && currentClubEntry.allowFacilityFullBudget) || (AppState.editingHistoryId && AppState._editingFacilityFullApproved)) {
             return Math.max(0, Math.min(amount, realRemaining));
         }
         const facilityCapTotal = memberCount * (rules.facilityLimit || 85000);

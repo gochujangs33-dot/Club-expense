@@ -52,6 +52,8 @@ loadModule('js/settlement-history.js', sandbox);
 
 const formatLocalDateYMD = vm.runInContext('formatLocalDateYMD', sandbox);
 const stripHistoryMedia = vm.runInContext('stripHistoryMedia', sandbox);
+const hasFacilityFullApprovalInEntry = vm.runInContext('hasFacilityFullApprovalInEntry', sandbox);
+const hasOverLimitApprovalInEntry = vm.runInContext('hasOverLimitApprovalInEntry', sandbox);
 const DefaultRules = vm.runInContext('DefaultRules', sandbox);
 const SettlementCalculator = vm.runInContext('SettlementCalculator', sandbox);
 
@@ -124,6 +126,25 @@ const SettlementCalculator = vm.runInContext('SettlementCalculator', sandbox);
     assert.strictEqual(res.totalSelfPay, 280000);
     assert.strictEqual(res.finalSupportAmount, 720000);
     assert.strictEqual(res._validation.valid, true);
+}
+
+// 4. 수정 모드 시 기존 승인 상태 유지 판별 테스트
+{
+    assert.strictEqual(hasFacilityFullApprovalInEntry({ facilityFullApproved: true }), true);
+    assert.strictEqual(hasOverLimitApprovalInEntry({ overLimitApproved: true }), true);
+    // 구버전 이력(명시 플래그 없음)에서도 85,000원/인 초과 시설비 법인카드 배분 시 승인 이력으로 판별
+    assert.strictEqual(hasFacilityFullApprovalInEntry({
+        memberCount: 4,
+        expenseItems: [{ category: 'FACILITY', amount: 600000, corporateAmount: 600000 }]
+    }), true);
+    assert.strictEqual(hasFacilityFullApprovalInEntry({
+        memberCount: 4,
+        expenseItems: [{ category: 'FACILITY', amount: 300000, corporateAmount: 300000 }]
+    }), false);
+    assert.strictEqual(hasOverLimitApprovalInEntry({
+        memberCount: 2,
+        expenseItems: [{ category: 'EVENT', amount: 250000, corporateAmount: 250000 }]
+    }), true);
 }
 
 console.log('verify_core.js: all checks passed');

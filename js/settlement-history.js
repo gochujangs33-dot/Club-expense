@@ -139,6 +139,32 @@ function historyMatchesClub(entry, clubId, clubName) {
     return !!clubName && entry.clubName === clubName;
 }
 
+// 정산 이력이 시설비 전액 승인 또는 85,000원 초과 지원 승인을 받아 저장된 건인지 판별
+// (신규 이력은 명시 플래그, 기존 구버전 이력은 저장된 항목의 법인카드 합계와 당시 한도로 역추적)
+function hasFacilityFullApprovalInEntry(entry) {
+    if (!entry || typeof entry !== 'object') return false;
+    if (entry.facilityFullApproved === true) return true;
+    const memberCount = Number(entry.memberCount) || (Array.isArray(entry.attendees) ? entry.attendees.length : 0);
+    if (memberCount <= 0) return false;
+    const limit = (entry.rules && Number(entry.rules.facilityLimit)) || 85000;
+    const facilityCorpSum = getHistoryExpenseItems(entry)
+        .filter(item => item && item.category === 'FACILITY')
+        .reduce((sum, item) => sum + Math.max(0, Number(item.corporateAmount) || 0), 0);
+    return facilityCorpSum > memberCount * limit;
+}
+
+function hasOverLimitApprovalInEntry(entry) {
+    if (!entry || typeof entry !== 'object') return false;
+    if (entry.overLimitApproved === true) return true;
+    const memberCount = Number(entry.memberCount) || (Array.isArray(entry.attendees) ? entry.attendees.length : 0);
+    if (memberCount <= 0) return false;
+    const cap = (entry.rules && Number(entry.rules.deduction4)) || 85000;
+    const eventCorpSum = getHistoryExpenseItems(entry)
+        .filter(item => item && item.category === 'EVENT')
+        .reduce((sum, item) => sum + Math.max(0, Number(item.corporateAmount) || 0), 0);
+    return eventCorpSum > memberCount * cap;
+}
+
 // globalHistory 스냅샷(키-값 맵)에서 deletedHistoryIds(키 및 entry.id 양쪽)와 불완전 좀비 노드를 제거하고
 // entry.id 가 누락된 정상 엔트리는 Firebase 키로 정규화해 사용자/관리자 화면 이력을 100% 일치시킨다.
 function extractValidGlobalHistory(historyData, deletedMap, db = null) {
@@ -208,6 +234,8 @@ window.__installSettlementHistory = function (targetAppState) {
             this._editingOriginalPrize = (entry.expenseItems || [])
                 .filter(i => i.category === 'PRIZE')
                 .reduce((s, i) => s + (i.amount || 0), 0);
+            this._editingFacilityFullApproved = hasFacilityFullApprovalInEntry(entry);
+            this._editingOverLimitApproved = hasOverLimitApprovalInEntry(entry);
             this.expenseItems = JSON.parse(JSON.stringify(entry.expenseItems || []));
             this.attendees = JSON.parse(JSON.stringify(entry.attendees || []));
             this.eventPhotos = JSON.parse(JSON.stringify(getHistoryEventPhotos(entry)));
@@ -472,6 +500,8 @@ window.__installSettlementHistory = function (targetAppState) {
             this._editingHistoryOriginal = null;
             this._editingOriginalSupport = 0;
             this._editingOriginalPrize = 0;
+            this._editingFacilityFullApproved = false;
+            this._editingOverLimitApproved = false;
             const banner = document.getElementById('edit-mode-banner');
             if (banner) banner.classList.add('hidden');
             // 우측 하단 버튼 문구 원래("정산 완료")로 복원 및 수정 취소 버튼 숨기기
@@ -707,6 +737,9 @@ window.__installSettlementHistory = function (targetAppState) {
                     attendees: JSON.parse(JSON.stringify(this.attendees)),
                     // 영수증·행사 사진은 메일로 백업하므로 Firebase DB에는 저장하지 않는다.
                     mediaStoredInGlobal: false,
+                    // 정산 당시 1회 승인 여부 보존 (추후 이력 수정 시에도 동일 승인 상태 유지)
+                    facilityFullApproved: Boolean(this.clubId && this.clubRegistry && this.clubRegistry[this.clubId] && this.clubRegistry[this.clubId].allowFacilityFullBudget),
+                    overLimitApproved: Boolean(this.clubId && this.clubRegistry && this.clubRegistry[this.clubId] && this.clubRegistry[this.clubId].allowOverLimitSupport),
                     // 정산 당시의 정산 규칙(구간/비율) 스냅샷 영구 보존 — 새해에 rules가 변경되어도 과거 데이터 고정 (v1.6.320)
                     rules: JSON.parse(JSON.stringify(this.rules || DefaultRules)),
                     settlementYear: parseInt(settlementDate.slice(0, 4), 10) || new Date().getFullYear(),
