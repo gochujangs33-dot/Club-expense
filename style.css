@@ -4095,6 +4095,18 @@ html[data-app-theme="light"] .settlement-detail-modal-card {
     background: #ffffff;
     border-color: rgba(15, 23, 42, 0.14);
 }
+html[data-app-theme="light"] .attendance-roster-list {
+    background: #f8fafc;
+    border-color: rgba(148, 163, 184, 0.25);
+}
+html[data-app-theme="light"] .attendance-roster-person {
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    color: var(--text-primary);
+}
+.attendance-roster-close:focus:not(:focus-visible) {
+    outline: none;
+}
 
 .settlement-detail-modal-card {
     width: min(760px, 94vw);

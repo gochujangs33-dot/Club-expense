@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.81';
+const APP_VERSION      = '1.7.82';
 const APP_VERSION_DATE = '2026.11.27';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -5274,6 +5274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.82', date: '2026.11.27', items: ['라이트 모드 [정산 내역 상세] 및 [참석자 명단] 모달의 참석자 목록 배경·카드 색상을 주변 밝은 테마(#f8fafc / #ffffff)와 자연스럽게 일치하도록 개선'] },
         { ver: '1.7.81', date: '2026.11.27', items: ['정산 이력 수정 모드(editingHistoryId) 중에는 AppState.save()가 기존 임시저장(localStorage·settlements/{pin})을 덮어쓰지 않도록 차단해 새로고침 후 과거 이력 내용이 새 정산 화면에 남던 버그 수정'] },
         { ver: '1.7.80', date: '2026.11.27', items: ['[📋 중간 결산] 팝업 표의 [행사수]에 마우스를 올리면 해당 클럽의 정산 내역(날짜·참석인원·지원금·비고)을, [실참석]에 마우스를 올리면 참석자별 누적 횟수(이름 (N회))를 툴팁으로 즉시 표시'] },
         { ver: '1.7.79', date: '2026.11.27', items: ['차트 탭 [최근 정산 알림]에서 최근 24시간 내 신규 등록 건에 NEW 뱃지를 표시하고, 알림 클릭 시 비용 항목·법인/개인카드 배분·참석자 명단을 한눈에 볼 수 있는 [정산 내역 상세] 모달 오픈', '관리자 [클럽별 정산이력]·[클럽 사용 요약] 행 클릭 시에도 정산 내역 및 참석자 명단을 즉시 확인할 수 있도록 연동'] },
