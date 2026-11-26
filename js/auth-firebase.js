@@ -498,7 +498,7 @@ window.__installAuthFirebaseUI = function (B) {
 
         // 관리자 모드: 헤더 문구 변경 및 클럽 선택 영역 숨김
         const headerTitleEl = document.querySelector('.logo-area h1');
-        if (headerTitleEl) headerTitleEl.textContent = allowAdmin ? '총 클럽 비용 관리' : '클럽 비용 정산';
+        if (headerTitleEl) headerTitleEl.textContent = allowAdmin ? '클럽 비용 관리 (동탄)' : '클럽 비용 정산';
         const clubNameWrapperEl = document.querySelector('.club-name-wrapper');
         if (clubNameWrapperEl) clubNameWrapperEl.classList.toggle('hidden', allowAdmin);
 
