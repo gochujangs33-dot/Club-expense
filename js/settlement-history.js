@@ -124,68 +124,6 @@ function stripHistoryMedia(entry) {
     return cleaned;
 }
 
-// 과거 버전에서 Firebase DB에 저장된 행사·영수증 사진(Base64)을 안전하게 스캔/제거하기 위한 계획 생성
-function collectLegacyMediaCleanupPlan(globalHistoryData, settlementsData) {
-    const updates = {};
-    let targetCount = 0;
-    let totalBytes = 0;
-
-    const measureEntryMediaBytes = entry => {
-        if (!entry || typeof entry !== 'object') return 0;
-        let bytes = getHistoryEventPhotos(entry).reduce((sum, v) => sum + getMediaDataSize(v), 0);
-        getHistoryExpenseItems(entry).forEach(item => {
-            if (!item || typeof item !== 'object') return;
-            bytes += getMediaDataSize(item.receiptImage);
-            bytes += getMediaDataSize(item.corporateReceiptImage);
-            bytes += getMediaDataSize(item.personalReceiptImage);
-        });
-        return bytes;
-    };
-
-    const appendStrippedUpdates = (prefix, entry, includeMediaFlag = true) => {
-        if (!entry || typeof entry !== 'object') return;
-        const bytes = measureEntryMediaBytes(entry);
-        const hasEventMedia = (Array.isArray(entry.eventPhotos) && entry.eventPhotos.length > 0) || Boolean(entry.eventPhoto);
-        const hasReceipt = getHistoryExpenseItems(entry).some(hasReceiptMedia);
-        if (!hasEventMedia && !hasReceipt && bytes === 0) return;
-
-        targetCount++;
-        totalBytes += bytes;
-        if (entry.eventPhotos !== undefined) updates[`${prefix}/eventPhotos`] = null;
-        if (entry.eventPhoto !== undefined) updates[`${prefix}/eventPhoto`] = null;
-        if (includeMediaFlag) updates[`${prefix}/mediaStoredInGlobal`] = false;
-        if (hasReceipt) {
-            updates[`${prefix}/expenseItems`] = stripHistoryMedia({ expenseItems: entry.expenseItems }).expenseItems;
-        }
-    };
-
-    Object.entries(globalHistoryData && typeof globalHistoryData === 'object' ? globalHistoryData : {})
-        .forEach(([key, entry]) => appendStrippedUpdates(`globalHistory/${key}`, entry, true));
-
-    Object.entries(settlementsData && typeof settlementsData === 'object' ? settlementsData : {})
-        .forEach(([pin, userData]) => {
-            if (!userData || typeof userData !== 'object') return;
-            appendStrippedUpdates(`settlements/${pin}`, userData, false);
-            if (userData.history && typeof userData.history === 'object') {
-                Object.entries(userData.history).forEach(([hKey, hEntry]) => {
-                    appendStrippedUpdates(`settlements/${pin}/history/${hKey}`, hEntry, true);
-                });
-            }
-        });
-
-    return { targetCount, totalBytes, updates };
-}
-
-async function applyLegacyMediaCleanupUpdates(db, updates) {
-    if (!db || !updates) return;
-    const entries = Object.entries(updates);
-    const CHUNK_SIZE = 80;
-    for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
-        const chunk = Object.fromEntries(entries.slice(i, i + CHUNK_SIZE));
-        await db.ref().update(chunk);
-    }
-}
-
 // 정산 연도가 끝난 뒤 다음 해 4월 1일부터 해당 연도의 첨부만 자동 정리한다.
 function isHistoryMediaExpired(entry, now = new Date()) {
     const entryYear = getHistoryEntryYear(entry);

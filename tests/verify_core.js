@@ -52,7 +52,6 @@ loadModule('js/settlement-history.js', sandbox);
 
 const formatLocalDateYMD = vm.runInContext('formatLocalDateYMD', sandbox);
 const stripHistoryMedia = vm.runInContext('stripHistoryMedia', sandbox);
-const collectLegacyMediaCleanupPlan = vm.runInContext('collectLegacyMediaCleanupPlan', sandbox);
 const DefaultRules = vm.runInContext('DefaultRules', sandbox);
 const SettlementCalculator = vm.runInContext('SettlementCalculator', sandbox);
 
@@ -104,25 +103,6 @@ const SettlementCalculator = vm.runInContext('SettlementCalculator', sandbox);
     assert.strictEqual(stripped.expenseItems[0].corporateAmount, 150000);
     assert.strictEqual(stripped.supportAmount, 150000);
     assert.strictEqual(sample.eventPhotos.length, 2, '원본 객체는 변경하지 않아야 함');
-
-    // collectLegacyMediaCleanupPlan 테스트 (과거 DB 사진 정리 계획 생성)
-    const plan = collectLegacyMediaCleanupPlan(
-        { 'hist-1': sample, 'hist-clean': { id: 'hist-clean', supportAmount: 50000 } },
-        {
-            '002531': {
-                eventPhoto: 'data:image/png;base64,zzz',
-                history: { 'h-1': sample }
-            }
-        }
-    );
-    assert.strictEqual(plan.targetCount, 3);
-    assert.ok(plan.totalBytes > 0);
-    assert.strictEqual(plan.updates['globalHistory/hist-1/eventPhotos'], null);
-    assert.strictEqual(plan.updates['globalHistory/hist-1/mediaStoredInGlobal'], false);
-    assert.strictEqual(plan.updates['globalHistory/hist-1/expenseItems'][0].receiptImage, undefined);
-    assert.strictEqual(plan.updates['globalHistory/hist-1/expenseItems'][0].amount, 150000);
-    assert.strictEqual(plan.updates['settlements/002531/eventPhoto'], null);
-    assert.strictEqual(plan.updates['settlements/002531/history/h-1/eventPhotos'], null);
 }
 
 // 3. CALCULATION_LOCKED 정산 계산 & 검증기 교차 테스트
