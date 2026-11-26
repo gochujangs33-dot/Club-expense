@@ -315,7 +315,7 @@
                 const time = entry.settlementDate
                     ? new Date(entry.settlementDate + 'T00:00:00').getTime()
                     : (entry.date ? new Date(entry.date).getTime() : (entry.id || 0));
-                const dateStr = entry.settlementDate || (entry.date ? new Date(entry.date).toISOString().slice(0, 10) : '');
+                const dateStr = entry.settlementDate || (entry.date ? formatLocalDateYMD(entry.date) : '');
                 const inSameClub = typeof B.historyMatchesClub === 'function'
                     ? B.historyMatchesClub(entry, targetClubId, targetClubName)
                     : (entry.clubId === targetClubId || entry.clubName === targetClubName);

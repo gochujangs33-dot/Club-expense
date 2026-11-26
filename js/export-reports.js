@@ -193,7 +193,7 @@ AppState.generateExcelFile = async function generateExcelFile() {
     const wbout = await zip.generateAsync({ type: 'arraybuffer' });
     const settleDateInput = document.getElementById('settlement-date-input');
     const settleDateVal = settleDateInput ? settleDateInput.value : '';
-    const fileDateStr = (settleDateVal || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+    const fileDateStr = (settleDateVal || formatLocalDateYMD()).replace(/-/g, '');
     const safeClubName = (this.clubName || '클럽').replace(/[\\/:*?"<>|]/g, '_');
     const fileName = `${safeClubName}(${fileDateStr}).xlsx`;
     return new File([wbout], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -527,200 +527,6 @@ window.__installExportReports = function (B) {
             };
         },
 
-        renderDonutChartImage(title, centerValue, centerSub, items, width = 760, height = 420) {
-            if (typeof document === 'undefined') return null;
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return null;
-
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, width, height);
-
-            const cx = 175;
-            const cy = height / 2 + 10;
-            const radius = 120;
-            const innerRadius = 75;
-
-            const total = items.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
-
-            if (total <= 0) {
-                ctx.beginPath();
-                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                ctx.arc(cx, cy, innerRadius, Math.PI * 2, 0, true);
-                ctx.fillStyle = '#E2E8F0';
-                ctx.fill();
-            } else {
-                let currentAngle = -Math.PI / 2;
-                items.forEach(item => {
-                    const val = Number(item.value) || 0;
-                    if (val <= 0) return;
-                    const sliceAngle = (val / total) * Math.PI * 2;
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, radius, currentAngle, currentAngle + sliceAngle);
-                    ctx.arc(cx, cy, innerRadius, currentAngle + sliceAngle, currentAngle, true);
-                    ctx.closePath();
-                    ctx.fillStyle = item.color;
-                    ctx.fill();
-
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = '#FFFFFF';
-                    ctx.stroke();
-
-                    currentAngle += sliceAngle;
-                });
-            }
-
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.font = '600 13px "Malgun Gothic", sans-serif';
-            ctx.fillStyle = '#64748B';
-            ctx.fillText(centerSub || '총 합계', cx, cy - 16);
-
-            ctx.font = 'bold 17px "Malgun Gothic", sans-serif';
-            ctx.fillStyle = '#0F172A';
-            ctx.fillText(centerValue || '0원', cx, cy + 7);
-
-            ctx.font = '500 11px "Malgun Gothic", sans-serif';
-            ctx.fillStyle = '#94A3B8';
-            ctx.fillText('100.0%', cx, cy + 26);
-
-            const startX = 350;
-            const startY = 55;
-            const rowHeight = (height - 80) / Math.max(items.length, 1);
-
-            items.forEach((item, idx) => {
-                const y = startY + idx * rowHeight;
-                const val = Number(item.value) || 0;
-                const ratio = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
-
-                ctx.fillStyle = item.color;
-                if (ctx.roundRect) {
-                    ctx.beginPath();
-                    ctx.roundRect(startX, y + 4, 10, 30, 3);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(startX, y + 4, 10, 30);
-                }
-
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-                ctx.font = 'bold 14px "Malgun Gothic", sans-serif';
-                ctx.fillStyle = '#1E293B';
-                ctx.fillText(item.label, startX + 20, y + 2);
-
-                ctx.font = '13px "Malgun Gothic", sans-serif';
-                ctx.fillStyle = '#475569';
-                ctx.fillText(`${formatAmount(val)}원`, startX + 20, y + 22);
-
-                ctx.textAlign = 'right';
-                ctx.font = 'bold 15px "Malgun Gothic", sans-serif';
-                ctx.fillStyle = item.color;
-                ctx.fillText(`${ratio}%`, width - 30, y + 10);
-            });
-
-            return canvas.toDataURL('image/png');
-        },
-
-        renderClubBurnRateBarChartImage(clubsData, width = 840, height = 540) {
-            if (typeof document === 'undefined') return null;
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return null;
-
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, width, height);
-
-            ctx.font = 'bold 16px "Malgun Gothic", sans-serif';
-            ctx.fillStyle = '#0F172A';
-            ctx.fillText('클럽별 연간 예산 소진율 현황 (%)', 30, 36);
-
-            ctx.font = '12px "Malgun Gothic", sans-serif';
-            ctx.fillStyle = '#64748B';
-            ctx.textAlign = 'right';
-            ctx.fillText('기준: 80% 안전(블루) | 80~100% 주의(주황) | 100% 초과(레드)', width - 30, 36);
-
-            const displayClubs = (clubsData || []).slice(0, 8);
-            if (displayClubs.length === 0) return canvas.toDataURL('image/png');
-
-            const labelW = 105;
-            const rightW = 145;
-            const barStartX = 30 + labelW + 10;
-            const barMaxW = width - barStartX - rightW - 20;
-            const startY = 65;
-            const rowH = (height - 95) / displayClubs.length;
-
-            displayClubs.forEach((c, idx) => {
-                const y = startY + idx * rowH;
-                const rate = Math.max(0, c.burnRate || 0);
-
-                // 1. 좌측 클럽명
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.font = 'bold 13px "Malgun Gothic", sans-serif';
-                ctx.fillStyle = '#1E293B';
-                const name = c.name.length > 7 ? c.name.slice(0, 6) + '..' : c.name;
-                ctx.fillText(name, 30, y + 18);
-
-                // 2. 수평 막대바 (배경 + 채우기)
-                const barY = y + 8;
-                const barH = 20;
-                ctx.fillStyle = '#F1F5F9';
-                if (ctx.roundRect) {
-                    ctx.beginPath();
-                    ctx.roundRect(barStartX, barY, barMaxW, barH, 4);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(barStartX, barY, barMaxW, barH);
-                }
-
-                let barColor = '#2563EB';
-                if (rate >= 100) barColor = '#EF4444';
-                else if (rate >= 80) barColor = '#F59E0B';
-
-                const fillW = Math.min(barMaxW, Math.max(6, (rate / 100) * barMaxW));
-                ctx.fillStyle = barColor;
-                if (ctx.roundRect) {
-                    ctx.beginPath();
-                    ctx.roundRect(barStartX, barY, fillW, barH, 4);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(barStartX, barY, fillW, barH);
-                }
-
-                // 3. 퍼센티지 (%): 막대바 내부(또는 바로 바깥)에 표기
-                ctx.textBaseline = 'middle';
-                ctx.font = 'bold 11px "Malgun Gothic", sans-serif';
-                if (fillW >= 55) {
-                    ctx.textAlign = 'right';
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillText(`${rate.toFixed(1)}%`, barStartX + fillW - 6, barY + barH / 2);
-                } else {
-                    ctx.textAlign = 'left';
-                    ctx.fillStyle = barColor;
-                    ctx.fillText(`${rate.toFixed(1)}%`, barStartX + fillW + 6, barY + barH / 2);
-                }
-
-                // 4. 총 배정 금액: 우측에 적기
-                ctx.textAlign = 'right';
-                ctx.font = 'bold 12px "Malgun Gothic", sans-serif';
-                ctx.fillStyle = '#0F172A';
-                ctx.fillText(`배정 ${formatAmount(c.budget)}원`, width - 30, barY + barH / 2);
-
-                // 5. 사용 금액: 막대바 밑에 적기
-                ctx.textAlign = 'left';
-                ctx.font = '11px "Malgun Gothic", sans-serif';
-                ctx.fillStyle = '#64748B';
-                const remainText = c.remaining >= 0 ? `잔여 ${formatAmount(c.remaining)}원` : `초과 ${formatAmount(Math.abs(c.remaining))}원`;
-                ctx.fillText(`사용 금액: ${formatAmount(c.support)}원 (${remainText})`, barStartX, barY + barH + 13);
-            });
-
-            return canvas.toDataURL('image/png');
-        },
-
         async generateAndDownload(targetYear, historyList, clubRegistry, onProgress) {
             if (typeof PptxGenJS === 'undefined') {
                 throw new Error('PPTX 생성 라이브러리가 로드되지 않았습니다.');
@@ -731,7 +537,7 @@ window.__installExportReports = function (B) {
             const pptx = new PptxGenJS();
             pptx.layout = 'LAYOUT_16x9';
             const font = 'Malgun Gothic';
-            const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+            const todayStr = formatLocalDateYMD().replace(/-/g, '.');
 
             // [Slide 1] 표지 (Executive Cover - 라이트 테마 일체화)
             const s1 = pptx.addSlide();
@@ -1461,7 +1267,7 @@ window.__installExportReports = function (B) {
                     club.entries.forEach((e, eIdx) => {
                         const isAlt = eIdx % 2 === 1;
                         const bg = isAlt ? 'F8FAFC' : 'FFFFFF';
-                        const dateStr = (e.settlementDate || (e.date ? new Date(e.date).toISOString().slice(0, 10) : '-')).slice(0, 10);
+                        const dateStr = (e.settlementDate || (e.date ? formatLocalDateYMD(e.date) : '-')).slice(0, 10);
                         const attCount = (e.attendees && e.attendees.length) ? `${e.attendees.length}명` : `${e.attendeeCount || 0}명`;
                         const spendStr = formatAmount(e.totalCost || 0) + '원';
                         const suppStr = formatAmount(e.finalSupportAmount || 0) + '원';

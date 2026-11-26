@@ -328,10 +328,10 @@ window.__installEmailReport = function (targetAppState) {
                 this.selfPayManuallyOverridden = true;
                 this.previousPrizeTotal = 0;
                 this.editingHistoryId = null;
-                if (sdi) sdi.value = entry.settlementDate || new Date().toISOString().slice(0, 10);
+                if (sdi) sdi.value = entry.settlementDate || formatLocalDateYMD();
                 const file = await this.generateExcelFile();
                 const safeClubName = (entry.clubName || this.clubName || '클럽').replace(/[\\/:*?"<>|]/g, '_');
-                const fileDateStr = (entry.settlementDate || (entry.date ? String(entry.date).slice(0, 10) : new Date().toISOString().slice(0, 10))).replace(/-/g, '');
+                const fileDateStr = (entry.settlementDate || (entry.date ? formatLocalDateYMD(entry.date) : formatLocalDateYMD())).replace(/-/g, '');
                 const creatorPart = entry.creatorName ? `_${entry.creatorName}` : '';
                 const downloadFileName = `${safeClubName}(${fileDateStr})${creatorPart}.xlsx`;
                 const url = URL.createObjectURL(file);
@@ -381,7 +381,7 @@ window.__installEmailReport = function (targetAppState) {
                 if (!skipEditSave && this.editingHistoryId) {
                     const _sdi = document.getElementById('settlement-date-input');
                     const settlementDate = (_sdi && _sdi.value)
-                        ? _sdi.value : (this._editingHistoryOriginal?.settlementDate || new Date().toISOString().slice(0, 10));
+                        ? _sdi.value : (this._editingHistoryOriginal?.settlementDate || formatLocalDateYMD());
                     const result = SettlementCalculator.calculate(
                         this.memberCount, this.expenseItems, this.previousPrizeTotal, this.rules
                     );

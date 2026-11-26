@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.73';
+const APP_VERSION      = '1.7.74';
 const APP_VERSION_DATE = '2026.11.26';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -455,7 +455,7 @@ const AppState = {
                 ? new Date(entry.settlementDate + 'T00:00:00').getTime()
                 : (entry.date ? new Date(entry.date).getTime() : (entry.id || 0));
             if (!latest || time > latest.time) {
-                latest = { time, dateStr: entry.settlementDate || (entry.date ? new Date(entry.date).toISOString().slice(0, 10) : '') };
+                latest = { time, dateStr: entry.settlementDate || (entry.date ? formatLocalDateYMD(entry.date) : '') };
             }
         });
         return latest;
@@ -712,11 +712,11 @@ const AppState = {
         // 2. Firebase 온라인 실시간 클라우드 동기화
         if (syncFirebase && this.isLoggedIn && this.firebaseDb && this.currentPin) {
             const dataToSync = {
-                // 세션 데이터만 유저별 저장
+                // 세션 데이터만 유저별 저장 (영수증·행사 사진은 메일로 백업하므로 Firebase DB에는 저장하지 않음)
                 memberCount: this.memberCount,
                 nonMemberCount: this.nonMemberCount || 0,
                 eventNote: this.eventNote || '',
-                expenseItems: this.expenseItems,
+                expenseItems: stripHistoryMedia({ expenseItems: this.expenseItems }).expenseItems,
                 attendees: this.attendees,
                 directory: this.directory,
                 clubName: this.clubName,   // 마지막 선택 클럽명 (편의용)
@@ -724,7 +724,7 @@ const AppState = {
                 reportEmail: this.reportEmail || '',
                 saveExcelToDevice: this.saveExcelToDevice !== false,
                 settlementHistory: this.buildPersonalHistoryForSync(),
-                eventPhotos: (this.eventPhotos && this.eventPhotos.length > 0) ? this.eventPhotos : null,
+                eventPhotos: null,
                 lastUpdated: Date.now()
                 // rules → globalSettings/rules (관리자 전용)
                 // annualBudget → clubRegistry.budget (관리자 전용)
@@ -2970,7 +2970,7 @@ function resetSettlementSession(auditEvent = null) {
     document.getElementById('prev-prize-input').value = formatAmount(AppState.previousPrizeTotal);
     if (typeof updateCardTypeUI === 'function') updateCardTypeUI();
     const settleDateEl = document.getElementById('settlement-date-input');
-    if (settleDateEl) settleDateEl.value = new Date().toISOString().slice(0, 10);
+    if (settleDateEl) settleDateEl.value = formatLocalDateYMD();
     if (typeof window._onSettleDateReset === 'function') window._onSettleDateReset();
     const savePromise = AppState.save();
     if (auditEvent) AppState.writeAuditAfterSave(savePromise, auditEvent);
@@ -3011,7 +3011,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 정산 날짜 입력 필드 오늘 날짜로 초기화
     const settleDateEl = document.getElementById('settlement-date-input');
-    if (settleDateEl) settleDateEl.value = new Date().toISOString().slice(0, 10);
+    if (settleDateEl) settleDateEl.value = formatLocalDateYMD();
     if (typeof window._onSettleDateReset === 'function') window._onSettleDateReset();
 
     // PIN 키패드 클릭이 항상 동작하도록 가장 먼저 위임 방식으로 등록
@@ -4619,7 +4619,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             sendEmailBtn.innerHTML = '<span class="btn-icon">⏳</span> 수정 저장 중...';
                             const _sdi = document.getElementById('settlement-date-input');
                             const settlementDate = (_sdi && _sdi.value)
-                                ? _sdi.value : (AppState._editingHistoryOriginal?.settlementDate || new Date().toISOString().slice(0, 10));
+                                ? _sdi.value : (AppState._editingHistoryOriginal?.settlementDate || formatLocalDateYMD());
                             const result = SettlementCalculator.calculate(
                                 AppState.memberCount, AppState.expenseItems, AppState.previousPrizeTotal, AppState.rules
                             );
@@ -5288,6 +5288,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.74', date: '2026.11.26', items: ['영수증·행사 사진(Base64)을 Firebase DB(globalHistory·settlements)에 저장하지 않도록 개선 (엑셀·이메일 발송 시에는 메모리/로컬 상태 그대로 정상 포함)', '한국 로컬 시간대 날짜 유틸(formatLocalDateYMD)을 도입해 새벽 시간대(00:00~08:59) UTC 전날 밀림 버그 14곳 일괄 수정', '미사용 PPT 차트 이미지 헬퍼 제거 및 핵심 계산·날짜·미디어 정책 자동 검증 테스트(tests/verify_core.js) 추가'] },
         { ver: '1.7.73', date: '2026.11.26', items: ['차트 탭 [최근 정산 알림]을 행사일순이 아닌 실제 입력(등록) 날짜·시간 최신순으로 정렬·필터링해 몇 달 전 정산을 지금 입력해도 최상단에 즉시 표시되도록 개선'] },
         { ver: '1.7.72', date: '2026.11.26', items: ['차트 탭 [최근 정산 알림] 표시 범위를 최신 5건에서 최근 2개월 전체로 확대하고 목록 스크롤(마우스 휠) 지원', '관리자 [클럽 관리] 상품비 금액에 마우스를 올리면 날짜별 상품비 입력 내역을 툴팁으로 즉시 표시'] },
         { ver: '1.7.71', date: '2026.11.26', items: ['전체 모듈 코드 정적 감사 및 정리: 미사용 구버전 함수(clearAll·updateAttendance·updateRemainingDisplay) 제거 및 클럽 미선택 시 구형 셀렉터(#club-select → #club-name-select) 포커스 이동 보완'] },

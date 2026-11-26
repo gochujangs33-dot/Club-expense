@@ -6,6 +6,18 @@
 //   - finalizeSettlement: allowOverLimitSupport / allowFacilityFullBudget 정산당 1회성 무조건 리셋
 //   - extractValidGlobalHistory: deletedHistoryIds 양방향 필터링 및 좀비 노드 정리
 
+// 로컬 시간대(한국 시간 KST 포함) 기준 YYYY-MM-DD 포맷 헬퍼 (UTC 날짜 어긋남 방지)
+function formatLocalDateYMD(dateInput = new Date()) {
+    const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    if (Number.isNaN(d.getTime())) return '';
+    return [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, '0'),
+        String(d.getDate()).padStart(2, '0')
+    ].join('-');
+}
+window.formatLocalDateYMD = formatLocalDateYMD;
+
 // 정산 이력 호환 헬퍼: 신규 이력의 명시 필드와 구버전 expenseItems 구조를 모두 지원한다.
 function getHistoryPrizeCost(entry) {
     if (!entry || typeof entry !== 'object') return 0;
@@ -274,8 +286,9 @@ window.__installSettlementHistory = function (targetAppState) {
             if (!oldEntry) throw new Error('수정할 정산 이력을 찾을 수 없습니다.');
 
             const editedAt = new Date().toISOString();
-            // 수정 저장은 globalHistory 원본까지 함께 완료된 뒤 개인 이력의 첨부를 생략할 수 있다.
-            const merged = { ...oldEntry, ...updatedFields, mediaStoredInGlobal: true, isEdited: true, editedAt };
+            // 영수증·행사 사진은 메일로 백업하므로 Firebase DB에는 저장하지 않는다.
+            const sanitizedFields = stripHistoryMedia(updatedFields || {});
+            const merged = stripHistoryMedia({ ...oldEntry, ...sanitizedFields, mediaStoredInGlobal: false, isEdited: true, editedAt });
             const ownIdx = (this.settlementHistory || []).findIndex(e => String(e.id) === String(id));
             const nextSettlementHistory = ownIdx >= 0
                 ? this.settlementHistory.map((entry, index) => index === ownIdx ? merged : entry)
@@ -343,7 +356,7 @@ window.__installSettlementHistory = function (targetAppState) {
                     // 공유 이력·개인 이력·클럽 누적액을 한 번의 원자적 update로 저장한다.
                     // 누적액은 서버 증분을 사용해 동시 수정/정산이 서로의 값을 덮어쓰지 않게 한다.
                     const firebaseUpdates = {};
-                    const globalUpdate = { id: merged.id, ...updatedFields, mediaStoredInGlobal: true, isEdited: true, editedAt };
+                    const globalUpdate = { id: merged.id, ...sanitizedFields, mediaStoredInGlobal: false, isEdited: true, editedAt, eventPhotos: null, eventPhoto: null };
                     Object.entries(globalUpdate).forEach(([key, value]) => {
                         firebaseUpdates[`globalHistory/${id}/${key}`] = value;
                     });
@@ -482,7 +495,7 @@ window.__installSettlementHistory = function (targetAppState) {
             if (!targetDate) {
                 const settleDateInput = document.getElementById('settlement-date-input');
                 const settleDateVal = settleDateInput ? settleDateInput.value : '';
-                targetDate = (settleDateVal || new Date().toISOString().slice(0, 10)).trim();
+                targetDate = (settleDateVal || formatLocalDateYMD()).trim();
             } else {
                 targetDate = String(targetDate).trim();
             }
@@ -633,7 +646,7 @@ window.__installSettlementHistory = function (targetAppState) {
             // 사용자가 지정한 정산 날짜 (미입력 시 오늘)
             const settleDateInput = document.getElementById('settlement-date-input');
             const settleDateVal = settleDateInput ? settleDateInput.value : '';
-            const settlementDate = (settleDateVal || new Date().toISOString().slice(0, 10)).trim();
+            const settlementDate = (settleDateVal || formatLocalDateYMD()).trim();
 
             // ── 관리자 DB 중복 정산 검증 (동일 클럽 + 동일 날짜 차단) ──
             const duplicate = await this.checkDuplicateSettlement(this.clubId, this.clubName, settlementDate);
@@ -672,7 +685,8 @@ window.__installSettlementHistory = function (targetAppState) {
                 const finalPerPersonSelfPay = this.memberCount > 0 ? finalTotalSelfPay / this.memberCount : result.perPersonSelfPay;
                 const finalSelfPayRatio = result.totalCost > 0 ? finalTotalSelfPay / result.totalCost : 0;
 
-                const newHistoryItem = {
+                const rawEventPhotoCount = Array.isArray(this.eventPhotos) ? this.eventPhotos.length : 0;
+                const newHistoryItem = stripHistoryMedia({
                     id: Date.now(),
                     date: new Date().toISOString(),
                     settlementDate,
@@ -691,20 +705,16 @@ window.__installSettlementHistory = function (targetAppState) {
                     selfPayRatio: finalSelfPayRatio,
                     expenseItems: JSON.parse(JSON.stringify(this.expenseItems)),
                     attendees: JSON.parse(JSON.stringify(this.attendees)),
-                    eventPhotos: JSON.parse(JSON.stringify(this.eventPhotos || [])),
-                    // 첨부 원본은 globalHistory에만 보관한다. 개인 이력은 메타데이터만 저장해 중복 용량을 막는다.
-                    mediaStoredInGlobal: true,
+                    // 영수증·행사 사진은 메일로 백업하므로 Firebase DB에는 저장하지 않는다.
+                    mediaStoredInGlobal: false,
                     // 정산 당시의 정산 규칙(구간/비율) 스냅샷 영구 보존 — 새해에 rules가 변경되어도 과거 데이터 고정 (v1.6.320)
                     rules: JSON.parse(JSON.stringify(this.rules || DefaultRules)),
                     settlementYear: parseInt(settlementDate.slice(0, 4), 10) || new Date().getFullYear(),
-                };
+                });
                 const nextSettlementHistory = [newHistoryItem, ...(this.settlementHistory || [])];
                 const nextPersonalDirectory = this.buildDirectoryCountsForHistory(nextSettlementHistory);
                 let nextGlobalDirectory = null;
                 const pendingGlobalDirUpdates = {};
-                if (this.getHistoryMediaBytes(newHistoryItem) > MediaStoragePolicy.maxSettlementBytes) {
-                    throw new Error('첨부 사진·영수증 용량이 너무 큽니다. 일부 파일을 삭제한 뒤 다시 시도해 주세요.');
-                }
                 const prizeThisSession = result.prizeCost || 0;
                 const registryClub = this.clubId ? this.clubRegistry[this.clubId] : null;
                 let persistedClub = null;
@@ -786,7 +796,7 @@ window.__installSettlementHistory = function (targetAppState) {
                             상품비: newHistoryItem.prizeCost || 0,
                             참석인원: newHistoryItem.memberCount,
                             비용항목수: newHistoryItem.expenseItems.length,
-                            행사사진수: newHistoryItem.eventPhotos.length,
+                            행사사진수: rawEventPhotoCount,
                             수동자부담수정: this.selfPayManuallyOverridden
                         }
                     });
@@ -838,7 +848,7 @@ window.__installSettlementHistory = function (targetAppState) {
                 this.editingItemId = null;
                 this.editingAttendeeId = null;
                 const _sdi = document.getElementById('settlement-date-input');
-                if (_sdi) _sdi.value = new Date().toISOString().slice(0, 10);
+                if (_sdi) _sdi.value = formatLocalDateYMD();
                 if (typeof window._onSettleDateReset === 'function') window._onSettleDateReset();
 
                 // Firebase에는 위 원자적 update로 이미 저장했으므로 로컬 백업만 갱신한다.
