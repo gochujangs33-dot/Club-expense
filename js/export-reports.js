@@ -1679,6 +1679,8 @@ window.__installExportReports = function (B) {
                 regularMembers: 0,
                 actualMembers: 0,
                 uniqueAttendeeKeys: new Set(),
+                attendeeCountMap: new Map(),
+                events: [],
                 nonMembers: 0,
                 noteCounts: new Map()
             });
@@ -1696,29 +1698,52 @@ window.__installExportReports = function (B) {
                     regularMembers: 0,
                     actualMembers: 0,
                     uniqueAttendeeKeys: new Set(),
+                    attendeeCountMap: new Map(),
+                    events: [],
                     nonMembers: 0,
                     noteCounts: new Map()
                 });
             }
             const row = clubMap.get(key);
-            row.support += Math.max(0, parseAmount(entry.finalSupportAmount));
+            const entrySupport = Math.max(0, parseAmount(entry.finalSupportAmount));
+            row.support += entrySupport;
             row.eventCount += 1;
             const regCnt = Number(entry.memberCount) || (Array.isArray(entry.attendees) ? entry.attendees.length : 0);
             const nonCnt = Math.max(0, parseInt(entry.nonMemberCount, 10) || 0);
             row.regularMembers += regCnt;
             row.nonMembers += nonCnt;
 
+            const entryDate = entry.settlementDate || (entry.date ? String(entry.date).slice(0, 10) : '-');
+            const note = String(entry.eventNote || '').trim();
+            row.events.push({
+                date: entryDate,
+                memberCount: regCnt,
+                support: entrySupport,
+                note
+            });
+
             if (Array.isArray(entry.attendees)) {
+                const seenInEntry = new Set();
                 entry.attendees.forEach(att => {
                     if (!att) return;
                     const empId = (typeof att === 'object' && att.employeeId) ? String(att.employeeId).trim() : '';
                     const attName = (typeof att === 'object' ? (att.name || '') : String(att)).trim();
                     const uKey = empId ? `id:${empId}` : (attName ? `name:${attName}` : '');
-                    if (uKey) row.uniqueAttendeeKeys.add(uKey);
+                    if (uKey) {
+                        row.uniqueAttendeeKeys.add(uKey);
+                        if (!seenInEntry.has(uKey)) {
+                            seenInEntry.add(uKey);
+                            const prevAtt = row.attendeeCountMap.get(uKey);
+                            if (prevAtt) {
+                                prevAtt.count += 1;
+                            } else {
+                                row.attendeeCountMap.set(uKey, { name: attName || '이름 없음', empId, count: 1 });
+                            }
+                        }
+                    }
                 });
             }
 
-            const note = String(entry.eventNote || '').trim();
             if (note) {
                 row.noteCounts.set(note, (row.noteCounts.get(note) || 0) + 1);
             }
@@ -1742,6 +1767,26 @@ window.__installExportReports = function (B) {
             const noteText = Array.from(r.noteCounts.entries())
                 .map(([n, cnt]) => `${n} ${cnt}회`)
                 .join(', ');
+            const sortedEvents = (r.events || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+            const eventLines = sortedEvents.map((ev, idx) =>
+                `${idx + 1}. ${ev.date} | 참석 ${ev.memberCount}명 | 지원 ${formatAmount(ev.support)}원${ev.note ? ` (${ev.note})` : ''}`
+            );
+            const eventTooltip = eventLines.length > 0
+                ? `[${r.name} 정산 내역 (${eventLines.length}건)]\n${eventLines.join('\n')}`
+                : `${r.name} 정산 내역 없음`;
+            const attList = Array.from((r.attendeeCountMap || new Map()).values())
+                .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name, 'ko-KR'));
+            const attFormatted = attList.map(a => `${a.name} (${a.count}회)`);
+            let attLines = attFormatted;
+            if (attFormatted.length > 10) {
+                attLines = [];
+                for (let i = 0; i < attFormatted.length; i += 2) {
+                    attLines.push(attFormatted.slice(i, i + 2).join(' · '));
+                }
+            }
+            const actualMembersTooltip = attLines.length > 0
+                ? `[${r.name} 실참석 ${attList.length}명]\n${attLines.join('\n')}`
+                : `${r.name} 실참석 내역 없음`;
             return {
                 name: r.name,
                 budget: r.budget,
@@ -1757,7 +1802,9 @@ window.__installExportReports = function (B) {
                 burnRate,
                 perPersonSupport,
                 avgParticipants,
-                noteText
+                noteText,
+                eventTooltip,
+                actualMembersTooltip
             };
         }).sort((a, b) => {
             const aPin = isPinnedInterimBottomClub(a.name);
@@ -2141,9 +2188,9 @@ window.__installExportReports = function (B) {
                             <td style="${tdBase} text-align:right;">${formatAmount(r.budget)}</td>
                             <td style="${tdBase} text-align:right;">${formatAmount(r.support)}</td>
                             <td style="${tdBase} text-align:right; ${remColor}">${formatAmount(r.remaining)}</td>
-                            <td style="${tdBase} text-align:right;">${r.eventCount}</td>
+                            <td style="${tdBase} text-align:right; cursor:help; text-decoration:underline dotted; text-underline-offset:3px;" data-tooltip="${AppState.escapeHtml(r.eventTooltip || '')}" tabindex="0">${r.eventCount}</td>
                             <td style="${tdBase} text-align:right;">${r.regularMembers}</td>
-                            <td style="${tdBase} text-align:right; font-weight:600; color:var(--color-primary);">${r.actualMembers}</td>
+                            <td style="${tdBase} text-align:right; font-weight:600; color:var(--color-primary); cursor:help; text-decoration:underline dotted; text-underline-offset:3px;" data-tooltip="${AppState.escapeHtml(r.actualMembersTooltip || '')}" tabindex="0">${r.actualMembers}</td>
                             <td style="${tdBase} text-align:right;">${r.nonMembers}</td>
                             <td style="${tdBase} text-align:right;">${r.budgetRatio.toFixed(1)}%</td>
                             <td style="${tdBase} text-align:right;">${r.memberRatio.toFixed(1)}%</td>
