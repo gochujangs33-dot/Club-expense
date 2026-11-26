@@ -4089,6 +4089,97 @@ html[data-app-theme="light"] .result-card {
 html[data-app-theme="light"] .modal { background-color: rgba(226, 234, 246, 0.9); }
 html[data-app-theme="light"] .modal-content-card,
 html[data-app-theme="light"] .attendance-roster-modal-card,
+html[data-app-theme="light"] .settlement-detail-modal-card {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.14);
+}
+
+.settlement-detail-modal-card {
+    width: min(760px, 94vw);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+}
+.settlement-detail-modal-card .card-body {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+.settlement-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.9rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 10px;
+    background: rgba(148, 163, 184, 0.1);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+.settlement-detail-meta span strong {
+    color: var(--text-primary);
+}
+.settlement-detail-section h3 {
+    margin: 0 0 0.45rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.settlement-detail-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.settlement-detail-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 9px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(148, 163, 184, 0.05);
+    font-size: 0.83rem;
+}
+.settlement-detail-item-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+.settlement-detail-item-cat {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+.settlement-detail-item-right {
+    text-align: right;
+    white-space: nowrap;
+}
+.settlement-detail-item-right small {
+    display: block;
+    font-size: 0.73rem;
+    color: var(--text-muted);
+}
+.recent-settlement-new-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.08rem 0.38rem;
+    margin-left: 0.35rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    color: #ffffff;
+    background: linear-gradient(135deg, #ef4444, #f97316);
+    vertical-align: middle;
+}
+.club-usage-summary-table tbody tr.is-clickable-row {
+    cursor: pointer;
+}
+.club-usage-summary-table tbody tr.is-clickable-row:hover {
+    background: rgba(99, 102, 241, 0.08);
+}
 html[data-app-theme="light"] .club-usage-summary-modal-card,
 html[data-app-theme="light"] .audit-log-modal-card,
 html[data-app-theme="light"] .pin-modal-card {

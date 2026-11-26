@@ -550,6 +550,7 @@ window.__installAdminDashboard = function (B) {
         updateGlobalYearPickerUI: (year) => updateGlobalYearPickerUI(year),
         openClubUsageSummaryModal: (clubName, entries, year) => openClubUsageSummaryModal(clubName, entries, year),
         openAttendanceRosterModal: (title, summary, attendees) => openAttendanceRosterModal(title, summary, attendees),
+        openSettlementDetailModal: (entry) => openSettlementDetailModal(entry),
         getHistoryUsageBreakdown: (entry) => getHistoryUsageBreakdown(entry)
     };
 
@@ -645,6 +646,12 @@ window.__installAdminDashboard = function (B) {
 
         rows.forEach(rowData => {
             const row = document.createElement('tr');
+            row.className = 'is-clickable-row';
+            row.title = '클릭하여 정산 내역 및 참석자 명단 확인';
+            row.addEventListener('click', event => {
+                if (event.target.closest('button, a, input')) return;
+                openSettlementDetailModal(rowData.entry);
+            });
             const values = [
                 formatHistoryUsageDate(rowData.entry),
                 `${rowData.memberCount}명`,
@@ -670,7 +677,10 @@ window.__installAdminDashboard = function (B) {
                         dateButton.className = 'club-usage-date-button';
                         dateButton.textContent = value;
                         dateButton.title = '이 정산 이력 수정';
-                        dateButton.addEventListener('click', () => AppState.loadHistoryEntryForEdit(rowData.entry));
+                        dateButton.addEventListener('click', event => {
+                            event.stopPropagation();
+                            AppState.loadHistoryEntryForEdit(rowData.entry);
+                        });
                         dateWrap.appendChild(dateButton);
                     } else {
                         const dateSpan = document.createElement('span');
@@ -692,7 +702,8 @@ window.__installAdminDashboard = function (B) {
                     attendeeButton.className = 'club-usage-attendee-button';
                     attendeeButton.textContent = value;
                     attendeeButton.title = '참석자 명단 확인 및 복사';
-                    attendeeButton.addEventListener('click', () => {
+                    attendeeButton.addEventListener('click', event => {
+                        event.stopPropagation();
                         const date = formatHistoryUsageDate(rowData.entry);
                         openAttendanceRosterModal(
                             `${rowData.entry.clubName || '클럽'} ${date} 참석자 명단`,
@@ -977,6 +988,12 @@ window.__installAdminDashboard = function (B) {
                 st.rows.forEach(r => {
                     const itemEl = document.createElement('div');
                     itemEl.className = 'club-weekday-event-item';
+                    itemEl.style.cursor = 'pointer';
+                    itemEl.title = '클릭하여 정산 내역 및 참석자 확인';
+                    itemEl.addEventListener('click', event => {
+                        if (event.target.closest('button')) return;
+                        openSettlementDetailModal(r.entry);
+                    });
 
                     const dateBtn = document.createElement('button');
                     dateBtn.type = 'button';
@@ -1152,6 +1169,154 @@ window.__installAdminDashboard = function (B) {
         });
     }
     initAttendanceRosterModal();
+
+    let settlementDetailCopyText = '';
+
+    function closeSettlementDetailModal() {
+        document.getElementById('settlement-detail-modal')?.classList.add('hidden');
+    }
+
+    function openSettlementDetailModal(entry) {
+        if (!entry || typeof entry !== 'object') return;
+        const modal = document.getElementById('settlement-detail-modal');
+        const titleEl = document.getElementById('settlement-detail-title');
+        const metaEl = document.getElementById('settlement-detail-meta');
+        const totalsEl = document.getElementById('settlement-detail-totals');
+        const itemsEl = document.getElementById('settlement-detail-items');
+        const attCountEl = document.getElementById('settlement-detail-attendee-count');
+        const attListEl = document.getElementById('settlement-detail-attendees');
+        const copyStatusEl = document.getElementById('settlement-detail-copy-status');
+        const copyBtn = document.getElementById('copy-settlement-detail-roster-btn');
+        const editBtn = document.getElementById('edit-from-settlement-detail-btn');
+        if (!modal || !titleEl || !metaEl || !totalsEl || !itemsEl || !attCountEl || !attListEl) return;
+
+        const clubName = entry.clubName || '기본 클럽';
+        const dateText = formatHistoryUsageDate(entry);
+        const breakdown = getHistoryUsageBreakdown(entry);
+        const perPersonSelfPay = breakdown.memberCount > 0
+            ? Math.round(breakdown.selfPay / breakdown.memberCount)
+            : Math.max(0, parseAmount(entry.perPersonSelfPay));
+
+        titleEl.textContent = `${clubName} · ${dateText} 정산 내역`;
+
+        const savedAtRaw = entry.date || (entry.id ? Number(entry.id) : null);
+        const savedAtDate = savedAtRaw ? new Date(savedAtRaw) : null;
+        const savedAtText = savedAtDate && !Number.isNaN(savedAtDate.getTime())
+            ? `${savedAtDate.getFullYear()}-${String(savedAtDate.getMonth() + 1).padStart(2, '0')}-${String(savedAtDate.getDate()).padStart(2, '0')} ${String(savedAtDate.getHours()).padStart(2, '0')}:${String(savedAtDate.getMinutes()).padStart(2, '0')}`
+            : '-';
+
+        metaEl.innerHTML = [
+            `<span>행사일: <strong>${AppState.escapeHtml(dateText)}</strong></span>`,
+            `<span>입력 일시: <strong>${AppState.escapeHtml(savedAtText)}</strong></span>`,
+            `<span>정산인: <strong>${AppState.escapeHtml(entry.creatorName || '-')}</strong></span>`,
+            entry.eventNote ? `<span>비고: <strong>${AppState.escapeHtml(entry.eventNote)}</strong></span>` : ''
+        ].filter(Boolean).join('');
+
+        totalsEl.innerHTML = '';
+        appendClubUsageTotalCard(totalsEl, '총 비용', breakdown.totalCost, '');
+        appendClubUsageTotalCard(totalsEl, '회사 지원금(법인)', breakdown.support, 'support');
+        appendClubUsageTotalCard(totalsEl, '자부담 비용(개인)', breakdown.selfPay, 'selfpay');
+        appendClubUsageTotalCard(totalsEl, '인당 자부담', perPersonSelfPay, '');
+
+        itemsEl.innerHTML = '';
+        const items = getHistoryExpenseItems(entry);
+        const catNames = (typeof categoryNameMap !== 'undefined' && categoryNameMap)
+            ? categoryNameMap
+            : { EVENT: '행사비', FACILITY: '시설·장비 이용료', PRIZE: '상품' };
+        if (items.length === 0) {
+            const emptyItem = document.createElement('p');
+            emptyItem.className = 'attendance-roster-empty';
+            emptyItem.textContent = '등록된 세부 비용 항목이 없습니다.';
+            itemsEl.appendChild(emptyItem);
+        } else {
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'settlement-detail-item-row';
+                const totalAmt = Math.max(0, parseAmount(item.amount));
+                const corpAmt = (item.corporateAmount !== undefined && item.corporateAmount !== null)
+                    ? Math.max(0, parseAmount(item.corporateAmount))
+                    : (item.cardType === 'personal' ? 0 : totalAmt);
+                const persAmt = (item.personalAmount !== undefined && item.personalAmount !== null)
+                    ? Math.max(0, parseAmount(item.personalAmount))
+                    : Math.max(0, totalAmt - corpAmt);
+                const catLabel = catNames[item.category] || item.category || '기타';
+                row.innerHTML = `
+                    <div class="settlement-detail-item-left">
+                        <span class="settlement-detail-item-cat">${AppState.escapeHtml(catLabel)}</span>
+                        <strong>${AppState.escapeHtml(item.description || '항목')}</strong>
+                    </div>
+                    <div class="settlement-detail-item-right">
+                        <strong>${SettlementCalculator.formatCurrency(totalAmt)}</strong>
+                        <small>법인 ${SettlementCalculator.formatCurrency(corpAmt)} · 개인 ${SettlementCalculator.formatCurrency(persAmt)}</small>
+                    </div>
+                `;
+                itemsEl.appendChild(row);
+            });
+        }
+
+        const people = normalizeChartAttendees(entry.attendees || []);
+        attCountEl.textContent = String(people.length || breakdown.memberCount);
+        attListEl.innerHTML = '';
+        if (copyStatusEl) copyStatusEl.textContent = '';
+        settlementDetailCopyText = `${clubName} ${dateText} 참석자 명단 (${people.length}명)\n\n${people.map((p, i) => `${i + 1}. ${formatChartAttendee(p)}`).join('\n')}`;
+
+        if (people.length === 0) {
+            const emptyAtt = document.createElement('p');
+            emptyAtt.className = 'attendance-roster-empty';
+            emptyAtt.textContent = '이 이력에는 참석자 상세 정보가 저장되지 않았습니다.';
+            attListEl.appendChild(emptyAtt);
+            if (copyBtn) copyBtn.disabled = true;
+        } else {
+            people.forEach((person, index) => {
+                const pEl = document.createElement('div');
+                pEl.className = 'attendance-roster-person';
+                pEl.textContent = `${index + 1}. ${formatChartAttendee(person)}`;
+                attListEl.appendChild(pEl);
+            });
+            if (copyBtn) copyBtn.disabled = false;
+        }
+
+        if (editBtn) {
+            const canEdit = Boolean(AppState.isAdmin && AppState.isAdmin())
+                || (entry.creatorPin && AppState.currentPin && String(entry.creatorPin) === String(AppState.currentPin));
+            editBtn.classList.toggle('hidden', !canEdit);
+            editBtn.onclick = () => {
+                closeSettlementDetailModal();
+                closeClubUsageSummaryModal();
+                AppState.loadHistoryEntryForEdit(entry);
+            };
+        }
+
+        modal.classList.remove('hidden');
+        document.getElementById('close-settlement-detail-modal')?.focus();
+    }
+    window.openSettlementDetailModal = openSettlementDetailModal;
+
+    function initSettlementDetailModal() {
+        const modal = document.getElementById('settlement-detail-modal');
+        if (!modal) return;
+        document.getElementById('close-settlement-detail-modal')?.addEventListener('click', closeSettlementDetailModal);
+        document.getElementById('dismiss-settlement-detail-btn')?.addEventListener('click', closeSettlementDetailModal);
+        document.getElementById('copy-settlement-detail-roster-btn')?.addEventListener('click', async () => {
+            if (!settlementDetailCopyText) return;
+            const statusEl = document.getElementById('settlement-detail-copy-status');
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(settlementDetailCopyText);
+                }
+                if (statusEl) statusEl.textContent = '참석자 명단을 클립보드에 복사했습니다.';
+            } catch (err) {
+                if (statusEl) statusEl.textContent = '복사하지 못했습니다. 다시 시도해 주세요.';
+            }
+        });
+        modal.addEventListener('click', event => {
+            if (event.target === modal) closeSettlementDetailModal();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) closeSettlementDetailModal();
+        });
+    }
+    initSettlementDetailModal();
 
     // ── 전역 조회 연도 상태 관리 & 팝업 모달 (v1.6.331) ──────────────────────
     function updateGlobalYearPickerUI(year) {

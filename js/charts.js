@@ -1242,6 +1242,8 @@
     function formatChartAttendee(attendee) {
         return attendee.employeeId ? `${attendee.name} (${attendee.employeeId})` : `${attendee.name} (사번 없음)`;
     }
+    window.normalizeChartAttendees = normalizeChartAttendees;
+    window.formatChartAttendee = formatChartAttendee;
 
     // 호버 툴팁은 빠른 확인용으로 이름·사번을 2명씩 묶어 모두 표시한다.
     // 긴 명단은 막대 클릭 후 팝업에서 스크롤·복사까지 할 수 있다.
@@ -1419,7 +1421,7 @@
         });
 
         if (subtitleEl) {
-            subtitleEl.textContent = `최근 2개월 입력순 (${entries.length}건) · 참석 인원과 명단 확인`;
+            subtitleEl.textContent = `최근 2개월 입력순 (${entries.length}건) · 클릭 시 정산 내역 확인`;
         }
         if (entries.length === 0) {
             container.innerHTML = '<div class="recent-settlement-empty">최근 2개월 내 입력된 정산 이력이 없습니다.</div>';
@@ -1432,21 +1434,26 @@
             const pad = n => String(n).padStart(2, '0');
             return `${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
         };
+        const nowMs = Date.now();
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
         const colorMap = getClubColorMap();
         container.innerHTML = entries.map((entry, index) => {
             const clubName = entry.clubName || '기본 클럽';
             const dateText = entry.settlementDate || (entry.date ? String(entry.date).slice(0, 10) : '날짜 없음');
-            const createdText = formatCreatedShort(getCreatedTimestamp(entry));
+            const createdTs = getCreatedTimestamp(entry);
+            const isRecentNew = createdTs > 0 && (nowMs - createdTs) <= ONE_DAY_MS;
+            const newBadge = isRecentNew ? '<span class="recent-settlement-new-badge">NEW</span>' : '';
+            const createdText = formatCreatedShort(createdTs);
             const createdSpan = createdText ? `<span style="opacity:0.78;">입력 ${AppState.escapeHtml(createdText)}</span>` : '';
             const creator = entry.creatorName ? `<span>정산인 ${AppState.escapeHtml(entry.creatorName)}</span>` : '';
             const support = Math.max(0, parseAmount(entry.finalSupportAmount));
             const memberCount = ChartBridge().getHistoryUsageBreakdown(entry).memberCount;
             const baseColor = colorMap[clubName] || stableClubHexColor(clubName);
             return `
-                <button type="button" class="recent-settlement-item" data-recent-index="${index}" style="--club-color:${baseColor};" aria-label="${AppState.escapeHtml(clubName)} ${AppState.escapeHtml(dateText)} 참석 ${memberCount}명 명단 확인">
+                <button type="button" class="recent-settlement-item" data-recent-index="${index}" style="--club-color:${baseColor};" aria-label="${AppState.escapeHtml(clubName)} ${AppState.escapeHtml(dateText)} 정산 내역 확인">
                     <span class="recent-settlement-dot" aria-hidden="true"></span>
                     <div class="recent-settlement-copy">
-                        <strong>${AppState.escapeHtml(clubName)} 정산 완료</strong>
+                        <strong>${AppState.escapeHtml(clubName)} 정산 완료${newBadge}</strong>
                         <small class="recent-settlement-meta"><span>행사 ${AppState.escapeHtml(dateText)}</span>${createdSpan}<span class="recent-settlement-attendees">👥 참석 ${memberCount}명</span>${creator}</small>
                     </div>
                     <span class="recent-settlement-amount">${SettlementCalculator.formatCurrency(support)}</span>
@@ -1457,6 +1464,14 @@
             button.addEventListener('click', () => {
                 const entry = entries[Number(button.dataset.recentIndex)];
                 if (!entry) return;
+                if (typeof ChartBridge().openSettlementDetailModal === 'function') {
+                    ChartBridge().openSettlementDetailModal(entry);
+                    return;
+                }
+                if (typeof window.openSettlementDetailModal === 'function') {
+                    window.openSettlementDetailModal(entry);
+                    return;
+                }
                 const clubName = entry.clubName || '기본 클럽';
                 const dateText = entry.settlementDate || (entry.date ? String(entry.date).slice(0, 10) : '날짜 없음');
                 const memberCount = ChartBridge().getHistoryUsageBreakdown(entry).memberCount;

@@ -1546,6 +1546,37 @@
         </div>
     </div>
 
+    <!-- 정산 내역 상세 모달 (최근 정산 알림 · 관리자 정산이력 공용) -->
+    <div id="settlement-detail-modal" class="modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="settlement-detail-title">
+        <div class="modal-content-card card settlement-detail-modal-card">
+            <div class="card-header">
+                <span class="card-icon">🧾</span>
+                <h2 id="settlement-detail-title">정산 내역 상세</h2>
+                <button type="button" id="close-settlement-detail-modal" class="attendance-roster-close"
+                    aria-label="정산 내역 상세 닫기">&times;</button>
+            </div>
+            <div class="card-body">
+                <div id="settlement-detail-meta" class="settlement-detail-meta"></div>
+                <div id="settlement-detail-totals" class="club-usage-summary-totals"></div>
+                <div class="settlement-detail-section">
+                    <h3>💳 비용 항목 내역</h3>
+                    <div id="settlement-detail-items" class="settlement-detail-items"></div>
+                </div>
+                <div class="settlement-detail-section">
+                    <h3>👥 참석자 명단 (<span id="settlement-detail-attendee-count">0</span>명)</h3>
+                    <div id="settlement-detail-attendees" class="attendance-roster-list"></div>
+                </div>
+                <p id="settlement-detail-copy-status" class="attendance-roster-copy-status" role="status"></p>
+                <div class="form-actions attendance-roster-actions">
+                    <button type="button" id="copy-settlement-detail-roster-btn" class="btn-secondary">📋 참석자 복사</button>
+                    <button type="button" id="edit-from-settlement-detail-btn" class="btn-primary hidden">✏️ 수정하기</button>
+                    <button type="button" id="dismiss-settlement-detail-btn" class="btn-secondary">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 클럽별 사용 요약 모달 -->
     <div id="club-usage-summary-modal" class="modal hidden" role="dialog" aria-modal="true"
         aria-labelledby="club-usage-summary-title">
