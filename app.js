@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.82';
+const APP_VERSION      = '1.7.83';
 const APP_VERSION_DATE = '2026.11.27';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -1654,12 +1654,39 @@ const AppState = {
         document.getElementById('cancel-edit-btn').classList.add('hidden');
     },
 
+    findDirectoryNamesByEmployeeId(employeeId) {
+        const targetId = String(employeeId || '').trim();
+        if (!targetId || !this.directory || typeof this.directory !== 'object') return [];
+        const matchedNames = [];
+        Object.entries(this.directory).forEach(([dirName, entry]) => {
+            if (!entry) return;
+            const ids = (typeof entry === 'object' && Array.isArray(entry.ids) && entry.ids.length > 0)
+                ? entry.ids.map(v => String(v || '').trim())
+                : [String(typeof entry === 'object' ? (entry.id || '') : entry).trim()];
+            if (ids.includes(targetId)) {
+                matchedNames.push(dirName);
+            }
+        });
+        return matchedNames;
+    },
+
     addAttendee(name, employeeId) {
         const editingAttendeeId = this.editingAttendeeId;
         const previousAttendee = editingAttendeeId !== null
             ? this.attendees.find(attendee => attendee.id === editingAttendeeId)
             : null;
+        const normalizedName = String(name || '').trim();
         const normalizedEmployeeId = String(employeeId || '').trim();
+        const registeredOwners = this.findDirectoryNamesByEmployeeId(normalizedEmployeeId);
+        if (registeredOwners.length > 0 && !registeredOwners.includes(normalizedName)) {
+            const msg = `사번 ${normalizedEmployeeId}은(는) '${registeredOwners.join(', ')}'의 사번입니다. 이름과 사번이 일치하지 않아 추가할 수 없습니다.`;
+            if (typeof window.showAttendeeError === 'function') {
+                window.showAttendeeError(msg);
+            } else if (typeof showAlertModal === 'function') {
+                showAlertModal(msg, '이름·사번 불일치', '⚠️');
+            }
+            return false;
+        }
         const duplicateAttendee = normalizedEmployeeId
             ? this.attendees.find(attendee =>
                 attendee && String(attendee.employeeId || '').trim() === normalizedEmployeeId &&
@@ -3716,6 +3743,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 attendeeNameInput.value = entry.name;
                 attendeeIdInput.value = entry.id;
+                attendeeIdInput.dataset.autoFilledName = entry.name;
                 hideAttendeeDropdown();
             });
             attendeeDropdown.appendChild(item);
@@ -3726,6 +3754,10 @@ document.addEventListener('DOMContentLoaded', () => {
     attendeeNameInput.addEventListener('input', () => {
         AppState.clearAttendeeDuplicateHint();
         const query = attendeeNameInput.value.trim();
+        if (attendeeIdInput.dataset.autoFilledName && attendeeIdInput.dataset.autoFilledName !== query) {
+            attendeeIdInput.value = '';
+            delete attendeeIdInput.dataset.autoFilledName;
+        }
         if (!query) { hideAttendeeDropdown(); return; }
 
         const matches = AppState.getAllDirectoryMatches(query);
@@ -3735,6 +3767,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (exactMatches.length === 1) {
             // 단일 → 사번 자동 입력
             attendeeIdInput.value = exactMatches[0].id;
+            attendeeIdInput.dataset.autoFilledName = exactMatches[0].name;
             hideAttendeeDropdown();
             return;
         }
@@ -3744,6 +3777,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showEmpIdPickerPopup(query, exactMatches, (entry) => {
                 attendeeNameInput.value = entry.name;
                 attendeeIdInput.value = entry.id;
+                attendeeIdInput.dataset.autoFilledName = entry.name;
             });
             return;
         }
@@ -3755,7 +3789,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(hideAttendeeDropdown, 150);
     });
 
-    attendeeIdInput.addEventListener('input', () => AppState.clearAttendeeDuplicateHint());
+    attendeeIdInput.addEventListener('input', () => {
+        delete attendeeIdInput.dataset.autoFilledName;
+        AppState.clearAttendeeDuplicateHint();
+    });
 
     function showAttendeeError(msg) {
         const el = document.getElementById('attendee-error-msg');
@@ -3765,6 +3802,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(el._timer);
         el._timer = setTimeout(() => el.classList.add('hidden'), 3500);
     }
+    window.showAttendeeError = showAttendeeError;
 
     function trySubmitAttendee() {
         const name = attendeeNameInput.value.trim();
@@ -5274,6 +5312,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.83', date: '2026.11.27', items: ['참석자 입력란에서 자동 입력된 이름을 다른 이름으로 수정하면 자동 입력된 사번을 즉시 초기화하도록 개선', '전사원 명부에 이미 등록된 사번을 다른 이름으로 추가·수정하려 하면 이름·사번 불일치 안내와 함께 등록을 차단하도록 보완'] },
         { ver: '1.7.82', date: '2026.11.27', items: ['라이트 모드 [정산 내역 상세] 및 [참석자 명단] 모달의 참석자 목록 배경·카드 색상을 주변 밝은 테마(#f8fafc / #ffffff)와 자연스럽게 일치하도록 개선'] },
         { ver: '1.7.81', date: '2026.11.27', items: ['정산 이력 수정 모드(editingHistoryId) 중에는 AppState.save()가 기존 임시저장(localStorage·settlements/{pin})을 덮어쓰지 않도록 차단해 새로고침 후 과거 이력 내용이 새 정산 화면에 남던 버그 수정'] },
         { ver: '1.7.80', date: '2026.11.27', items: ['[📋 중간 결산] 팝업 표의 [행사수]에 마우스를 올리면 해당 클럽의 정산 내역(날짜·참석인원·지원금·비고)을, [실참석]에 마우스를 올리면 참석자별 누적 횟수(이름 (N회))를 툴팁으로 즉시 표시'] },
