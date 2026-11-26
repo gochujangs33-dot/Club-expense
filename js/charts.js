@@ -551,6 +551,10 @@
     if (typeof Chart !== 'undefined') Chart.register(dashboardChartThemePlugin);
     // 예산 소진율 위험도 색상 (안전/주의/초과) — 소진율 % 라벨 글씨색에만 사용
     function getUsageRiskColor(ratio) {
+        const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-app-theme') === 'light';
+        if (isLight) {
+            return ratio >= 100 ? 'rgb(220, 38, 38)' : ratio >= 80 ? 'rgb(217, 119, 6)' : 'rgb(5, 150, 105)';
+        }
         return ratio >= 100 ? 'rgb(248, 113, 113)' : ratio >= 80 ? 'rgb(251, 191, 36)' : 'rgb(52, 211, 153)';
     }
 

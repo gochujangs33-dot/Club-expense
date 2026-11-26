@@ -3764,6 +3764,10 @@ html[data-app-theme="light"] .year-picker-item-badge {
 .charts-kpi-card.kpi-used .charts-kpi-val { color: #fb923c; }
 .charts-kpi-card.kpi-remaining .charts-kpi-val { color: #34d399; }
 .charts-kpi-card.kpi-count .charts-kpi-val { color: #60a5fa; }
+html[data-app-theme="light"] .charts-kpi-card.kpi-used { --kpi-accent: #ea580c; }
+html[data-app-theme="light"] .charts-kpi-card.kpi-used .charts-kpi-val { color: #c2410c; }
+html[data-app-theme="light"] .charts-kpi-card.kpi-remaining .charts-kpi-val { color: #059669; }
+html[data-app-theme="light"] .charts-kpi-card.kpi-count .charts-kpi-val { color: #0284c7; }
 .kpi-mini-gauge-wrap { position: relative; z-index: 1; }
 .kpi-mini-gauge-track {
     width: 100%;

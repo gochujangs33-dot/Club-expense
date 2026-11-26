@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.76';
+const APP_VERSION      = '1.7.77';
 const APP_VERSION_DATE = '2026.11.26';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -2541,7 +2541,7 @@ const AppState = {
                         <div class="expense-row-left">
                             <span class="expense-row-title" style="font-size: 0.88rem; display: inline-flex; align-items: center;">
                                 ${crownHtml}<button type="button" class="btn-dir-member-history" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" data-count="${countValue}" style="background:none; border:none; padding:0; margin:0; font:inherit; font-weight:700; color:inherit; cursor:pointer; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px;">${this.escapeHtml(name)}</button>
-                                <span class="dir-year-count-badge ${isTopRank ? 'is-top' : ''}">(${dirYearLabel}: ${this.hasAdminAccess && activeQueryYear === String(realCurrentYear) ? `<input type="number" class="dir-count-input" data-name="${this.escapeHtml(name)}" data-id="${this.escapeHtml(id)}" value="${countValue}" min="0">` : countValue}회)</span>
+                                <span class="dir-year-count-badge ${isTopRank ? 'is-top' : ''}">(${dirYearLabel}: ${countValue}회)</span>
                             </span>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">EMP ID: ${this.escapeHtml(id)}</span>
                         </div>
@@ -2552,21 +2552,6 @@ const AppState = {
                         </div>
                     `;
                     directoryContainer.appendChild(row);
-                });
-
-                // Bind dir-count-input change handlers
-                directoryContainer.querySelectorAll('.dir-count-input').forEach(input => {
-                    input.addEventListener('click', (e) => e.stopPropagation());
-                    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
-                    input.addEventListener('change', () => {
-                        const dirName = input.getAttribute('data-name');
-                        const dirId = input.getAttribute('data-id');
-                        const newCount = Math.max(0, parseInt(input.value, 10) || 0);
-                        input.value = newCount;
-                        if (this.directory[dirName] !== undefined) {
-                            this.updateDirectoryMemberCount(dirName, dirId, newCount);
-                        }
-                    });
                 });
 
                 // Bind hover + click handlers for member name -> show club attendance breakdown tooltip/modal
@@ -5283,6 +5268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.77', date: '2026.11.26', items: ['라이트 모드 대시보드 [현재 사용 금액] 오렌지 색상(#c2410c) 및 [예산 소진율 80%↑] 경고 색상(rgb(217, 119, 6))의 대비를 높여 가독성 개선', '전사원 명부 "(올해 누적: N회)"를 실시간 자동 집계 전용 읽기 전용 표시로 변경해 불필요한 수동 입력란 제거'] },
         { ver: '1.7.76', date: '2026.11.26', items: ['기존 DB 사진 데이터 정리가 완료되어 관리자 페이지의 일회성 [DB 기존 사진 데이터 정리] 카드 및 관련 코드 제거'] },
         { ver: '1.7.75', date: '2026.11.26', items: ['정산 완료·수정 완료 확인 팝업에 행사·영수증 사진이 엑셀에 첨부되어 이메일로 발송되며 DB 서버에는 저장되지 않는다는 안내 문구 추가', '행사 사진 첨부·삭제 안내 문구를 실제 동작(이 기기에 임시 저장)과 일치하도록 개선'] },
         { ver: '1.7.74', date: '2026.11.26', items: ['영수증·행사 사진(Base64)을 Firebase DB(globalHistory·settlements)에 저장하지 않도록 개선 (엑셀·이메일 발송 시에는 메모리/로컬 상태 그대로 정상 포함)', '한국 로컬 시간대 날짜 유틸(formatLocalDateYMD)을 도입해 새벽 시간대(00:00~08:59) UTC 전날 밀림 버그 14곳 일괄 수정', '미사용 PPT 차트 이미지 헬퍼 제거 및 핵심 계산·날짜·미디어 정책 자동 검증 테스트(tests/verify_core.js) 추가'] },
