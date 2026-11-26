@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.83';
+const APP_VERSION      = '1.7.84';
 const APP_VERSION_DATE = '2026.11.27';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -3694,16 +3694,58 @@ document.addEventListener('DOMContentLoaded', () => {
         title.textContent = `"${name}" 동명이인 — 사번을 선택하세요`;
         box.appendChild(title);
 
-        entries.forEach(entry => {
+        let defaultEntry = null;
+        let defaultRecentTime = -1;
+        const enriched = entries.map(entry => {
             const recent = AppState.getRecentClubAttendance(entry.id);
+            if (recent) {
+                const t = new Date(recent.dateStr || 0).getTime() || 0;
+                if (!defaultEntry || t >= defaultRecentTime) {
+                    defaultEntry = entry;
+                    defaultRecentTime = t;
+                }
+            }
+            return { entry, recent };
+        });
+        if (!defaultEntry && entries.length > 0) defaultEntry = entries[0];
+
+        const closePopup = () => {
+            document.removeEventListener('keydown', handlePickerKeydown, true);
+            overlay.remove();
+        };
+
+        const handlePickerKeydown = (e) => {
+            if (!document.body.contains(overlay)) {
+                document.removeEventListener('keydown', handlePickerKeydown, true);
+                return;
+            }
+            if (e.key === 'Enter') {
+                if (e.isComposing) return;
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+                if (defaultEntry) {
+                    closePopup();
+                    onSelect(defaultEntry, { viaEnter: true });
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                closePopup();
+            }
+        };
+        document.addEventListener('keydown', handlePickerKeydown, true);
+
+        enriched.forEach(({ entry, recent }) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = `emp-picker-btn ${recent ? 'is-recent' : ''}`;
+            const isDefaultTarget = defaultEntry && entry.id === defaultEntry.id;
+            btn.className = `emp-picker-btn ${recent ? 'is-recent' : ''} ${isDefaultTarget ? 'is-default-enter' : ''}`.trim();
             const recentBadge = recent
-                ? `<span class="emp-picker-recent-badge">✅ 이 클럽 최근 참석 (${AppState.escapeHtml(recent.dateStr)})</span>`
+                ? `<span class="emp-picker-recent-badge">✅ 이 클럽 최근 참석 (${AppState.escapeHtml(recent.dateStr)})${isDefaultTarget ? ' · ⏎ Enter' : ''}</span>`
                 : '';
             btn.innerHTML = `<span class="emp-picker-name">${AppState.escapeHtml(entry.name)}</span><span class="emp-picker-id">EMP ID: ${AppState.escapeHtml(entry.id)}</span>${recentBadge}`;
-            btn.addEventListener('click', () => { onSelect(entry); overlay.remove(); });
+            btn.addEventListener('click', () => { closePopup(); onSelect(entry, { viaEnter: false }); });
             box.appendChild(btn);
         });
 
@@ -3711,11 +3753,11 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelBtn.type = 'button';
         cancelBtn.className = 'emp-picker-cancel-btn';
         cancelBtn.textContent = '취소';
-        cancelBtn.addEventListener('click', () => overlay.remove());
+        cancelBtn.addEventListener('click', closePopup);
         box.appendChild(cancelBtn);
 
         overlay.appendChild(box);
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closePopup(); });
         document.body.appendChild(overlay);
     }
     window.showEmpIdPickerPopup = showEmpIdPickerPopup;
@@ -3774,10 +3816,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (exactMatches.length > 1) {
             // 동명이인 → 팝업 선택
             hideAttendeeDropdown();
-            showEmpIdPickerPopup(query, exactMatches, (entry) => {
+            showEmpIdPickerPopup(query, exactMatches, (entry, meta) => {
                 attendeeNameInput.value = entry.name;
                 attendeeIdInput.value = entry.id;
                 attendeeIdInput.dataset.autoFilledName = entry.name;
+                if (meta && meta.viaEnter) {
+                    trySubmitAttendee();
+                }
             });
             return;
         }
@@ -5312,6 +5357,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.84', date: '2026.11.27', items: ['참석자 입력란에서 동명이인 사번 선택 팝업(최근 참석자 강조)이 떴을 때 Enter 키를 누르면 최근 참석 이력이 있는 사번을 자동 선택해 즉시 현재 참석자 명단에 추가하도록 개선'] },
         { ver: '1.7.83', date: '2026.11.27', items: ['참석자 입력란에서 자동 입력된 이름을 다른 이름으로 수정하면 자동 입력된 사번을 즉시 초기화하도록 개선', '전사원 명부에 이미 등록된 사번을 다른 이름으로 추가·수정하려 하면 이름·사번 불일치 안내와 함께 등록을 차단하도록 보완'] },
         { ver: '1.7.82', date: '2026.11.27', items: ['라이트 모드 [정산 내역 상세] 및 [참석자 명단] 모달의 참석자 목록 배경·카드 색상을 주변 밝은 테마(#f8fafc / #ffffff)와 자연스럽게 일치하도록 개선'] },
         { ver: '1.7.81', date: '2026.11.27', items: ['정산 이력 수정 모드(editingHistoryId) 중에는 AppState.save()가 기존 임시저장(localStorage·settlements/{pin})을 덮어쓰지 않도록 차단해 새로고침 후 과거 이력 내용이 새 정산 화면에 남던 버그 수정'] },
