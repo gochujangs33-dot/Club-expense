@@ -239,7 +239,7 @@
                             </div>
                         </div>
                         <div class="selfpay-stat-box is-share">
-                            <span class="selfpay-stat-label">기본 1인분 <small id="selfpay-active-count-label"></small></span>
+                            <span class="selfpay-stat-label">1인 자부담 금액 <small id="selfpay-active-count-label"></small></span>
                             <strong id="selfpay-per-share-val" class="selfpay-stat-val">0원</strong>
                         </div>
                         <div class="selfpay-stat-box is-status">
@@ -412,10 +412,10 @@
             return `<span class="selfpay-role-badge badge-covered">🤝 ${item.paidByIndex}번 대납</span>`;
         }
         if (item.shareCount >= 3) {
-            return `<span class="selfpay-role-badge badge-hero">👑 ${item.shareCount}인분 골든벨</span>`;
+            return `<span class="selfpay-role-badge badge-hero">👑 ${item.shareCount}명분 골든벨</span>`;
         }
         if (item.shareCount === 2) {
-            return `<span class="selfpay-role-badge badge-angel">👼 2인분 합산</span>`;
+            return `<span class="selfpay-role-badge badge-angel">👼 2명분 합산</span>`;
         }
         if (item.manualAmount !== null) {
             if (item.finalAmount > equalRef) {
@@ -423,7 +423,7 @@
             }
             return `<span class="selfpay-role-badge badge-locked">🔒 금액 고정</span>`;
         }
-        return `<span class="selfpay-role-badge badge-normal">⚖️ 1인분</span>`;
+        return `<span class="selfpay-role-badge badge-normal">⚖️ 1인 자부담 금액</span>`;
     }
 
     function mergeParticipantInto(sourceId, targetId) {
