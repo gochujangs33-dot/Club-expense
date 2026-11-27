@@ -1360,6 +1360,23 @@ html[data-app-theme="light"] .dir-year-count-badge.is-top .dir-count-input {
 html[data-app-theme="light"] .dir-club-count-text {
     color: #0369a1 !important;
 }
+.dir-participant-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.16rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(16, 185, 129, 0.32);
+    white-space: nowrap;
+}
+html[data-app-theme="light"] .dir-participant-badge {
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(5, 150, 105, 0.3);
+}
 
 /* Scroll Container */
 .scroll-y {

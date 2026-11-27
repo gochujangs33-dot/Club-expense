@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.85';
+const APP_VERSION      = '1.7.86';
 const APP_VERSION_DATE = '2026.11.27';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -2472,6 +2472,7 @@ const AppState = {
 
         // Update Cumulative Directory Database UI
         const directoryCount = document.getElementById('directory-count');
+        const directoryParticipantBadge = document.getElementById('directory-participant-badge');
         const directoryContainer = document.getElementById('directory-container');
         
         if (directoryCount && directoryContainer) {
@@ -2480,6 +2481,7 @@ const AppState = {
 
             if (dirNames.length === 0) {
                 directoryCount.textContent = 0;
+                if (directoryParticipantBadge) directoryParticipantBadge.textContent = '행사 참여 0명';
                 directoryContainer.innerHTML = `
                     <div class="empty-state" style="padding: 1rem 0;">
                         <p style="font-size: 0.8rem;">${t('empty.directory')}</p>
@@ -2522,6 +2524,11 @@ const AppState = {
                     return a.name.localeCompare(b.name, 'ko') || a.id.localeCompare(b.id);
                 });
                 directoryCount.textContent = dirRows.length;
+                if (directoryParticipantBadge) {
+                    const participantCount = dirRows.filter(r => r.count > 0).length;
+                    const pct = dirRows.length > 0 ? Math.round((participantCount / dirRows.length) * 1000) / 10 : 0;
+                    directoryParticipantBadge.textContent = `행사 참여 ${participantCount}명 (${pct}%)`;
+                }
 
                 // 최다 참석 횟수 (1회 이상 참석자 중에서 1위 판정, 공동 1등 포함)
                 const maxAttendanceCount = (dirRows.length > 0 && dirRows[0].count > 0) ? dirRows[0].count : 0;
@@ -5357,6 +5364,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.86', date: '2026.11.27', items: ['[전사원 명부 (N명)] 제목 우측에 조회 연도 기준 1회 이상 행사에 참여한 직원 수와 비율(행사 참여 N명 (X%)) 배지 추가'] },
         { ver: '1.7.85', date: '2026.11.27', items: ['관리자 페이지 상단 헤더 문구를 "3M 총 클럽 비용 관리"에서 "3M 클럽 비용 관리 (동탄)"으로 변경'] },
         { ver: '1.7.84', date: '2026.11.27', items: ['참석자 입력란에서 동명이인 사번 선택 팝업(최근 참석자 강조)이 떴을 때 Enter 키를 누르면 최근 참석 이력이 있는 사번을 자동 선택해 즉시 현재 참석자 명단에 추가하도록 개선'] },
         { ver: '1.7.83', date: '2026.11.27', items: ['참석자 입력란에서 자동 입력된 이름을 다른 이름으로 수정하면 자동 입력된 사번을 즉시 초기화하도록 개선', '전사원 명부에 이미 등록된 사번을 다른 이름으로 추가·수정하려 하면 이름·사번 불일치 안내와 함께 등록을 차단하도록 보완'] },
