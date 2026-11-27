@@ -2542,34 +2542,65 @@ html[data-app-theme="light"] .club-progress-subtext {
     .inline-club-usage-summary .club-usage-summary-table { font-size: 0.82rem; }
     .inline-club-usage-summary .club-usage-summary-table thead { display: none; }
     .inline-club-usage-summary .club-usage-summary-table tbody tr {
-        margin: 0 0 0.55rem;
-        padding: 0.2rem 0.65rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 9px;
-        background: rgba(15, 23, 42, 0.5);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.35rem 0.6rem;
+        margin: 0 0 0.85rem;
+        padding: 0.6rem 0.72rem;
+        border: 1.5px solid rgba(99, 102, 241, 0.28);
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.58);
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+    }
+    html[data-app-theme="light"] .inline-club-usage-summary .club-usage-summary-table tbody tr {
+        background: #ffffff !important;
+        border-color: rgba(72, 91, 128, 0.24) !important;
+        box-shadow: 0 4px 12px rgba(30, 41, 59, 0.07) !important;
     }
     .inline-club-usage-summary .club-usage-summary-table tbody td {
         display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 0.14rem;
+        min-height: auto;
+        padding: 0.28rem 0.45rem;
+        border-bottom: 0;
+        border-radius: 8px;
+        background: rgba(148, 163, 184, 0.08);
+        text-align: left;
+        white-space: normal;
+        font-size: 0.8rem;
+    }
+    .inline-club-usage-summary .club-usage-summary-table tbody td.is-zero-subcost {
+        display: none !important;
+    }
+    .inline-club-usage-summary .club-usage-summary-table tbody td:first-child {
+        grid-column: 1 / -1;
+        flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        gap: 0.8rem;
-        min-height: 2.1rem;
-        padding: 0.35rem 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        text-align: right;
-        white-space: normal;
+        padding: 0.4rem 0.55rem;
+        margin-bottom: 0.15rem;
+        background: rgba(99, 102, 241, 0.12);
+        border: 1px solid rgba(99, 102, 241, 0.24);
+        border-radius: 10px;
+    }
+    .inline-club-usage-summary .club-usage-summary-table tbody td:first-child::before {
+        content: '📅 ' attr(data-label);
+        flex: 0 0 auto;
+        font-size: 0.72rem;
     }
     .inline-club-usage-summary .club-usage-summary-table tbody td::before {
         content: attr(data-label);
-        flex: 0 0 42%;
+        flex: 0 0 auto;
         color: var(--text-secondary);
-        font-size: 0.71rem;
+        font-size: 0.67rem;
         font-weight: 700;
         text-align: left;
     }
-    .inline-club-usage-summary .club-usage-summary-table tbody td:last-child { border-bottom: 0; }
     .inline-club-usage-summary .club-usage-summary-table td:first-child,
-    .inline-club-usage-summary .club-usage-summary-table td:nth-child(2) { text-align: right; }
+    .inline-club-usage-summary .club-usage-summary-table td:nth-child(2) { text-align: left; }
     .inline-club-usage-summary .club-usage-summary-empty { display: block !important; text-align: center !important; }
     .inline-club-usage-summary .club-usage-summary-empty::before { display: none; }
     .inline-club-usage-summary .club-usage-attendee-button,
@@ -6291,32 +6322,73 @@ html[data-app-theme="light"] #dedup-clubs-btn {
     .club-usage-summary-table { font-size: 0.82rem; }
     .club-usage-summary-table thead { display: none; }
     .club-usage-summary-table tbody tr {
-        margin: 0 0 0.55rem;
-        padding: 0.2rem 0.65rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 9px;
-        background: rgba(15, 23, 42, 0.5);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.35rem 0.6rem;
+        margin: 0 0 0.85rem;
+        padding: 0.6rem 0.72rem;
+        border: 1.5px solid rgba(99, 102, 241, 0.28);
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.58);
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+    }
+    html[data-app-theme="light"] .club-usage-summary-table tbody tr {
+        background: #ffffff !important;
+        border-color: rgba(72, 91, 128, 0.24) !important;
+        box-shadow: 0 4px 12px rgba(30, 41, 59, 0.07) !important;
     }
     .club-usage-summary-table tbody td {
         display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 0.14rem;
+        min-height: auto;
+        padding: 0.28rem 0.45rem;
+        border-bottom: 0;
+        border-radius: 8px;
+        background: rgba(148, 163, 184, 0.08);
+        text-align: left;
+        white-space: normal;
+        font-size: 0.8rem;
+    }
+    .club-usage-summary-table tbody td.is-zero-subcost {
+        display: none !important;
+    }
+    .club-usage-summary-table tbody td:first-child {
+        grid-column: 1 / -1;
+        flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        gap: 0.8rem;
-        min-height: 2.1rem;
-        padding: 0.35rem 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        text-align: right;
-        white-space: normal;
+        padding: 0.4rem 0.55rem;
+        margin-bottom: 0.15rem;
+        background: rgba(99, 102, 241, 0.12);
+        border: 1px solid rgba(99, 102, 241, 0.24);
+        border-radius: 10px;
+    }
+    .club-usage-summary-table tbody td:first-child::before {
+        content: '📅 ' attr(data-label);
+        flex: 0 0 auto;
+        font-size: 0.72rem;
     }
     .club-usage-summary-table tbody td::before {
         content: attr(data-label);
-        flex: 0 0 42%;
+        flex: 0 0 auto;
         color: var(--text-secondary);
-        font-size: 0.71rem;
+        font-size: 0.67rem;
         font-weight: 700;
         text-align: left;
     }
     .club-usage-summary-table tbody td:last-child { border-bottom: 0; }
+    .club-usage-summary-modal-card .club-usage-summary-totals {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.45rem;
+    }
+    .club-usage-summary-modal-card .club-usage-total-card {
+        padding: 0.48rem 0.6rem;
+    }
+    .club-usage-summary-modal-card .club-usage-total-card span { font-size: 0.68rem; }
+    .club-usage-summary-modal-card .club-usage-total-card strong { font-size: 0.84rem; }
     .club-usage-summary-empty { display: block !important; text-align: center !important; }
     .club-usage-summary-empty::before { display: none; }
     .club-usage-attendee-button,

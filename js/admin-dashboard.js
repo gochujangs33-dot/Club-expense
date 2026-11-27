@@ -731,6 +731,7 @@ window.__installAdminDashboard = function (B) {
                 }
                 if (index === 5) cell.className = 'support';
                 if (index === 6) cell.className = 'selfpay';
+                if ((index === 3 || index === 4) && value === '0원') cell.classList.add('is-zero-subcost');
                 row.appendChild(cell);
             });
             if (excelDownloads) {
