@@ -778,6 +778,98 @@
                     mergeParticipantInto(srcId, pid);
                 }
             });
+
+            // 7. 모바일 터치 꾹 눌러 드래그 & 드롭 합체 (280ms 롱프레스)
+            let longPressTimer = null;
+            let touchDragActive = false;
+            let touchGhost = null;
+            let touchTargetPid = null;
+            let startX = 0;
+            let startY = 0;
+
+            const cleanupTouchDrag = () => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+                if (touchGhost) {
+                    touchGhost.remove();
+                    touchGhost = null;
+                }
+                card.classList.remove('is-dragging');
+                grid.querySelectorAll('.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
+                currentState.draggingId = null;
+                touchDragActive = false;
+                touchTargetPid = null;
+            };
+
+            card.addEventListener('touchstart', e => {
+                if (currentState.isSpinning) return;
+                if (card.classList.contains('is-exempt')) return;
+                if (e.target.closest('input, button, .selfpay-delegate-popover')) return;
+                if (!e.touches || e.touches.length !== 1) return;
+
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                touchTargetPid = null;
+
+                longPressTimer = setTimeout(() => {
+                    touchDragActive = true;
+                    currentState.draggingId = pid;
+                    card.classList.add('is-dragging');
+                    if (navigator.vibrate) {
+                        try { navigator.vibrate(25); } catch (_) {}
+                    }
+                    const rect = card.getBoundingClientRect();
+                    touchGhost = card.cloneNode(true);
+                    touchGhost.className = 'selfpay-person-card selfpay-touch-ghost';
+                    touchGhost.style.width = `${Math.min(rect.width, 210)}px`;
+                    touchGhost.style.left = `${startX - Math.min(rect.width, 210) / 2}px`;
+                    touchGhost.style.top = `${startY - 38}px`;
+                    document.body.appendChild(touchGhost);
+                }, 280);
+            }, { passive: true });
+
+            card.addEventListener('touchmove', e => {
+                const touch = e.touches && e.touches[0];
+                if (!touch) return;
+                if (!touchDragActive) {
+                    if (longPressTimer && Math.hypot(touch.clientX - startX, touch.clientY - startY) > 10) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                    return;
+                }
+                e.preventDefault();
+                if (touchGhost) {
+                    const gw = touchGhost.offsetWidth || 180;
+                    touchGhost.style.left = `${touch.clientX - gw / 2}px`;
+                    touchGhost.style.top = `${touch.clientY - 38}px`;
+                }
+                const underEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                const overCard = underEl && underEl.closest ? underEl.closest('.selfpay-person-card[data-pid]') : null;
+                const overPid = overCard ? overCard.getAttribute('data-pid') : null;
+                touchTargetPid = (overPid && overPid !== pid) ? overPid : null;
+
+                grid.querySelectorAll('.selfpay-person-card').forEach(c => {
+                    c.classList.toggle('is-drop-target', c.getAttribute('data-pid') === touchTargetPid);
+                });
+            }, { passive: false });
+
+            card.addEventListener('touchend', e => {
+                const wasActive = touchDragActive;
+                const targetPid = touchTargetPid;
+                cleanupTouchDrag();
+                if (wasActive) {
+                    e.preventDefault();
+                    if (targetPid && targetPid !== pid) {
+                        mergeParticipantInto(pid, targetPid);
+                    }
+                }
+            });
+
+            card.addEventListener('touchcancel', cleanupTouchDrag);
         });
     }
 
