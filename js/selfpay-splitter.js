@@ -86,7 +86,7 @@
 
             list.forEach(p => {
                 const covered = coveredByRoot.get(p.id) || [];
-                p.coveredMembers = covered.map(c => ({ id: c.id, index: c.index, name: c.name }));
+                p.coveredMembers = covered.map(c => ({ id: c.id, index: c.index, name: c.name, color: c.color, employeeId: c.employeeId }));
                 if (p.exempt) {
                     p.role = 'exempt';
                     p.shareCount = 0;
@@ -529,7 +529,10 @@
 
         const activePayers = computed.items.filter(it => it.role === 'payer');
 
-        grid.innerHTML = computed.items.map(item => {
+        // 대신 내주기로 합체된 인원(covered)은 바깥 그리드에서 숨기고, 대신 내주는 큰 카드 내부의 작은 카드로 배치한다.
+        const visibleItems = computed.items.filter(item => item.role !== 'covered');
+
+        grid.innerHTML = visibleItems.map(item => {
             const isPayer = item.role === 'payer';
             const isExempt = item.role === 'exempt';
             const isCovered = item.role === 'covered';
@@ -549,12 +552,16 @@
             ].filter(Boolean).join(' ');
 
             const coveredChipsHtml = item.coveredMembers.length > 0
-                ? `<div class="selfpay-covered-chips">
+                ? `<div class="selfpay-nested-cards">
                     ${item.coveredMembers.map(cm => `
-                        <span class="selfpay-covered-chip">
-                            🤝 ${cm.index}번 ${escapeHtml(cm.name)} 몫
-                            <button type="button" class="selfpay-unmerge-chip-btn" data-unmerge-id="${escapeHtml(cm.id)}" aria-label="${escapeHtml(cm.name)} 분리">&times;</button>
-                        </span>
+                        <div class="selfpay-nested-mini-card">
+                            <span class="selfpay-nested-num" style="background:${cm.color || '#6366f1'};">${cm.index}</span>
+                            <div class="selfpay-nested-info">
+                                <strong>${escapeHtml(cm.name)}</strong>
+                                <small>${cm.employeeId ? `${escapeHtml(cm.employeeId)} · ` : ''}0원 (대납)</small>
+                            </div>
+                            <button type="button" class="selfpay-unmerge-chip-btn" data-unmerge-id="${escapeHtml(cm.id)}" title="다시 밖으로 꺼내기" aria-label="${escapeHtml(cm.name)} 분리">&times;</button>
+                        </div>
                     `).join('')}
                    </div>`
                 : '';
