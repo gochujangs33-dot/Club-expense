@@ -779,13 +779,19 @@
                 }
             });
 
-            // 7. 모바일 터치 꾹 눌러 드래그 & 드롭 합체 (280ms 롱프레스)
+            // 7. 모바일 터치 꾹 눌러 드래그 & 드롭 합체 (280ms 롱프레스, 이동 중 스크롤 완전 잠금)
             let longPressTimer = null;
             let touchDragActive = false;
             let touchGhost = null;
             let touchTargetPid = null;
             let startX = 0;
             let startY = 0;
+            const splitterBody = document.querySelector('#selfpay-splitter-modal .selfpay-splitter-body');
+
+            const onDocTouchMoveWhileDrag = (e) => {
+                if (!touchDragActive) return;
+                e.preventDefault();
+            };
 
             const cleanupTouchDrag = () => {
                 if (longPressTimer) {
@@ -796,6 +802,8 @@
                     touchGhost.remove();
                     touchGhost = null;
                 }
+                document.removeEventListener('touchmove', onDocTouchMoveWhileDrag, { passive: false });
+                if (splitterBody) splitterBody.classList.remove('is-touch-dragging-lock');
                 card.classList.remove('is-dragging');
                 grid.querySelectorAll('.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
                 currentState.draggingId = null;
@@ -818,6 +826,8 @@
                     touchDragActive = true;
                     currentState.draggingId = pid;
                     card.classList.add('is-dragging');
+                    if (splitterBody) splitterBody.classList.add('is-touch-dragging-lock');
+                    document.addEventListener('touchmove', onDocTouchMoveWhileDrag, { passive: false });
                     if (navigator.vibrate) {
                         try { navigator.vibrate(25); } catch (_) {}
                     }

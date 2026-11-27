@@ -4311,6 +4311,11 @@ html[data-app-theme="light"] .selfpay-splitter-modal-card {
     flex-direction: column;
     gap: 0.95rem;
 }
+.selfpay-splitter-body.is-touch-dragging-lock {
+    overflow: hidden !important;
+    touch-action: none !important;
+    overscroll-behavior: none !important;
+}
 .selfpay-dashboard-bar {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
