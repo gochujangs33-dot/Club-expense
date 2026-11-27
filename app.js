@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.87';
+const APP_VERSION      = '1.7.88';
 const APP_VERSION_DATE = '2026.11.27';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -2829,7 +2829,7 @@ const AppState = {
                             <div class="history-stat"><span>${t('hist.attendees')}</span><strong>${entry.memberCount}${t('unit.person')}</strong></div>
                             <div class="history-stat"><span>${t('hist.total_cost')}</span><strong>${SettlementCalculator.formatCurrency(entry.totalCost)}</strong></div>
                             <div class="history-stat"><span>${t('hist.final_support')}</span><strong style="color:var(--color-secondary)">${SettlementCalculator.formatCurrency(entry.finalSupportAmount)}</strong></div>
-                            <div class="history-stat"><span>${t('hist.self_pay')}</span><strong style="color:var(--warning-text)">${SettlementCalculator.formatCurrency(entry.totalSelfPay)}</strong></div>
+                            <div class="history-stat selfpay-calc-trigger" data-selfpay-entry-id="${entry.id}" title="클릭하여 자부담 정산기 열기"><span>${t('hist.self_pay')} 🧮</span><strong style="color:var(--warning-text)">${SettlementCalculator.formatCurrency(entry.totalSelfPay)}</strong></div>
                             ${prizeSummaryHtml}
                         </div>
                         <details class="history-details">
@@ -2844,6 +2844,18 @@ const AppState = {
                     const clubName = entry.clubName || t('label.default_club');
                     const targetContainer = groupContainers.get(clubName) || historyContainer;
                     targetContainer.appendChild(card);
+                });
+
+                // 자부담 금액 클릭 -> 자부담 더치페이 정산기 모달 오픈
+                historyContainer.querySelectorAll('[data-selfpay-entry-id]').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = Number(el.getAttribute('data-selfpay-entry-id'));
+                        const entry = historyList.find(it => Number(it.id) === id);
+                        if (entry && typeof window.openSelfPaySplitterModal === 'function') {
+                            window.openSelfPaySplitterModal(entry);
+                        }
+                    });
                 });
 
                 // 엑셀 다운로드 버튼 이벤트
@@ -5364,6 +5376,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.88', date: '2026.11.27', items: ['인터랙티브 자부담 계산 툴 전용 모듈(js/selfpay-splitter.js) 신설: 정산이력의 자부담 금액 클릭 시 참석자 자동 1/N 분배, 특정 인원 면제(🎟️ 무임승차권), 드래그 & 드롭 대신 내주기 합체(2인분 자동 표시), 특정 인원 금액 수정 시 잔여금 자동 분배 및 1,000원 자투리/골든벨 룰렛 미니게임 지원'] },
         { ver: '1.7.87', date: '2026.11.27', items: ['전사원 명부 제목 영역의 h2 flex 너비 조정을 통해 [행사 참여 N명 (X%)] 배지가 [전사원 명부 (N명)] 바로 우측에 붙어 표시되도록 정렬 수정'] },
         { ver: '1.7.86', date: '2026.11.27', items: ['[전사원 명부 (N명)] 제목 우측에 조회 연도 기준 1회 이상 행사에 참여한 직원 수와 비율(행사 참여 N명 (X%)) 배지 추가'] },
         { ver: '1.7.85', date: '2026.11.27', items: ['관리자 페이지 상단 헤더 문구를 "3M 총 클럽 비용 관리"에서 "3M 클럽 비용 관리 (동탄)"으로 변경'] },

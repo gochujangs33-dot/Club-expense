@@ -4214,6 +4214,351 @@ html[data-app-theme="light"] .attendance-roster-person {
 .club-usage-summary-table tbody tr.is-clickable-row:hover {
     background: rgba(99, 102, 241, 0.08);
 }
+
+/* ── 자부담 계산 툴 (js/selfpay-splitter.js) ───────────────────── */
+.selfpay-calc-trigger {
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.selfpay-calc-trigger:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+.selfpay-splitter-modal-card {
+    width: min(920px, 95vw);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+html[data-app-theme="light"] .selfpay-splitter-modal-card {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.14);
+}
+.selfpay-splitter-header {
+    align-items: center;
+}
+.selfpay-splitter-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+}
+.selfpay-splitter-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+.selfpay-splitter-body {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+.selfpay-dashboard-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+.selfpay-stat-box {
+    padding: 0.65rem 0.85rem;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(148, 163, 184, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.selfpay-stat-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.selfpay-stat-val {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--color-primary);
+}
+.selfpay-stat-status {
+    font-size: 0.92rem;
+    font-weight: 800;
+}
+.selfpay-total-edit-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.selfpay-total-input {
+    width: 130px;
+    padding: 0.22rem 0.5rem;
+    font-size: 1.02rem;
+    font-weight: 800;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(15, 23, 42, 0.35);
+    color: var(--text-primary);
+    text-align: right;
+}
+html[data-app-theme="light"] .selfpay-total-input {
+    background: #ffffff;
+    border-color: rgba(148, 163, 184, 0.45);
+}
+.selfpay-action-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.22);
+}
+.selfpay-guide-pill {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+.selfpay-game-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+.selfpay-game-btn {
+    font-size: 0.76rem !important;
+    padding: 0.35rem 0.65rem !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+}
+.selfpay-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+    gap: 0.65rem;
+}
+.selfpay-person-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 12px;
+    border: 1.5px solid rgba(148, 163, 184, 0.24);
+    background: rgba(15, 23, 42, 0.45);
+    cursor: grab;
+    transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+html[data-app-theme="light"] .selfpay-person-card {
+    background: #f8fafc;
+    border-color: rgba(148, 163, 184, 0.32);
+}
+.selfpay-person-card:hover {
+    border-color: rgba(99, 102, 241, 0.55);
+}
+.selfpay-person-card.is-dragging {
+    opacity: 0.45;
+    transform: scale(0.97);
+}
+.selfpay-person-card.is-drop-target {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.28), 0 8px 20px rgba(245, 158, 11, 0.18);
+    transform: translateY(-2px) scale(1.02);
+}
+.selfpay-person-card.is-multi-payer {
+    border-color: rgba(245, 158, 11, 0.55);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(251, 191, 36, 0.04));
+}
+.selfpay-person-card.is-exempt,
+.selfpay-person-card.is-covered {
+    opacity: 0.68;
+    border-style: dashed;
+}
+.selfpay-person-card.is-roulette-cursor {
+    border-color: #ec4899 !important;
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.35);
+    transform: scale(1.03);
+}
+@keyframes selfpayMergePulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+    50% { transform: scale(1.03); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+.selfpay-person-card.just-merged {
+    animation: selfpayMergePulse 0.55s ease;
+}
+.selfpay-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+.selfpay-person-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+.selfpay-person-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 0.72rem;
+    font-weight: 800;
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+.selfpay-person-name {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.selfpay-person-empid {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+.selfpay-role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.14rem 0.48rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.selfpay-role-badge.badge-normal { background: rgba(148, 163, 184, 0.16); color: var(--text-secondary); }
+.selfpay-role-badge.badge-angel,
+.selfpay-role-badge.badge-hero { background: rgba(245, 158, 11, 0.2); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.4); }
+.selfpay-role-badge.badge-generous,
+.selfpay-role-badge.badge-locked { background: rgba(99, 102, 241, 0.18); color: var(--color-primary); border: 1px solid rgba(99, 102, 241, 0.35); }
+.selfpay-role-badge.badge-exempt { background: rgba(16, 185, 129, 0.16); color: #059669; }
+.selfpay-role-badge.badge-covered { background: rgba(56, 189, 248, 0.16); color: #0284c7; }
+.selfpay-role-badge.badge-roulette { background: linear-gradient(135deg, #ec4899, #f97316); color: #ffffff; }
+.selfpay-covered-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+.selfpay-covered-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.18rem 0.48rem;
+    border-radius: 8px;
+    font-size: 0.73rem;
+    font-weight: 700;
+    background: rgba(245, 158, 11, 0.16);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.selfpay-unmerge-chip-btn {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 0.88rem;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+}
+.selfpay-amount-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.selfpay-person-amount-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.38rem 0.55rem;
+    font-size: 1rem;
+    font-weight: 800;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(15, 23, 42, 0.35);
+    color: var(--text-primary);
+    text-align: right;
+}
+html[data-app-theme="light"] .selfpay-person-amount-input {
+    background: #ffffff;
+    border-color: rgba(148, 163, 184, 0.4);
+}
+.selfpay-person-unit {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.selfpay-unlock-btn {
+    padding: 0.28rem 0.48rem;
+    border-radius: 7px;
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.selfpay-amount-zero-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.38rem 0.55rem;
+    border-radius: 8px;
+    background: rgba(148, 163, 184, 0.1);
+}
+.selfpay-amount-zero-row strong {
+    font-size: 0.96rem;
+    color: var(--text-muted);
+}
+.selfpay-amount-zero-row small {
+    font-size: 0.73rem;
+    color: var(--text-secondary);
+}
+.selfpay-card-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: auto;
+}
+.selfpay-exempt-btn,
+.selfpay-separate-btn {
+    padding: 0.26rem 0.55rem;
+    border-radius: 7px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.73rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.selfpay-exempt-btn.is-active {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.45);
+    color: #059669;
+}
+.selfpay-delegate-select {
+    flex: 1;
+    min-width: 0;
+    padding: 0.24rem 0.4rem;
+    border-radius: 7px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+@media (max-width: 640px) {
+    .selfpay-dashboard-bar {
+        grid-template-columns: 1fr;
+    }
+    .selfpay-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
 html[data-app-theme="light"] .club-usage-summary-modal-card,
 html[data-app-theme="light"] .audit-log-modal-card,
 html[data-app-theme="light"] .pin-modal-card {

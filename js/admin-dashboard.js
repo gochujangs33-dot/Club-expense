@@ -712,6 +712,20 @@ window.__installAdminDashboard = function (B) {
                         );
                     });
                     cell.appendChild(attendeeButton);
+                } else if (index === 6) {
+                    const selfPayBtn = document.createElement('button');
+                    selfPayBtn.type = 'button';
+                    selfPayBtn.className = 'club-usage-attendee-button selfpay-calc-trigger';
+                    selfPayBtn.style.color = 'inherit';
+                    selfPayBtn.textContent = value;
+                    selfPayBtn.title = '클릭하여 자부담 정산기 열기';
+                    selfPayBtn.addEventListener('click', event => {
+                        event.stopPropagation();
+                        if (typeof window.openSelfPaySplitterModal === 'function') {
+                            window.openSelfPaySplitterModal(rowData.entry);
+                        }
+                    });
+                    cell.appendChild(selfPayBtn);
                 } else {
                     cell.textContent = value;
                 }
@@ -1020,7 +1034,16 @@ window.__installAdminDashboard = function (B) {
 
                     const infoSpan = document.createElement('span');
                     infoSpan.className = 'club-weekday-event-info';
-                    infoSpan.innerHTML = `지원 <strong class="support">${SettlementCalculator.formatCurrency(r.support)}</strong> · 자부담 <strong class="selfpay">${SettlementCalculator.formatCurrency(r.selfPay)}</strong>`;
+                    infoSpan.innerHTML = `지원 <strong class="support">${SettlementCalculator.formatCurrency(r.support)}</strong> · 자부담 <strong class="selfpay selfpay-calc-trigger" title="클릭하여 자부담 정산기 열기">${SettlementCalculator.formatCurrency(r.selfPay)}</strong>`;
+                    const selfpayTriggerEl = infoSpan.querySelector('.selfpay-calc-trigger');
+                    if (selfpayTriggerEl) {
+                        selfpayTriggerEl.addEventListener('click', event => {
+                            event.stopPropagation();
+                            if (typeof window.openSelfPaySplitterModal === 'function') {
+                                window.openSelfPaySplitterModal(r.entry);
+                            }
+                        });
+                    }
 
                     itemEl.append(dateBtn, attBtn, infoSpan);
                     detailWrap.appendChild(itemEl);
@@ -1215,8 +1238,17 @@ window.__installAdminDashboard = function (B) {
         totalsEl.innerHTML = '';
         appendClubUsageTotalCard(totalsEl, '총 비용', breakdown.totalCost, '');
         appendClubUsageTotalCard(totalsEl, '회사 지원금(법인)', breakdown.support, 'support');
-        appendClubUsageTotalCard(totalsEl, '자부담 비용(개인)', breakdown.selfPay, 'selfpay');
+        appendClubUsageTotalCard(totalsEl, '자부담 비용(개인) 🧮', breakdown.selfPay, 'selfpay selfpay-calc-trigger');
         appendClubUsageTotalCard(totalsEl, '인당 자부담', perPersonSelfPay, '');
+        const detailSelfPayCard = totalsEl.querySelector('.selfpay-calc-trigger');
+        if (detailSelfPayCard) {
+            detailSelfPayCard.title = '클릭하여 자부담 정산기 열기';
+            detailSelfPayCard.addEventListener('click', () => {
+                if (typeof window.openSelfPaySplitterModal === 'function') {
+                    window.openSelfPaySplitterModal(entry);
+                }
+            });
+        }
 
         itemsEl.innerHTML = '';
         const items = getHistoryExpenseItems(entry);

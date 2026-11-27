@@ -49,6 +49,7 @@ function createSandbox() {
 const sandbox = createSandbox();
 loadModule('js/calc-locked.js', sandbox);
 loadModule('js/settlement-history.js', sandbox);
+loadModule('js/selfpay-splitter.js', sandbox);
 
 const formatLocalDateYMD = vm.runInContext('formatLocalDateYMD', sandbox);
 const stripHistoryMedia = vm.runInContext('stripHistoryMedia', sandbox);
@@ -56,6 +57,7 @@ const hasFacilityFullApprovalInEntry = vm.runInContext('hasFacilityFullApprovalI
 const hasOverLimitApprovalInEntry = vm.runInContext('hasOverLimitApprovalInEntry', sandbox);
 const DefaultRules = vm.runInContext('DefaultRules', sandbox);
 const SettlementCalculator = vm.runInContext('SettlementCalculator', sandbox);
+const SelfPaySplitterEngine = vm.runInContext('SelfPaySplitterEngine', sandbox);
 
 // 1. formatLocalDateYMD 테스트 (KST 00:00~08:59 구간에서도 UTC 전날로 밀리지 않음)
 {
@@ -145,6 +147,52 @@ const SettlementCalculator = vm.runInContext('SettlementCalculator', sandbox);
         memberCount: 2,
         expenseItems: [{ category: 'EVENT', amount: 250000, corporateAmount: 250000 }]
     }), true);
+}
+
+// 5. 자부담 계산 툴 (SelfPaySplitterEngine) 테스트: 기본 1/N · 면제 · 대신 내주기(2인분) · 금액 수동 수정 시 잔여금 자동 분배
+{
+    const basePeople = [
+        { id: '1', name: '1번' },
+        { id: '2', name: '2번' },
+        { id: '3', name: '3번' },
+        { id: '4', name: '4번' }
+    ];
+
+    // 5-1. 기본 1/N 분배 (100,000원 / 4명 = 각 25,000원)
+    const r1 = SelfPaySplitterEngine.compute(100000, basePeople);
+    assert.deepStrictEqual(r1.items.map(i => i.finalAmount), [25000, 25000, 25000, 25000]);
+
+    // 5-2. 4번 면제 -> 1,2,3번이 100,000원 분배 (33,333 / 33,333 / 33,334)
+    const r2 = SelfPaySplitterEngine.compute(100000, [
+        { id: '1', name: '1번' },
+        { id: '2', name: '2번' },
+        { id: '3', name: '3번' },
+        { id: '4', name: '4번', exempt: true }
+    ]);
+    assert.strictEqual(r2.items[3].finalAmount, 0);
+    assert.strictEqual(r2.items.reduce((s, i) => s + i.finalAmount, 0), 100000);
+
+    // 5-3. 2번을 드래그해서 1번에게 보냄 (paidBy: '1') -> 1번이 2인분(50,000원), 2번 0원, 3·4번 각 25,000원
+    const r3 = SelfPaySplitterEngine.compute(100000, [
+        { id: '1', name: '1번' },
+        { id: '2', name: '2번', paidBy: '1' },
+        { id: '3', name: '3번' },
+        { id: '4', name: '4번' }
+    ]);
+    assert.strictEqual(r3.items[0].shareCount, 2);
+    assert.strictEqual(r3.items[0].finalAmount, 50000);
+    assert.strictEqual(r3.items[1].finalAmount, 0);
+    assert.strictEqual(r3.items[2].finalAmount, 25000);
+    assert.strictEqual(r3.items[3].finalAmount, 25000);
+
+    // 5-4. 1번 금액을 40,000원으로 수동 수정 -> 남은 60,000원이 2·3·4번에게 각 20,000원씩 자동 분배
+    const r4 = SelfPaySplitterEngine.compute(100000, [
+        { id: '1', name: '1번', manualAmount: 40000 },
+        { id: '2', name: '2번' },
+        { id: '3', name: '3번' },
+        { id: '4', name: '4번' }
+    ]);
+    assert.deepStrictEqual(r4.items.map(i => i.finalAmount), [40000, 20000, 20000, 20000]);
 }
 
 console.log('verify_core.js: all checks passed');
