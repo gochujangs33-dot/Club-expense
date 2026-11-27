@@ -1,7 +1,7 @@
 /**
  * Club Expense Settlement App - Main JavaScript Logic
  */
-const APP_VERSION      = '1.7.86';
+const APP_VERSION      = '1.7.87';
 const APP_VERSION_DATE = '2026.11.27';
 
 // 전역 조회 연도 상태 (기본값: 현재 연도, 'ALL'이면 전체 연도)
@@ -5364,6 +5364,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 변경이력 모달
     const CHANGELOG = [
+        { ver: '1.7.87', date: '2026.11.27', items: ['전사원 명부 제목 영역의 h2 flex 너비 조정을 통해 [행사 참여 N명 (X%)] 배지가 [전사원 명부 (N명)] 바로 우측에 붙어 표시되도록 정렬 수정'] },
         { ver: '1.7.86', date: '2026.11.27', items: ['[전사원 명부 (N명)] 제목 우측에 조회 연도 기준 1회 이상 행사에 참여한 직원 수와 비율(행사 참여 N명 (X%)) 배지 추가'] },
         { ver: '1.7.85', date: '2026.11.27', items: ['관리자 페이지 상단 헤더 문구를 "3M 총 클럽 비용 관리"에서 "3M 클럽 비용 관리 (동탄)"으로 변경'] },
         { ver: '1.7.84', date: '2026.11.27', items: ['참석자 입력란에서 동명이인 사번 선택 팝업(최근 참석자 강조)이 떴을 때 Enter 키를 누르면 최근 참석 이력이 있는 사번을 자동 선택해 즉시 현재 참석자 명단에 추가하도록 개선'] },

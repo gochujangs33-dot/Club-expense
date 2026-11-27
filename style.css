@@ -1243,6 +1243,9 @@ input[aria-invalid="true"] {
     min-width: 0;
     flex: 1 1 auto;
 }
+#dir-list-card .header-left h2 {
+    flex: 0 1 auto;
+}
 
 /* 전사원 명부 실시간 검색창 */
 .dir-search-wrap {
