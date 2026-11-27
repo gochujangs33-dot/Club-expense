@@ -193,6 +193,27 @@ const SelfPaySplitterEngine = vm.runInContext('SelfPaySplitterEngine', sandbox);
         { id: '4', name: '4번' }
     ]);
     assert.deepStrictEqual(r4.items.map(i => i.finalAmount), [40000, 20000, 20000, 20000]);
+
+    // 5-5. 8명 86,000원 -> 1명 면제 -> 7명 합계 정확히 86,000원
+    const eightPeople = Array.from({ length: 8 }, (_, idx) => ({ id: String(idx + 1), name: `${idx + 1}번`, exempt: idx === 0 }));
+    const r5 = SelfPaySplitterEngine.compute(86000, eightPeople);
+    assert.strictEqual(r5.items[0].finalAmount, 0);
+    assert.strictEqual(r5.activeParticipantCount, 7);
+    assert.strictEqual(r5.items.reduce((s, i) => s + i.finalAmount, 0), 86000);
+
+    // 5-6. 1명 면제 + 1명 수동 금액(20,000) + 1명 대신 내주기 -> 전체 합계 정확히 86,000원
+    const r6 = SelfPaySplitterEngine.compute(86000, [
+        { id: '1', name: '1번', exempt: true },
+        { id: '2', name: '2번', manualAmount: 20000 },
+        { id: '3', name: '3번' },
+        { id: '4', name: '4번', paidBy: '3' },
+        { id: '5', name: '5번' }
+    ]);
+    assert.strictEqual(r6.items[0].finalAmount, 0);
+    assert.strictEqual(r6.items[1].finalAmount, 20000);
+    assert.strictEqual(r6.items[2].shareCount, 2);
+    assert.strictEqual(r6.items[3].finalAmount, 0);
+    assert.strictEqual(r6.items.reduce((s, i) => s + i.finalAmount, 0), 86000);
 }
 
 console.log('verify_core.js: all checks passed');
